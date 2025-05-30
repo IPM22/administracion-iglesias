@@ -27,6 +27,7 @@ model Miembro {
   fechaIngreso    DateTime?
   fechaBautismo   DateTime?
   estado          String?       // "Activo" | "Inactivo"
+  foto            String?       // URL de la imagen en Cloudinary
   notasAdicionales String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt

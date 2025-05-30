@@ -61,6 +61,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MiembroAvatar } from "../../components/MiembroAvatar";
 
 export default function MiembrosPage() {
   const router = useRouter();
@@ -239,8 +240,8 @@ export default function MiembrosPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nombres</TableHead>
-                      <TableHead>Apellidos</TableHead>
+                      <TableHead className="w-16">Foto</TableHead>
+                      <TableHead>Nombre Completo</TableHead>
                       <TableHead>Contacto</TableHead>
                       <TableHead>Ocupación</TableHead>
                       <TableHead>Familia</TableHead>
@@ -266,11 +267,19 @@ export default function MiembrosPage() {
                     ) : (
                       currentItems.map((miembro) => (
                         <TableRow key={miembro.id}>
-                          <TableCell className="font-medium">
-                            {miembro.nombres}
+                          <TableCell>
+                            <MiembroAvatar
+                              foto={miembro.foto}
+                              nombre={`${miembro.nombres} ${miembro.apellidos}`}
+                              size="sm"
+                            />
                           </TableCell>
                           <TableCell className="font-medium">
-                            {miembro.apellidos}
+                            <div>
+                              <div>
+                                {miembro.nombres} {miembro.apellidos}
+                              </div>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <div className="text-sm">

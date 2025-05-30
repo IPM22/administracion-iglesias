@@ -19,9 +19,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Edit, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { MiembroAvatar } from "../../../components/MiembroAvatar";
 
 interface MiembroDetalle {
   id: number;
@@ -39,6 +39,7 @@ interface MiembroDetalle {
   fechaIngreso?: string;
   fechaBautismo?: string;
   estado?: string;
+  foto?: string;
   notasAdicionales?: string;
   ministerios: Array<{
     ministerio: {
@@ -172,16 +173,12 @@ export default function MiembroDetallePage({
                 <CardTitle>Datos Personales</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col items-center text-center">
-                <Avatar className="h-32 w-32 mb-4">
-                  <AvatarImage src="/placeholder.svg?height=128&width=128" />
-                  <AvatarFallback>
-                    {miembro.nombres
-                      .split(" ")
-                      .map((n) => n[0])
-                      .concat(miembro.apellidos.split(" ").map((a) => a[0]))
-                      .join("")}
-                  </AvatarFallback>
-                </Avatar>
+                <MiembroAvatar
+                  foto={miembro.foto}
+                  nombre={getNombreCompleto(miembro)}
+                  size="xl"
+                  className="mb-4"
+                />
                 <h2 className="text-2xl font-bold mb-2">
                   {getNombreCompleto(miembro)}
                 </h2>

@@ -47,6 +47,7 @@ import { useForm, type ControllerRenderProps } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useState } from "react";
+import { CloudinaryUploader } from "../../../components/CloudinaryUploader";
 
 const formSchema = z.object({
   nombres: z.string().min(2, "Los nombres deben tener al menos 2 caracteres"),
@@ -69,6 +70,7 @@ const formSchema = z.object({
   fechaIngreso: z.string().optional(),
   fechaBautismo: z.string().optional(),
   estado: z.enum(["Activo", "Inactivo"]).optional(),
+  foto: z.string().optional(),
   notasAdicionales: z.string().optional(),
 });
 
@@ -96,6 +98,7 @@ export default function NuevoMiembroPage() {
       fechaIngreso: "",
       fechaBautismo: "",
       estado: undefined,
+      foto: "",
       notasAdicionales: "",
     },
   });
@@ -180,334 +183,417 @@ export default function NuevoMiembroPage() {
                   onSubmit={form.handleSubmit(onSubmit)}
                   className="space-y-8"
                 >
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="nombres"
-                      render={({
-                        field,
-                      }: {
-                        field: ControllerRenderProps<FormValues>;
-                      }) => (
-                        <FormItem>
-                          <FormLabel>Nombres</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Juan" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  {/* Sección de Datos Personales con Foto */}
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium mb-4">
+                        Datos Personales
+                      </h3>
+                      <div className="grid gap-6 md:grid-cols-3 md:grid-rows-3">
+                        {/* Primera fila - Nombres y Apellidos */}
+                        <div className="md:col-span-2">
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <FormField
+                              control={form.control}
+                              name="nombres"
+                              render={({
+                                field,
+                              }: {
+                                field: ControllerRenderProps<FormValues>;
+                              }) => (
+                                <FormItem>
+                                  <FormLabel>Nombres</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Juan" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
 
-                    <FormField
-                      control={form.control}
-                      name="apellidos"
-                      render={({
-                        field,
-                      }: {
-                        field: ControllerRenderProps<FormValues>;
-                      }) => (
-                        <FormItem>
-                          <FormLabel>Apellidos</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Pérez" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                            <FormField
+                              control={form.control}
+                              name="apellidos"
+                              render={({
+                                field,
+                              }: {
+                                field: ControllerRenderProps<FormValues>;
+                              }) => (
+                                <FormItem>
+                                  <FormLabel>Apellidos</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Pérez" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
 
-                    <FormField
-                      control={form.control}
-                      name="correo"
-                      render={({
-                        field,
-                      }: {
-                        field: ControllerRenderProps<FormValues>;
-                      }) => (
-                        <FormItem>
-                          <FormLabel>Correo</FormLabel>
-                          <FormControl>
-                            <Input placeholder="juan@ejemplo.com" {...field} />
-                          </FormControl>
-                          <FormDescription>Opcional</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                        {/* Columna derecha - Foto (ocupa las 3 filas desde el inicio) */}
+                        <div className="md:row-span-3 flex flex-col items-center justify-center">
+                          <div className="w-full bg-gray-50 border border-gray-200 rounded-lg p-4 h-full flex flex-col justify-center">
+                            <FormField
+                              control={form.control}
+                              name="foto"
+                              render={({ field }) => (
+                                <FormItem className="w-full">
+                                  <FormLabel className="text-sm font-medium text-center block mb-3">
+                                    Foto del Miembro
+                                  </FormLabel>
+                                  <FormControl>
+                                    <CloudinaryUploader
+                                      value={field.value}
+                                      onChange={field.onChange}
+                                      onRemove={() => field.onChange("")}
+                                    />
+                                  </FormControl>
+                                  <FormDescription className="text-xs text-center text-gray-500 mt-2">
+                                    Opcional - Máximo 5MB
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
 
-                    <FormField
-                      control={form.control}
-                      name="telefono"
-                      render={({
-                        field,
-                      }: {
-                        field: ControllerRenderProps<FormValues>;
-                      }) => (
-                        <FormItem>
-                          <FormLabel>Teléfono</FormLabel>
-                          <FormControl>
-                            <Input placeholder="+1234567890" {...field} />
-                          </FormControl>
-                          <FormDescription>Opcional</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                        {/* Segunda fila - Fecha de nacimiento, Sexo y Estado Civil */}
+                        <div className="md:col-span-2">
+                          <div className="grid gap-4 md:grid-cols-4">
+                            <FormField
+                              control={form.control}
+                              name="fechaNacimiento"
+                              render={({
+                                field,
+                              }: {
+                                field: ControllerRenderProps<FormValues>;
+                              }) => (
+                                <FormItem className="md:col-span-2">
+                                  <FormLabel>Fecha de Nacimiento</FormLabel>
+                                  <FormControl>
+                                    <Input type="date" {...field} />
+                                  </FormControl>
+                                  <FormDescription>Opcional</FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
 
-                    <FormField
-                      control={form.control}
-                      name="celular"
-                      render={({
-                        field,
-                      }: {
-                        field: ControllerRenderProps<FormValues>;
-                      }) => (
-                        <FormItem>
-                          <FormLabel>Celular</FormLabel>
-                          <FormControl>
-                            <Input placeholder="+1234567890" {...field} />
-                          </FormControl>
-                          <FormDescription>Opcional</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                            <FormField
+                              control={form.control}
+                              name="sexo"
+                              render={({
+                                field,
+                              }: {
+                                field: ControllerRenderProps<FormValues>;
+                              }) => (
+                                <FormItem>
+                                  <FormLabel>Sexo</FormLabel>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Selecciona un sexo" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="Masculino">
+                                        Masculino
+                                      </SelectItem>
+                                      <SelectItem value="Femenino">
+                                        Femenino
+                                      </SelectItem>
+                                      <SelectItem value="Otro">Otro</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormDescription>Opcional</FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
 
-                    <FormField
-                      control={form.control}
-                      name="fechaNacimiento"
-                      render={({
-                        field,
-                      }: {
-                        field: ControllerRenderProps<FormValues>;
-                      }) => (
-                        <FormItem>
-                          <FormLabel>Fecha de Nacimiento</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormDescription>Opcional</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                            <FormField
+                              control={form.control}
+                              name="estadoCivil"
+                              render={({
+                                field,
+                              }: {
+                                field: ControllerRenderProps<FormValues>;
+                              }) => (
+                                <FormItem>
+                                  <FormLabel>Estado Civil</FormLabel>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Selecciona estado civil" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="Soltero/a">
+                                        Soltero/a
+                                      </SelectItem>
+                                      <SelectItem value="Casado/a">
+                                        Casado/a
+                                      </SelectItem>
+                                      <SelectItem value="Viudo/a">
+                                        Viudo/a
+                                      </SelectItem>
+                                      <SelectItem value="Divorciado/a">
+                                        Divorciado/a
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormDescription>Opcional</FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
 
-                    <FormField
-                      control={form.control}
-                      name="sexo"
-                      render={({
-                        field,
-                      }: {
-                        field: ControllerRenderProps<FormValues>;
-                      }) => (
-                        <FormItem>
-                          <FormLabel>Sexo</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
+                        {/* Tercera fila - Ocupación y Familia */}
+                        <div className="md:col-span-2">
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <FormField
+                              control={form.control}
+                              name="ocupacion"
+                              render={({
+                                field,
+                              }: {
+                                field: ControllerRenderProps<FormValues>;
+                              }) => (
+                                <FormItem>
+                                  <FormLabel>Ocupación</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Ingeniero" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="familia"
+                              render={({
+                                field,
+                              }: {
+                                field: ControllerRenderProps<FormValues>;
+                              }) => (
+                                <FormItem>
+                                  <FormLabel>Familia</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      placeholder="Familia Pérez"
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sección de Datos de Contacto */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Datos de Contacto</h3>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="correo"
+                        render={({
+                          field,
+                        }: {
+                          field: ControllerRenderProps<FormValues>;
+                        }) => (
+                          <FormItem>
+                            <FormLabel>Correo</FormLabel>
                             <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecciona un sexo" />
-                              </SelectTrigger>
+                              <Input
+                                placeholder="juan@ejemplo.com"
+                                {...field}
+                              />
                             </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Masculino">
-                                Masculino
-                              </SelectItem>
-                              <SelectItem value="Femenino">Femenino</SelectItem>
-                              <SelectItem value="Otro">Otro</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>Opcional</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                            <FormDescription>Opcional</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormField
-                      control={form.control}
-                      name="estadoCivil"
-                      render={({
-                        field,
-                      }: {
-                        field: ControllerRenderProps<FormValues>;
-                      }) => (
-                        <FormItem>
-                          <FormLabel>Estado Civil</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
+                      <FormField
+                        control={form.control}
+                        name="telefono"
+                        render={({
+                          field,
+                        }: {
+                          field: ControllerRenderProps<FormValues>;
+                        }) => (
+                          <FormItem>
+                            <FormLabel>Teléfono</FormLabel>
                             <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecciona estado civil" />
-                              </SelectTrigger>
+                              <Input placeholder="+1234567890" {...field} />
                             </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Soltero/a">
-                                Soltero/a
-                              </SelectItem>
-                              <SelectItem value="Casado/a">Casado/a</SelectItem>
-                              <SelectItem value="Viudo/a">Viudo/a</SelectItem>
-                              <SelectItem value="Divorciado/a">
-                                Divorciado/a
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>Opcional</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                            <FormDescription>Opcional</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormField
-                      control={form.control}
-                      name="ocupacion"
-                      render={({
-                        field,
-                      }: {
-                        field: ControllerRenderProps<FormValues>;
-                      }) => (
-                        <FormItem>
-                          <FormLabel>Ocupación</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ingeniero" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="familia"
-                      render={({
-                        field,
-                      }: {
-                        field: ControllerRenderProps<FormValues>;
-                      }) => (
-                        <FormItem>
-                          <FormLabel>Familia</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Familia Pérez" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="fechaIngreso"
-                      render={({
-                        field,
-                      }: {
-                        field: ControllerRenderProps<FormValues>;
-                      }) => (
-                        <FormItem>
-                          <FormLabel>Fecha de Ingreso</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="fechaBautismo"
-                      render={({
-                        field,
-                      }: {
-                        field: ControllerRenderProps<FormValues>;
-                      }) => (
-                        <FormItem>
-                          <FormLabel>Fecha de Bautismo</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormDescription>Opcional</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="estado"
-                      render={({
-                        field,
-                      }: {
-                        field: ControllerRenderProps<FormValues>;
-                      }) => (
-                        <FormItem>
-                          <FormLabel>Estado</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
+                      <FormField
+                        control={form.control}
+                        name="celular"
+                        render={({
+                          field,
+                        }: {
+                          field: ControllerRenderProps<FormValues>;
+                        }) => (
+                          <FormItem>
+                            <FormLabel>Celular</FormLabel>
                             <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecciona un estado" />
-                              </SelectTrigger>
+                              <Input placeholder="+1234567890" {...field} />
                             </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Activo">Activo</SelectItem>
-                              <SelectItem value="Inactivo">Inactivo</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            <FormDescription>Opcional</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="direccion"
+                        render={({
+                          field,
+                        }: {
+                          field: ControllerRenderProps<FormValues>;
+                        }) => (
+                          <FormItem>
+                            <FormLabel>Dirección</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Calle Principal 123, Ciudad"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Sección de Datos Ministeriales */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Datos Ministeriales</h3>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="fechaIngreso"
+                        render={({
+                          field,
+                        }: {
+                          field: ControllerRenderProps<FormValues>;
+                        }) => (
+                          <FormItem>
+                            <FormLabel>Fecha de Ingreso</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="fechaBautismo"
+                        render={({
+                          field,
+                        }: {
+                          field: ControllerRenderProps<FormValues>;
+                        }) => (
+                          <FormItem>
+                            <FormLabel>Fecha de Bautismo</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormDescription>Opcional</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="estado"
+                        render={({
+                          field,
+                        }: {
+                          field: ControllerRenderProps<FormValues>;
+                        }) => (
+                          <FormItem>
+                            <FormLabel>Estado</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecciona un estado" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="Activo">Activo</SelectItem>
+                                <SelectItem value="Inactivo">
+                                  Inactivo
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Sección de Notas Adicionales */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">
+                      Información Adicional
+                    </h3>
+                    <FormField
+                      control={form.control}
+                      name="notasAdicionales"
+                      render={({
+                        field,
+                      }: {
+                        field: ControllerRenderProps<FormValues>;
+                      }) => (
+                        <FormItem>
+                          <FormLabel>Notas Adicionales</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Información adicional relevante..."
+                              className="min-h-[100px]"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>Opcional</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                   </div>
-
-                  <FormField
-                    control={form.control}
-                    name="direccion"
-                    render={({
-                      field,
-                    }: {
-                      field: ControllerRenderProps<FormValues>;
-                    }) => (
-                      <FormItem>
-                        <FormLabel>Dirección</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Calle Principal 123, Ciudad"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="notasAdicionales"
-                    render={({
-                      field,
-                    }: {
-                      field: ControllerRenderProps<FormValues>;
-                    }) => (
-                      <FormItem>
-                        <FormLabel>Notas Adicionales</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Información adicional relevante..."
-                            className="min-h-[100px]"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription>Opcional</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
                   <div className="flex justify-end space-x-4">
                     <Button

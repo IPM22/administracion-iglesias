@@ -82,6 +82,7 @@ export async function PUT(
       fechaIngreso,
       fechaBautismo,
       estado,
+      foto,
       notasAdicionales,
     } = body;
 
@@ -173,6 +174,7 @@ export async function PUT(
         fechaIngreso: parseDate(fechaIngreso),
         fechaBautismo: parseDate(fechaBautismo),
         estado: parseString(estado) || "Activo",
+        foto: parseString(foto),
         notasAdicionales: parseString(notasAdicionales),
       },
       include: {
