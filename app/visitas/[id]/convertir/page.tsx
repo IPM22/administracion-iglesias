@@ -346,7 +346,7 @@ export default function ConvertirVisitaPage({
                           </li>
                           <li>
                             • El estado de la visita cambiará a
-                            &ldquo;Convertida&rdquo;
+                            &ldquo;Convertido&rdquo;
                           </li>
                         </ul>
                       </div>

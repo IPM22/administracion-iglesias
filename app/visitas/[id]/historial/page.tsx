@@ -20,11 +20,33 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Plus, Calendar, User, Search } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  Calendar,
+  User,
+  Search,
+  Building2,
+  Trash2,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ModeToggle } from "../../../../components/mode-toggle";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Interfaces para tipado
+interface Ministerio {
+  id: number;
+  nombre: string;
+  descripcion?: string;
+}
+
 interface HistorialVisita {
   id: number;
   fecha: string;
@@ -36,6 +58,7 @@ interface HistorialVisita {
   actividad?: {
     id: number;
     nombre: string;
+    ministerio?: Ministerio;
   };
   invitadoPor?: {
     id: number;
@@ -64,6 +87,12 @@ export default function HistorialVisitaPage({
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
+  const [eliminando, setEliminando] = useState<number | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [registroAEliminar, setRegistroAEliminar] = useState<{
+    id: number;
+    nombre: string;
+  } | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -81,12 +110,7 @@ export default function HistorialVisitaPage({
         });
 
         // Obtener historial completo
-        const historialResponse = await fetch(`/api/visitas/${id}/historial`);
-        if (!historialResponse.ok) {
-          throw new Error("Error al obtener el historial de visitas");
-        }
-        const historialData = await historialResponse.json();
-        setHistorial(historialData);
+        await fetchHistorial();
       } catch (error) {
         console.error("Error:", error);
         setError("Error al cargar los datos");
@@ -97,6 +121,62 @@ export default function HistorialVisitaPage({
 
     fetchData();
   }, [id]);
+
+  const fetchHistorial = async () => {
+    const historialResponse = await fetch(`/api/visitas/${id}/historial`);
+    if (!historialResponse.ok) {
+      throw new Error("Error al obtener el historial de visitas");
+    }
+    const historialData = await historialResponse.json();
+    setHistorial(historialData);
+  };
+
+  // Función para mostrar dialog de confirmación
+  const mostrarDialogEliminar = (
+    historialId: number,
+    nombreActividad: string
+  ) => {
+    setRegistroAEliminar({ id: historialId, nombre: nombreActividad });
+    setDialogOpen(true);
+  };
+
+  // Función para cancelar eliminación
+  const cancelarEliminacion = () => {
+    setDialogOpen(false);
+    setRegistroAEliminar(null);
+  };
+
+  // Función para confirmar eliminación
+  const confirmarEliminacion = async () => {
+    if (!registroAEliminar) return;
+
+    setEliminando(registroAEliminar.id);
+    try {
+      const response = await fetch(
+        `/api/visitas/${id}/historial?historialId=${registroAEliminar.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error al eliminar el registro");
+      }
+
+      // Recargar el historial después de eliminar
+      await fetchHistorial();
+      setDialogOpen(false);
+      setRegistroAEliminar(null);
+    } catch (error) {
+      console.error("Error al eliminar:", error);
+      setError(
+        error instanceof Error ? error.message : "Error al eliminar el registro"
+      );
+    } finally {
+      setEliminando(null);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("es-ES", {
@@ -329,13 +409,23 @@ export default function HistorialVisitaPage({
                             </div>
                             <div>
                               <h4 className="font-medium">
-                                {item.tipoActividad?.nombre ||
-                                  item.actividad?.nombre ||
+                                {/* Para actividades especiales, mostrar el nombre específico */}
+                                {item.actividad?.nombre ||
+                                  item.tipoActividad?.nombre ||
                                   "Actividad no especificada"}
                               </h4>
                               <p className="text-sm text-muted-foreground">
                                 {formatDate(item.fecha)}
                               </p>
+                              {/* Mostrar ministerio si está disponible */}
+                              {item.actividad?.ministerio && (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <Building2 className="h-3 w-3 text-muted-foreground" />
+                                  <span className="text-xs text-muted-foreground">
+                                    {item.actividad.ministerio.nombre}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -365,15 +455,34 @@ export default function HistorialVisitaPage({
                         </div>
                       </div>
 
-                      <div className="flex flex-col items-end gap-2">
-                        <Badge
-                          variant={getBadgeVariant(item.tipoActividad?.tipo)}
+                      <div className="flex items-center gap-3">
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge
+                            variant={getBadgeVariant(item.tipoActividad?.tipo)}
+                          >
+                            {item.tipoActividad?.tipo || "Especial"}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDateShort(item.fecha)}
+                          </span>
+                        </div>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            mostrarDialogEliminar(
+                              item.id,
+                              item.actividad?.nombre ||
+                                item.tipoActividad?.nombre ||
+                                "Actividad"
+                            )
+                          }
+                          disabled={eliminando === item.id}
+                          className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
                         >
-                          {item.tipoActividad?.tipo || "Especial"}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDateShort(item.fecha)}
-                        </span>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -436,6 +545,38 @@ export default function HistorialVisitaPage({
           )}
         </div>
       </SidebarInset>
+      <Dialog open={dialogOpen} onOpenChange={cancelarEliminacion}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Eliminar Registro de Visita</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que deseas eliminar este registro del historial?
+              <br />
+              <br />
+              <strong>Actividad:</strong> {registroAEliminar?.nombre}
+              <br />
+              <br />
+              Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={cancelarEliminacion}
+              disabled={eliminando !== null}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmarEliminacion}
+              disabled={eliminando !== null}
+            >
+              {eliminando !== null ? "Eliminando..." : "Eliminar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
   );
 }

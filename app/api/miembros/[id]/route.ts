@@ -45,6 +45,10 @@ export async function GET(
               },
             },
           },
+          orderBy: [
+            { familiar: { apellidos: "asc" } },
+            { familiar: { nombres: "asc" } },
+          ],
         },
         visitaOriginal: true, // Para saber si era una visita convertida
       },
@@ -79,6 +83,7 @@ export async function GET(
           },
         },
       },
+      orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
     });
 
     // Procesar las visitas invitadas para incluir el total de visitas

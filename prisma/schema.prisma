@@ -23,7 +23,9 @@ model Miembro {
   sexo            String?       // "Masculino" | "Femenino" | "Otro"
   estadoCivil     String?       // "Soltero/a" | "Casado/a" | "Viudo/a" | "Divorciado/a"
   ocupacion       String?
-  familia         String?
+  familia         String?       // Campo legacy, mantenemos por compatibilidad
+  familiaId       Int?          // Nueva referencia a la familia
+  parentescoFamiliar String?    // Relación con el cabeza de familia: "Cabeza de Familia", "Esposo/a", "Hijo/a", "Padre/Madre", etc.
   fechaIngreso    DateTime?
   fechaBautismo   DateTime?
   estado          String?       // "Activo" | "Inactivo"
@@ -39,6 +41,12 @@ model Miembro {
   // Relaciones familiares
   familiares      FamiliarMiembro[] @relation("MiembroFamiliar")
   familiarDe      FamiliarMiembro[] @relation("FamiliarDeMiembro")
+  // Nueva relación con familia
+  familiaEstructurada Familia?  @relation("MiembroFamilia", fields: [familiaId], references: [id])
+  // Familias donde es jefe de familia
+  familiasComoJefe Familia[]    @relation("JefeFamilia")
+  // Vínculos familiares donde es el miembro conector
+  vinculosFamiliares VinculoFamiliar[] @relation("MiembroVinculo")
 }
 
 model Visita {
@@ -53,8 +61,10 @@ model Visita {
   sexo            String?       // "Masculino" | "Femenino" | "Otro"
   estadoCivil     String?       // "Soltero/a" | "Casado/a" | "Viudo/a" | "Divorciado/a"
   ocupacion       String?
-  familia         String?
-  estado          String?       // "Activa" | "Inactiva" | "Convertida"
+  familia         String?       // Campo legacy para visitantes
+  familiaId       Int?          // Nueva referencia a la familia
+  parentescoFamiliar String?    // Relación con el cabeza de familia
+  estado          String?       // "Nuevo" | "Convertido" | "Recurrente"
   foto            String?       // URL de la imagen en Cloudinary
   notasAdicionales String?
   // Campos específicos para visitas
@@ -66,6 +76,51 @@ model Visita {
   // Relaciones
   historialVisitas HistorialVisita[]
   miembroConvertido Miembro?    @relation("VisitaConvertida", fields: [miembroConvertidoId], references: [id])
+  // Nueva relación con familia
+  familiaEstructurada Familia?  @relation("VisitaFamilia", fields: [familiaId], references: [id])
+}
+
+model Familia {
+  id              Int           @id @default(autoincrement())
+  apellido        String        // Apellido familiar principal
+  nombre          String?       // Nombre opcional (ej: "Los García", "Familia Rodríguez")
+  direccion       String?       // Dirección del hogar
+  telefono        String?       // Teléfono principal
+  celular         String?       // Celular alternativo
+  email           String?       // Email familiar
+  jefeFamiliaId   Int?          // Referencia al miembro que es jefe de familia
+  estado          String        @default("Activa") // "Activa" | "Inactiva"
+  notas           String?       // Notas adicionales sobre la familia
+  fechaRegistro   DateTime      @default(now())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Relaciones
+  jefeFamilia     Miembro?      @relation("JefeFamilia", fields: [jefeFamiliaId], references: [id])
+  miembros        Miembro[]     @relation("MiembroFamilia")
+  visitas         Visita[]      @relation("VisitaFamilia")
+  // Vínculos familiares - como familia origen
+  vinculosOrigen  VinculoFamiliar[] @relation("FamiliaOrigen")
+  // Vínculos familiares - como familia relacionada
+  vinculosRelacionados VinculoFamiliar[] @relation("FamiliaRelacionada")
+}
+
+model VinculoFamiliar {
+  id                    Int      @id @default(autoincrement())
+  familiaOrigenId       Int      // Familia principal
+  familiaRelacionadaId  Int      // Familia relacionada
+  tipoVinculo          String   // "Familia extendida", "Familia política", "Familia adoptiva", etc.
+  descripcion          String?  // Descripción adicional del vínculo
+  miembroVinculoId     Int?     // Miembro que establece la conexión entre familias
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  
+  // Relaciones
+  familiaOrigen        Familia  @relation("FamiliaOrigen", fields: [familiaOrigenId], references: [id])
+  familiaRelacionada   Familia  @relation("FamiliaRelacionada", fields: [familiaRelacionadaId], references: [id])
+  miembroVinculo       Miembro? @relation("MiembroVinculo", fields: [miembroVinculoId], references: [id])
+  
+  @@unique([familiaOrigenId, familiaRelacionadaId])
 }
 
 model TipoActividad {
@@ -89,15 +144,20 @@ model Actividad {
   fecha           DateTime
   horaInicio      String?
   horaFin         String?
-  ubicacion       String?
+  ubicacion       String?       // Dirección de texto
+  latitud         Float?        // Coordenada GPS
+  longitud        Float?        // Coordenada GPS
   tipoActividadId Int
-  responsable     String?
+  ministerioId    Int?          // Ministerio organizador
+  responsable     String?       // Campo legacy, mantenemos por compatibilidad
   estado          String        @default("Programada") // "Programada" | "En curso" | "Finalizada" | "Cancelada"
+  banner          String?       // URL del banner de la actividad en Cloudinary
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   
   // Relaciones
   tipoActividad   TipoActividad @relation(fields: [tipoActividadId], references: [id])
+  ministerio      Ministerio?   @relation(fields: [ministerioId], references: [id])
   historialVisitas HistorialVisita[]
 }
 
@@ -129,22 +189,26 @@ model Ministerio {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   miembros    MinisterioMiembro[]
+  actividades Actividad[]
 }
 
 model MinisterioMiembro {
   id           Int        @id @default(autoincrement())
   miembroId    Int
   ministerioId Int
-  rol          String?    // Rol específico en el ministerio (Pastor, Líder, Colaborador, etc.)
+  rol          String?
+  esLider      Boolean    @default(false)
   fechaInicio  DateTime   @default(now())
   fechaFin     DateTime?
-  estado       String     // "Activo" | "Inactivo"
+  estado       String     @default("Activo")
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
-  miembro      Miembro    @relation(fields: [miembroId], references: [id])
-  ministerio   Ministerio @relation(fields: [ministerioId], references: [id])
+
+  miembro    Miembro    @relation(fields: [miembroId], references: [id], onDelete: Cascade)
+  ministerio Ministerio @relation(fields: [ministerioId], references: [id], onDelete: Cascade)
 
   @@unique([miembroId, ministerioId])
+  @@map("ministerio_miembros")
 }
 
 model FamiliarMiembro {

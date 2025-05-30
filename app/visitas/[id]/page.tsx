@@ -31,6 +31,8 @@ import {
   Users,
   UserCheck,
   Plus,
+  ChevronRight,
+  Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { MiembroAvatar } from "../../../components/MiembroAvatar";
@@ -160,10 +162,8 @@ export default function DetalleVisitaPage({
         <AppSidebar />
         <SidebarInset>
           <div className="flex items-center justify-center h-screen">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-4">Cargando información de la visita...</p>
-            </div>
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Cargando información de la visita...</span>
           </div>
         </SidebarInset>
       </SidebarProvider>

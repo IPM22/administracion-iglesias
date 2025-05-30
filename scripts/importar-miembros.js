@@ -112,7 +112,13 @@ function procesarMiembro(fila) {
   try {
     // Mapear los campos comunes (más flexible para diferentes variaciones)
     const nombre = limpiarNombre(
-      fila.Nombre || fila.nombre || fila.NOMBRE || fila.Name || ""
+      fila.nombres ||
+        fila.Nombres ||
+        fila.Nombre ||
+        fila.nombre ||
+        fila.NOMBRE ||
+        fila.Name ||
+        ""
     );
     const apellido1 = limpiarNombre(
       fila.apellido1 ||
@@ -131,8 +137,8 @@ function procesarMiembro(fila) {
         ""
     );
     const direccion =
-      fila.Direccion ||
       fila.direccion ||
+      fila.Direccion ||
       fila.DIRECCION ||
       fila.Dirección ||
       fila.Address ||

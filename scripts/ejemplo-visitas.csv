@@ -1,0 +1,7 @@
+Nombre,apellido1,apellido2,correo,Direccion,telefonos,fechaNacimiento,sexo,estadoCivil,ocupacion,familia,fechaPrimeraVisita,notasAdicionales
+María,González,Pérez,maria.gonzalez@email.com,"Av. Principal 123, Col. Centro","+1234567890, +0987654321",1985-03-15,Femenino,Casado/a,Doctora,Familia González,2024-01-15,"Primera visita muy positiva"
+Carlos,Rodríguez,,carlos.rodriguez@email.com,"Calle Libertad 456","+1111111111",1990-07-22,Masculino,Soltero/a,Ingeniero,,2024-02-10,"Invitado por Juan Pérez"
+Ana,Martínez,Silva,,"Plaza Central 789, Col. Norte","+2222222222;+3333333333",1988-12-05,Femenino,Divorciado/a,Profesora,Familia Martínez,2024-01-20,"Tiene 2 hijos"
+Pedro,Fernández,,"pedro.fernandez@email.com","Calle Esperanza 321","+4444444444 / +5555555555",1975-09-30,Masculino,Viudo/a,Contador,,2024-03-01,"Muy interesado en actividades"
+Laura,Sánchez,Ruiz,laura.sanchez@email.com,"Av. Reforma 654, Col. Sur","+6666666666",1992-11-18,Femenino,Soltero/a,Estudiante,,2024-02-25,"Joven universitaria"
+Roberto,Jiménez,,,"Plaza Libertad 147","+7777777777, +8888888888",1980-04-12,Masculino,Casado/a,Comerciante,Familia Jiménez,2024-01-30,"Familia de 4 miembros" 

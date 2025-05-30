@@ -1,6 +1,17 @@
+# Scripts de Importación
+
+Este directorio contiene scripts para importar datos desde archivos CSV a la base de datos de la aplicación de administración de iglesias.
+
+## Scripts disponibles
+
+- `importar-miembros.js` - Importa miembros de la iglesia
+- `importar-visitas.js` - Importa visitantes de la iglesia
+
+---
+
 # Script de Importación de Miembros
 
-Este script permite importar miembros desde un archivo Excel/CSV a la base de datos de la aplicación de administración de iglesias.
+Este script permite importar miembros desde un archivo Excel/CSV a la base de datos de la aplicación.
 
 ## Preparación del archivo
 
@@ -55,7 +66,102 @@ node scripts/importar-miembros.js ruta/al/archivo.csv
 node scripts/importar-miembros.js ./miembros.csv
 ```
 
-## Qué hace el script
+---
+
+# Script de Importación de Visitas
+
+Este script permite importar visitantes desde un archivo Excel/CSV a la base de datos de la aplicación.
+
+## Preparación del archivo
+
+### 1. Exportar desde Excel a CSV
+
+1. Abre tu archivo Excel
+2. Ve a `Archivo > Guardar como`
+3. Selecciona formato `CSV (separado por comas) (*.csv)`
+4. Guarda el archivo
+
+### 2. Estructura esperada del CSV
+
+El script busca las siguientes columnas (no importa el orden ni las mayúsculas):
+
+#### Campos básicos (mismo formato que miembros):
+
+- **Nombre** (requerido)
+- **apellido1** (requerido al menos uno)
+- **apellido2** (opcional)
+- **correo** (opcional)
+- **Dirección** (opcional)
+- **telefonos** (opcional, puede contener múltiples números)
+
+#### Campos específicos de visitas:
+
+- **fechaNacimiento** (opcional, formato: YYYY-MM-DD)
+- **sexo** (opcional: "Masculino", "Femenino", "Otro")
+- **estadoCivil** (opcional: "Soltero/a", "Casado/a", "Viudo/a", "Divorciado/a")
+- **ocupacion** (opcional)
+- **familia** (opcional)
+- **fechaPrimeraVisita** (opcional, formato: YYYY-MM-DD)
+- **notasAdicionales** (opcional)
+
+### Ejemplo de estructura CSV para visitas:
+
+```
+Nombre,apellido1,apellido2,correo,Direccion,telefonos,fechaNacimiento,sexo,estadoCivil,ocupacion,familia,fechaPrimeraVisita,notasAdicionales
+María,González,Pérez,maria@email.com,"Av. Principal 123","+1234567890",1985-03-15,Femenino,Casado/a,Doctora,Familia González,2024-01-15,"Primera visita positiva"
+Carlos,Rodríguez,,carlos@email.com,"Calle Libertad 456","+1111111111",1990-07-22,Masculino,Soltero/a,Ingeniero,,2024-02-10,"Invitado por Juan"
+```
+
+## Cómo usar el script de visitas
+
+### 1. Prerrequisitos
+
+Asegúrate de que:
+
+- El servidor de desarrollo esté corriendo (`npm run dev`)
+- El archivo CSV esté en el directorio del proyecto
+
+### 2. Ejecutar el script
+
+```bash
+# Navega al directorio del proyecto
+cd /ruta/a/tu/proyecto
+
+# Ejecuta el script
+node scripts/importar-visitas.js ruta/al/archivo.csv
+```
+
+### Ejemplo:
+
+```bash
+node scripts/importar-visitas.js ./visitas.csv
+```
+
+## Diferencias entre miembros y visitas
+
+### Campos únicos de visitas:
+
+- `fechaNacimiento`: Fecha de nacimiento (formato ISO)
+- `sexo`: Género de la persona
+- `estadoCivil`: Estado civil actual
+- `ocupacion`: Trabajo o profesión
+- `familia`: Información familiar
+- `fechaPrimeraVisita`: Cuándo visitó por primera vez
+- `notasAdicionales`: Observaciones especiales
+- `estado`: Se establece automáticamente como "Activa"
+
+### Validaciones específicas:
+
+- El script valida que `sexo` sea uno de los valores permitidos
+- El script valida que `estadoCivil` sea uno de los valores permitidos
+- Las fechas se procesan automáticamente al formato ISO
+- Si un campo no es válido, se establece como `null`
+
+---
+
+# Procesamiento común (miembros y visitas)
+
+## Qué hacen los scripts
 
 ### Procesamiento automático:
 
@@ -92,21 +198,21 @@ apellidos: "García López"
 direccion: "Calle Principal 123"
 telefono: "+1234567890"
 celular: "+0987654321"
-estado: "Activo"
+estado: "Activo" (miembros) / "Activa" (visitas)
 ```
 
 ## Manejo de errores
 
-El script maneja varios tipos de errores:
+Los scripts manejan varios tipos de errores:
 
-- **Duplicados**: Si ya existe un miembro con el mismo nombre y apellidos
+- **Duplicados**: Si ya existe una persona con el mismo correo
 - **Datos incompletos**: Salta filas sin nombre o apellidos
 - **Errores de conexión**: Reintentos automáticos
 - **Formato inválido**: Muestra qué líneas tienen problemas
 
 ## Resultado de la importación
 
-Al finalizar, el script muestra:
+Al finalizar, los scripts muestran:
 
 ```
 📈 Resultados de la importación:
@@ -114,7 +220,7 @@ Al finalizar, el script muestra:
 ❌ Errores: 2
 
 📋 Detalles de errores:
-  1. María García: Ya existe un miembro con el nombre María García
+  1. María García: Ya existe una persona con ese correo electrónico
   2. Pedro : Los nombres y apellidos son requeridos
 ```
 
@@ -126,7 +232,7 @@ Al finalizar, el script muestra:
 
    - Elimina filas vacías
    - Verifica que nombres y apellidos estén completos
-   - Estandariza el formato de teléfonos
+   - Estandariza el formato de teléfonos y fechas
 
 2. **Formatos de teléfono aceptados**:
 
@@ -135,7 +241,13 @@ Al finalizar, el script muestra:
    - `(123) 456-7890`
    - `123 456 7890`
 
-3. **Separadores para múltiples teléfonos**:
+3. **Formatos de fecha aceptados**:
+
+   - `2024-01-15` (YYYY-MM-DD)
+   - `01/15/2024` (MM/DD/YYYY)
+   - `15/01/2024` (DD/MM/YYYY)
+
+4. **Separadores para múltiples teléfonos**:
    - Coma: `123456789, 987654321`
    - Punto y coma: `123456789; 987654321`
    - Slash: `123456789 / 987654321`
@@ -146,10 +258,10 @@ Al finalizar, el script muestra:
 
 ```bash
 # Verifica la ruta completa
-ls -la miembros.csv
+ls -la archivo.csv
 
 # O usa ruta absoluta
-node scripts/importar-miembros.js /ruta/completa/al/archivo.csv
+node scripts/importar-[tipo].js /ruta/completa/al/archivo.csv
 ```
 
 ### Error de conexión:

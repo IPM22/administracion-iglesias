@@ -4,19 +4,18 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 // Helper function para manejar strings vacios
-function parseString(value: any): string | undefined {
+function parseString(value: unknown): string | undefined {
   if (typeof value === "string" && value.trim() === "") {
     return undefined;
   }
-  return value;
+  return value as string;
 }
 
 // Helper function para manejar fechas
-function parseDate(value: any): Date | undefined {
-  if (!value || (typeof value === "string" && value.trim() === "")) {
-    return undefined;
-  }
-  return new Date(value);
+function parseDate(dateString: unknown): Date | undefined {
+  if (!dateString || dateString === "") return undefined;
+  const date = new Date(dateString as string);
+  return isNaN(date.getTime()) ? undefined : date;
 }
 
 export async function GET() {
@@ -47,9 +46,7 @@ export async function GET() {
           },
         },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
     });
 
     return NextResponse.json(visitas);
@@ -104,7 +101,7 @@ export async function POST(request: NextRequest) {
         estadoCivil: parseString(estadoCivil),
         ocupacion: parseString(ocupacion),
         familia: parseString(familia),
-        estado: parseString(estado) || "Activa",
+        estado: parseString(estado) || "Nuevo",
         foto: parseString(foto),
         notasAdicionales: parseString(notasAdicionales),
         fechaPrimeraVisita: parseDate(fechaPrimeraVisita),
@@ -112,10 +109,15 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(nuevaVisita, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error al crear visita:", error);
 
-    if (error.code === "P2002") {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "P2002"
+    ) {
       return NextResponse.json(
         { error: "Ya existe una visita con ese correo electrónico" },
         { status: 400 }

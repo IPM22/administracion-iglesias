@@ -37,7 +37,17 @@ export async function GET(
       where: { visitaId: visitaId },
       include: {
         tipoActividad: true,
-        actividad: true,
+        actividad: {
+          include: {
+            ministerio: {
+              select: {
+                id: true,
+                nombre: true,
+                descripcion: true,
+              },
+            },
+          },
+        },
         invitadoPor: {
           select: {
             id: true,
@@ -126,7 +136,17 @@ export async function POST(
       },
       include: {
         tipoActividad: true,
-        actividad: true,
+        actividad: {
+          include: {
+            ministerio: {
+              select: {
+                id: true,
+                nombre: true,
+                descripcion: true,
+              },
+            },
+          },
+        },
         invitadoPor: {
           select: {
             id: true,
@@ -142,6 +162,73 @@ export async function POST(
     console.error("Error al crear registro de historial:", error);
     return NextResponse.json(
       { error: "Error al crear el registro de historial" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const visitaId = parseInt(id);
+
+    if (isNaN(visitaId)) {
+      return NextResponse.json(
+        { error: "ID de visita inválido" },
+        { status: 400 }
+      );
+    }
+
+    // Obtener el ID del registro de historial desde la query string
+    const url = new URL(request.url);
+    const historialId = url.searchParams.get("historialId");
+
+    if (!historialId) {
+      return NextResponse.json(
+        { error: "ID de registro de historial requerido" },
+        { status: 400 }
+      );
+    }
+
+    const historialIdNum = parseInt(historialId);
+    if (isNaN(historialIdNum)) {
+      return NextResponse.json(
+        { error: "ID de registro de historial inválido" },
+        { status: 400 }
+      );
+    }
+
+    // Verificar que el registro existe y pertenece a la visita correcta
+    const registroExistente = await prisma.historialVisita.findFirst({
+      where: {
+        id: historialIdNum,
+        visitaId: visitaId,
+      },
+    });
+
+    if (!registroExistente) {
+      return NextResponse.json(
+        { error: "Registro de historial no encontrado" },
+        { status: 404 }
+      );
+    }
+
+    // Eliminar el registro
+    await prisma.historialVisita.delete({
+      where: { id: historialIdNum },
+    });
+
+    return NextResponse.json(
+      { message: "Registro eliminado exitosamente" },
+      { status: 200 }
+    );
+  } catch (error: unknown) {
+    console.error("Error al eliminar registro de historial:", error);
+    return NextResponse.json(
+      { error: "Error al eliminar el registro de historial" },
       { status: 500 }
     );
   }

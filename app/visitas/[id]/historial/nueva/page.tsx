@@ -48,10 +48,57 @@ import { useForm, type ControllerRenderProps } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { ModeToggle } from "../../../../../components/mode-toggle";
+import PersonaSelector from "../../../../../components/PersonaSelector";
+
+interface TipoActividad {
+  id: number;
+  nombre: string;
+  tipo: string;
+}
+
+interface Actividad {
+  id: number;
+  nombre: string;
+  descripcion?: string;
+  fecha: string;
+  horaInicio?: string;
+  horaFin?: string;
+  ubicacion?: string;
+  estado: string;
+  tipoActividad: TipoActividad;
+}
+
+interface Miembro {
+  id: number;
+  nombres: string;
+  apellidos: string;
+  correo?: string;
+  estado: string;
+}
+
+interface Visita {
+  id: number;
+  nombres: string;
+  apellidos: string;
+  correo?: string;
+  estado?: string;
+}
+
+interface Persona {
+  id: number;
+  nombres: string;
+  apellidos: string;
+  foto?: string;
+  correo?: string;
+  telefono?: string;
+  celular?: string;
+  tipo: "miembro" | "visita";
+  estado?: string;
+}
 
 const formSchema = z
   .object({
-    fecha: z.string().min(1, "La fecha es requerida"),
+    fecha: z.string().optional(),
     tipoActividadId: z.string().optional(),
     actividadId: z.string().optional(),
     invitadoPorId: z.string().optional(),
@@ -60,27 +107,21 @@ const formSchema = z
   .refine((data) => data.tipoActividadId || data.actividadId, {
     message: "Debe seleccionar un tipo de actividad o una actividad específica",
     path: ["tipoActividadId"],
-  });
+  })
+  .refine(
+    (data) => {
+      // Si hay una actividad específica seleccionada, no necesita fecha manual
+      if (data.actividadId) return true;
+      // Si es tipo regular o no hay tipo, necesita fecha
+      return data.fecha && data.fecha.trim() !== "";
+    },
+    {
+      message: "La fecha es requerida para actividades regulares",
+      path: ["fecha"],
+    }
+  );
 
 type FormValues = z.infer<typeof formSchema>;
-
-interface TipoActividad {
-  id: number;
-  nombre: string;
-  tipo: string;
-}
-
-interface Miembro {
-  id: number;
-  nombres: string;
-  apellidos: string;
-}
-
-interface Visita {
-  id: number;
-  nombres: string;
-  apellidos: string;
-}
 
 export default function NuevaEntradaHistorialPage({
   params,
@@ -93,16 +134,22 @@ export default function NuevaEntradaHistorialPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tiposActividad, setTiposActividad] = useState<TipoActividad[]>([]);
-  const [miembros, setMiembros] = useState<Miembro[]>([]);
+  const [actividades, setActividades] = useState<Actividad[]>([]);
+  const [personas, setPersonas] = useState<Persona[]>([]);
+  const [personaSeleccionada, setPersonaSeleccionada] =
+    useState<Persona | null>(null);
   const [visita, setVisita] = useState<Visita | null>(null);
+  const [tipoSeleccionado, setTipoSeleccionado] = useState<string>("");
+  const [actividadSeleccionada, setActividadSeleccionada] =
+    useState<Actividad | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      fecha: new Date().toISOString().split("T")[0], // Fecha actual por defecto
+      fecha: undefined,
       tipoActividadId: "",
       actividadId: "",
-      invitadoPorId: "none",
+      invitadoPorId: undefined,
       observaciones: "",
     },
   });
@@ -136,7 +183,34 @@ export default function NuevaEntradaHistorialPage({
           throw new Error("Error al obtener la lista de miembros");
         }
         const miembrosData = await miembrosResponse.json();
-        setMiembros(miembrosData);
+
+        // Obtener lista de visitas para el campo "invitado por"
+        const visitasResponse = await fetch("/api/visitas");
+        if (!visitasResponse.ok) {
+          throw new Error("Error al obtener la lista de visitas");
+        }
+        const visitasData = await visitasResponse.json();
+        // Filtrar para excluir la visita actual
+        const visitasFiltradas = visitasData.filter(
+          (v: Visita) => v.id !== parseInt(id)
+        );
+
+        // Crear lista combinada de invitados por
+        const miembrosConTipo: Persona[] = miembrosData.map(
+          (miembro: Miembro) => ({
+            ...miembro,
+            tipo: "miembro" as const,
+          })
+        );
+
+        const visitasConTipo: Persona[] = visitasFiltradas.map(
+          (visita: Visita) => ({
+            ...visita,
+            tipo: "visita" as const,
+          })
+        );
+
+        setPersonas([...miembrosConTipo, ...visitasConTipo]);
       } catch (error) {
         console.error("Error:", error);
         setError("Error al cargar los datos necesarios");
@@ -148,6 +222,89 @@ export default function NuevaEntradaHistorialPage({
     fetchData();
   }, [id]);
 
+  // Cargar actividades cuando se selecciona un tipo especial
+  useEffect(() => {
+    const cargarActividades = async () => {
+      if (!tipoSeleccionado) {
+        setActividades([]);
+        return;
+      }
+
+      const tipoActividad = tiposActividad.find(
+        (tipo) => tipo.id.toString() === tipoSeleccionado
+      );
+
+      if (tipoActividad?.tipo === "Especial") {
+        try {
+          const response = await fetch("/api/actividades");
+          if (response.ok) {
+            const data = await response.json();
+            // Filtrar solo actividades del tipo seleccionado (incluyendo pasadas y futuras)
+            const actividadesFiltradas = data.filter(
+              (act: Actividad) =>
+                act.tipoActividad.id.toString() === tipoSeleccionado
+            );
+            // Ordenar por fecha, más recientes primero
+            actividadesFiltradas.sort(
+              (a: Actividad, b: Actividad) =>
+                new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+            );
+            setActividades(actividadesFiltradas);
+          }
+        } catch (error) {
+          console.error("Error al cargar actividades:", error);
+        }
+      } else {
+        setActividades([]);
+        // Si cambia a tipo regular, restaurar la fecha actual
+        if (tipoActividad?.tipo === "Regular") {
+          form.setValue("fecha", new Date().toISOString().split("T")[0]);
+        }
+      }
+    };
+
+    cargarActividades();
+  }, [tipoSeleccionado, tiposActividad, form]);
+
+  // Actualizar la fecha automáticamente cuando se selecciona una actividad específica
+  useEffect(() => {
+    const actividadIdSeleccionada = form.watch("actividadId");
+
+    if (actividadIdSeleccionada && actividades.length > 0) {
+      const actividadSeleccionada = actividades.find(
+        (act) => act.id.toString() === actividadIdSeleccionada
+      );
+
+      if (actividadSeleccionada) {
+        setActividadSeleccionada(actividadSeleccionada);
+        // Usar la fecha de la actividad específica
+        const fechaActividad = new Date(actividadSeleccionada.fecha)
+          .toISOString()
+          .split("T")[0];
+        form.setValue("fecha", fechaActividad);
+      }
+    } else {
+      setActividadSeleccionada(null);
+    }
+  }, [form.watch("actividadId"), actividades, form]);
+
+  // Función para determinar si se debe mostrar el campo de fecha
+  const deberMostrarCampoFecha = () => {
+    const tipoActividad = tiposActividad.find(
+      (tipo) => tipo.id.toString() === tipoSeleccionado
+    );
+    // Solo mostrar para actividades específicamente regulares
+    return tipoActividad?.tipo === "Regular";
+  };
+
+  // Función para obtener la fecha que se usará en el registro
+  const obtenerFechaParaRegistro = (values: FormValues) => {
+    if (actividadSeleccionada) {
+      return actividadSeleccionada.fecha;
+    }
+    return values.fecha || new Date().toISOString().split("T")[0];
+  };
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setSaving(true);
     setError(null);
@@ -158,13 +315,12 @@ export default function NuevaEntradaHistorialPage({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          fecha: values.fecha,
+          fecha: obtenerFechaParaRegistro(values),
           tipoActividadId: values.tipoActividadId || null,
           actividadId: values.actividadId || null,
-          invitadoPorId:
-            values.invitadoPorId === "none"
-              ? null
-              : values.invitadoPorId || null,
+          invitadoPorId: values.invitadoPorId
+            ? parseInt(values.invitadoPorId)
+            : null,
           observaciones: values.observaciones || null,
         }),
       });
@@ -276,69 +432,207 @@ export default function NuevaEntradaHistorialPage({
                   onSubmit={form.handleSubmit(onSubmit)}
                   className="space-y-6"
                 >
-                  {/* Fecha de la visita */}
-                  <FormField
-                    control={form.control}
-                    name="fecha"
-                    render={({
-                      field,
-                    }: {
-                      field: ControllerRenderProps<FormValues>;
-                    }) => (
-                      <FormItem>
-                        <FormLabel>Fecha de la Visita</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          Fecha en que {getNombreCompleto()} asistió
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {/* Actividad: Tipo y campos relacionados */}
+                  <div className="space-y-4">
+                    {/* Tipo de Actividad */}
+                    <FormField
+                      control={form.control}
+                      name="tipoActividadId"
+                      render={({
+                        field,
+                      }: {
+                        field: ControllerRenderProps<FormValues>;
+                      }) => (
+                        <FormItem>
+                          <FormLabel>Tipo de Actividad</FormLabel>
+                          <Select
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              setTipoSeleccionado(value);
+                              // Limpiar selección de actividad específica
+                              form.setValue("actividadId", "");
+                              setActividadSeleccionada(null);
 
-                  {/* Tipo de Actividad */}
-                  <FormField
-                    control={form.control}
-                    name="tipoActividadId"
-                    render={({
-                      field,
-                    }: {
-                      field: ControllerRenderProps<FormValues>;
-                    }) => (
-                      <FormItem>
-                        <FormLabel>Tipo de Actividad</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecciona el tipo de actividad" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {tiposActividad.map((tipo) => (
-                              <SelectItem
-                                key={tipo.id}
-                                value={tipo.id.toString()}
-                              >
-                                {tipo.nombre} ({tipo.tipo})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          Selecciona si fue una actividad regular (culto,
-                          estudio) o especial
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                              // Si es actividad regular, establecer fecha actual
+                              const tipoActividad = tiposActividad.find(
+                                (tipo) => tipo.id.toString() === value
+                              );
+                              if (tipoActividad?.tipo === "Regular") {
+                                form.setValue(
+                                  "fecha",
+                                  new Date().toISOString().split("T")[0]
+                                );
+                              } else {
+                                form.setValue("fecha", undefined);
+                              }
+                            }}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecciona el tipo" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {tiposActividad.map((tipo) => (
+                                <SelectItem
+                                  key={tipo.id}
+                                  value={tipo.id.toString()}
+                                >
+                                  {tipo.nombre} ({tipo.tipo})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Regular (culto, estudio) o especial
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  {/* Invitado por */}
+                    {/* Fecha de la visita - Solo para actividades regulares */}
+                    {deberMostrarCampoFecha() ? (
+                      <FormField
+                        control={form.control}
+                        name="fecha"
+                        render={({
+                          field,
+                        }: {
+                          field: ControllerRenderProps<FormValues>;
+                        }) => (
+                          <FormItem>
+                            <FormLabel>Fecha de la Visita</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              Fecha en que {getNombreCompleto()} asistió
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    ) : null}
+
+                    {/* Actividad Específica - Solo para actividades especiales */}
+                    <FormField
+                      control={form.control}
+                      name="actividadId"
+                      render={({
+                        field,
+                      }: {
+                        field: ControllerRenderProps<FormValues>;
+                      }) => (
+                        <FormItem>
+                          <FormLabel>Actividad Específica</FormLabel>
+                          <Select
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              // Buscar y establecer la actividad seleccionada
+                              if (value && actividades.length > 0) {
+                                const actividad = actividades.find(
+                                  (act) => act.id.toString() === value
+                                );
+                                if (actividad) {
+                                  setActividadSeleccionada(actividad);
+                                  const fechaActividad = new Date(
+                                    actividad.fecha
+                                  )
+                                    .toISOString()
+                                    .split("T")[0];
+                                  form.setValue("fecha", fechaActividad);
+                                }
+                              } else {
+                                setActividadSeleccionada(null);
+                              }
+                            }}
+                            value={field.value}
+                            disabled={
+                              !tipoSeleccionado ||
+                              tiposActividad.find(
+                                (t) => t.id.toString() === tipoSeleccionado
+                              )?.tipo !== "Especial"
+                            }
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue
+                                  placeholder={
+                                    !tipoSeleccionado
+                                      ? "Primero selecciona el tipo"
+                                      : tiposActividad.find(
+                                          (t) =>
+                                            t.id.toString() === tipoSeleccionado
+                                        )?.tipo !== "Especial"
+                                      ? "Solo para actividades especiales"
+                                      : "Selecciona la actividad"
+                                  }
+                                />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {actividades.map((actividad) => (
+                                <SelectItem
+                                  key={actividad.id}
+                                  value={actividad.id.toString()}
+                                >
+                                  <div className="flex flex-col">
+                                    <span>{actividad.nombre}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {new Date(
+                                        actividad.fecha
+                                      ).toLocaleDateString()}
+                                      {actividad.horaInicio &&
+                                        ` - ${actividad.horaInicio}`}
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Opcional - Solo para eventos especiales
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Información de fecha automática para actividades especiales */}
+                    {actividadSeleccionada && (
+                      <div className="rounded-lg border p-4 bg-muted/50">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Calendar className="h-4 w-4 text-primary" />
+                          <span className="font-medium">
+                            Fecha de la Actividad
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          La fecha se tomará automáticamente de la actividad
+                          específica:
+                        </p>
+                        <p className="font-medium mt-1">
+                          {new Date(
+                            actividadSeleccionada.fecha
+                          ).toLocaleDateString("es-ES", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                          {actividadSeleccionada.horaInicio && (
+                            <span className="text-muted-foreground">
+                              {" "}
+                              a las {actividadSeleccionada.horaInicio}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Invitado por con PersonaSelector */}
                   <FormField
                     control={form.control}
                     name="invitadoPorId"
@@ -348,32 +642,26 @@ export default function NuevaEntradaHistorialPage({
                       field: ControllerRenderProps<FormValues>;
                     }) => (
                       <FormItem>
-                        <FormLabel>Invitado por</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecciona quién lo invitó (opcional)" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="none">
-                              Sin especificar
-                            </SelectItem>
-                            {miembros.map((miembro) => (
-                              <SelectItem
-                                key={miembro.id}
-                                value={miembro.id.toString()}
-                              >
-                                {miembro.nombres} {miembro.apellidos}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormLabel>Invitado por (Opcional)</FormLabel>
+                        <FormControl>
+                          <PersonaSelector
+                            personas={personas}
+                            onSeleccionar={(persona: Persona | null) => {
+                              if (persona) {
+                                field.onChange(persona.id.toString());
+                                setPersonaSeleccionada(persona);
+                              } else {
+                                field.onChange(undefined);
+                                setPersonaSeleccionada(null);
+                              }
+                            }}
+                            personaSeleccionada={personaSeleccionada}
+                            placeholder="Buscar miembro o visita que invitó..."
+                          />
+                        </FormControl>
                         <FormDescription>
-                          Opcional - Indica qué miembro invitó a esta persona
+                          Busca y selecciona el miembro o visita que invitó a
+                          esta persona
                         </FormDescription>
                         <FormMessage />
                       </FormItem>

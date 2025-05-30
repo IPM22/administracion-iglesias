@@ -133,10 +133,6 @@ const data = {
           title: "Nueva Familia",
           url: "/familias/nueva",
         },
-        {
-          title: "Árbol Familiar",
-          url: "/familias/arbol",
-        },
       ],
     },
     {

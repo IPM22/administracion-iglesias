@@ -44,6 +44,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -76,7 +77,7 @@ export default function MiembrosPage() {
   const router = useRouter();
   const [miembros, setMiembros] = useState<Miembro[]>([]);
   const [miembrosFiltrados, setMiembrosFiltrados] = useState<Miembro[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
   // Estados para paginación
@@ -109,7 +110,7 @@ export default function MiembrosPage() {
       } catch (error) {
         console.error("Error:", error);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
@@ -274,397 +275,418 @@ export default function MiembrosPage() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4 flex-1">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Miembros</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
+        {loading ? (
+          <div className="flex items-center justify-center h-screen">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Cargando miembros...</span>
           </div>
-          <div className="px-4">
-            <ModeToggle />
-          </div>
-        </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Gestión de Miembros</CardTitle>
-                  <CardDescription>
-                    Administra la información de los miembros de la iglesia
-                  </CardDescription>
-                </div>
-                <Button onClick={() => router.push("/miembros/nuevo")}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nuevo Miembro
-                </Button>
+        ) : (
+          <>
+            <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+              <div className="flex items-center gap-2 px-4 flex-1">
+                <SidebarTrigger className="-ml-1" />
+                <Separator orientation="vertical" className="mr-2 h-4" />
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <BreadcrumbItem className="hidden md:block">
+                      <BreadcrumbLink href="/dashboard">
+                        Dashboard
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator className="hidden md:block" />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage>Miembros</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2 flex-1">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar miembros..."
-                      className="pl-8 pr-8"
-                      value={searchTerm}
-                      onChange={handleSearchChange}
-                    />
-                    {searchTerm && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-1 top-1 h-6 w-6 p-0"
-                        onClick={() => setSearchTerm("")}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowFilters(!showFilters)}
-                  >
-                    <Filter className="mr-2 h-4 w-4" />
-                    Filtros
-                  </Button>
-                </div>
-                {searchTerm && (
-                  <div className="text-sm text-muted-foreground ml-4">
-                    {miembrosFiltrados.length} resultado
-                    {miembrosFiltrados.length !== 1 ? "s" : ""} encontrado
-                    {miembrosFiltrados.length !== 1 ? "s" : ""}
-                    {totalPages > 1 && (
-                      <span>
-                        {" "}
-                        • Página {currentPage} de {totalPages}
-                      </span>
-                    )}
-                  </div>
-                )}
+              <div className="px-4">
+                <ModeToggle />
               </div>
-
-              {/* Panel de Filtros */}
-              {showFilters && (
-                <div className="border rounded-lg p-4 mb-4 bg-muted">
-                  <div className="flex flex-wrap items-end">
-                    <div className="w-40 space-y-1">
-                      <label className="text-sm font-medium">Estado</label>
-                      <Select
-                        value={filtroEstado}
-                        onValueChange={setFiltroEstado}
-                      >
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="todos">Todos</SelectItem>
-                          <SelectItem value="Activo">Activo</SelectItem>
-                          <SelectItem value="Inactivo">Inactivo</SelectItem>
-                        </SelectContent>
-                      </Select>
+            </header>
+            <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Gestión de Miembros</CardTitle>
+                      <CardDescription>
+                        Administra la información de los miembros de la iglesia
+                      </CardDescription>
                     </div>
-
-                    <div className="w-40 space-y-1">
-                      <label className="text-sm font-medium">Sexo</label>
-                      <Select value={filtroSexo} onValueChange={setFiltroSexo}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="todos">Todos</SelectItem>
-                          <SelectItem value="Masculino">Masculino</SelectItem>
-                          <SelectItem value="Femenino">Femenino</SelectItem>
-                          <SelectItem value="Otro">Otro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="w-40 space-y-1">
-                      <label className="text-sm font-medium">Familia</label>
-                      <Select
-                        value={filtroFamilia}
-                        onValueChange={setFiltroFamilia}
-                      >
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="todos">Todas</SelectItem>
-                          {getOpcionesFamilias().map((familia) => (
-                            <SelectItem key={familia} value={familia}>
-                              {familia}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={limpiarFiltros}
-                    >
-                      Limpiar Filtros
+                    <Button onClick={() => router.push("/miembros/nuevo")}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Nuevo Miembro
                     </Button>
                   </div>
-
-                  <div className="mt-3">
-                    <span className="text-sm text-muted-foreground">
-                      Mostrando {miembrosFiltrados.length} de {miembros.length}{" "}
-                      miembros
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-16">Foto</TableHead>
-                      <TableHead>Nombre Completo</TableHead>
-                      <TableHead>Contacto</TableHead>
-                      <TableHead>Ocupación</TableHead>
-                      <TableHead>Familia</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8">
-                          Cargando miembros...
-                        </TableCell>
-                      </TableRow>
-                    ) : miembrosFiltrados.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8">
-                          {searchTerm
-                            ? `No se encontraron miembros que coincidan con "${searchTerm}"`
-                            : "No hay miembros registrados"}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      currentItems.map((miembro) => (
-                        <TableRow key={miembro.id}>
-                          <TableCell>
-                            <MiembroAvatar
-                              foto={miembro.foto}
-                              nombre={`${miembro.nombres} ${miembro.apellidos}`}
-                              size="sm"
-                            />
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            <div>
-                              <div>
-                                {miembro.nombres} {miembro.apellidos}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              <div>{miembro.correo}</div>
-                              <div className="text-muted-foreground">
-                                {miembro.telefono}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>{miembro.ocupacion}</TableCell>
-                          <TableCell>{miembro.familia}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                miembro.estado === "Activo"
-                                  ? "default"
-                                  : "secondary"
-                              }
-                            >
-                              {miembro.estado}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    router.push(`/miembros/${miembro.id}`)
-                                  }
-                                >
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  Ver Detalles
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    router.push(
-                                      `/miembros/${miembro.id}/editar`
-                                    )
-                                  }
-                                >
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="text-red-600"
-                                  onClick={() => mostrarDialogEliminar(miembro)}
-                                  disabled={isDeleting}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  {isDeleting ? "Eliminando..." : "Eliminar"}
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* Componentes de paginación */}
-              {totalItems > 0 && (
-                <div className="flex items-center justify-between mt-4">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-muted-foreground">
-                      Mostrando {startIndex + 1} a{" "}
-                      {Math.min(endIndex, totalItems)} de {totalItems} miembros
-                    </span>
-                  </div>
-
-                  <div className="flex items-center space-x-6">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-muted-foreground">
-                        Elementos por página:
-                      </span>
-                      <Select
-                        value={itemsPerPage.toString()}
-                        onValueChange={(value) =>
-                          changeItemsPerPage(parseInt(value))
-                        }
-                      >
-                        <SelectTrigger className="w-16">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="5">5</SelectItem>
-                          <SelectItem value="10">10</SelectItem>
-                          <SelectItem value="25">25</SelectItem>
-                          <SelectItem value="50">50</SelectItem>
-                          <SelectItem value="100">100</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={goToPrevious}
-                        disabled={currentPage === 1}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                        Anterior
-                      </Button>
-
-                      <div className="flex items-center space-x-1">
-                        {Array.from(
-                          { length: Math.min(5, totalPages) },
-                          (_, i) => {
-                            let pageNumber;
-                            if (totalPages <= 5) {
-                              pageNumber = i + 1;
-                            } else if (currentPage <= 3) {
-                              pageNumber = i + 1;
-                            } else if (currentPage >= totalPages - 2) {
-                              pageNumber = totalPages - 4 + i;
-                            } else {
-                              pageNumber = currentPage - 2 + i;
-                            }
-
-                            return (
-                              <Button
-                                key={pageNumber}
-                                variant={
-                                  currentPage === pageNumber
-                                    ? "default"
-                                    : "outline"
-                                }
-                                size="sm"
-                                className="w-8 h-8 p-0"
-                                onClick={() => goToPage(pageNumber)}
-                              >
-                                {pageNumber}
-                              </Button>
-                            );
-                          }
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-2 flex-1">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Buscar miembros..."
+                          className="pl-8 pr-8"
+                          value={searchTerm}
+                          onChange={handleSearchChange}
+                        />
+                        {searchTerm && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-1 top-1 h-6 w-6 p-0"
+                            onClick={() => setSearchTerm("")}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
                         )}
                       </div>
-
                       <Button
                         variant="outline"
-                        size="sm"
-                        onClick={goToNext}
-                        disabled={currentPage === totalPages}
+                        onClick={() => setShowFilters(!showFilters)}
                       >
-                        Siguiente
-                        <ChevronRight className="h-4 w-4 ml-1" />
+                        <Filter className="mr-2 h-4 w-4" />
+                        Filtros
                       </Button>
                     </div>
+                    {searchTerm && (
+                      <div className="text-sm text-muted-foreground ml-4">
+                        {miembrosFiltrados.length} resultado
+                        {miembrosFiltrados.length !== 1 ? "s" : ""} encontrado
+                        {miembrosFiltrados.length !== 1 ? "s" : ""}
+                        {totalPages > 1 && (
+                          <span>
+                            {" "}
+                            • Página {currentPage} de {totalPages}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+
+                  {/* Panel de Filtros */}
+                  {showFilters && (
+                    <div className="border rounded-lg p-4 mb-4 bg-muted">
+                      <div className="flex flex-wrap items-end">
+                        <div className="w-40 space-y-1">
+                          <label className="text-sm font-medium">Estado</label>
+                          <Select
+                            value={filtroEstado}
+                            onValueChange={setFiltroEstado}
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="todos">Todos</SelectItem>
+                              <SelectItem value="Activo">Activo</SelectItem>
+                              <SelectItem value="Inactivo">Inactivo</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="w-40 space-y-1">
+                          <label className="text-sm font-medium">Sexo</label>
+                          <Select
+                            value={filtroSexo}
+                            onValueChange={setFiltroSexo}
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="todos">Todos</SelectItem>
+                              <SelectItem value="Masculino">
+                                Masculino
+                              </SelectItem>
+                              <SelectItem value="Femenino">Femenino</SelectItem>
+                              <SelectItem value="Otro">Otro</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="w-40 space-y-1">
+                          <label className="text-sm font-medium">Familia</label>
+                          <Select
+                            value={filtroFamilia}
+                            onValueChange={setFiltroFamilia}
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="todos">Todas</SelectItem>
+                              {getOpcionesFamilias().map((familia) => (
+                                <SelectItem key={familia} value={familia}>
+                                  {familia}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={limpiarFiltros}
+                        >
+                          Limpiar Filtros
+                        </Button>
+                      </div>
+
+                      <div className="mt-3">
+                        <span className="text-sm text-muted-foreground">
+                          Mostrando {miembrosFiltrados.length} de{" "}
+                          {miembros.length} miembros
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-16">Foto</TableHead>
+                          <TableHead>Nombre Completo</TableHead>
+                          <TableHead>Contacto</TableHead>
+                          <TableHead>Ocupación</TableHead>
+                          <TableHead>Familia</TableHead>
+                          <TableHead>Estado</TableHead>
+                          <TableHead className="text-right">Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {miembrosFiltrados.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-8">
+                              {searchTerm
+                                ? `No se encontraron miembros que coincidan con "${searchTerm}"`
+                                : "No hay miembros registrados"}
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          currentItems.map((miembro) => (
+                            <TableRow key={miembro.id}>
+                              <TableCell>
+                                <MiembroAvatar
+                                  foto={miembro.foto}
+                                  nombre={`${miembro.nombres} ${miembro.apellidos}`}
+                                  size="sm"
+                                />
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                <div>
+                                  <div>
+                                    {miembro.nombres} {miembro.apellidos}
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm">
+                                  <div>{miembro.correo}</div>
+                                  <div className="text-muted-foreground">
+                                    {miembro.telefono}
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>{miembro.ocupacion}</TableCell>
+                              <TableCell>{miembro.familia}</TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={
+                                    miembro.estado === "Activo"
+                                      ? "default"
+                                      : "secondary"
+                                  }
+                                >
+                                  {miembro.estado}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        router.push(`/miembros/${miembro.id}`)
+                                      }
+                                    >
+                                      <Eye className="mr-2 h-4 w-4" />
+                                      Ver Detalles
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        router.push(
+                                          `/miembros/${miembro.id}/editar`
+                                        )
+                                      }
+                                    >
+                                      <Edit className="mr-2 h-4 w-4" />
+                                      Editar
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="text-red-600"
+                                      onClick={() =>
+                                        mostrarDialogEliminar(miembro)
+                                      }
+                                      disabled={isDeleting}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      {isDeleting
+                                        ? "Eliminando..."
+                                        : "Eliminar"}
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Componentes de paginación */}
+                  {totalItems > 0 && (
+                    <div className="flex items-center justify-between mt-4">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-muted-foreground">
+                          Mostrando {startIndex + 1} a{" "}
+                          {Math.min(endIndex, totalItems)} de {totalItems}{" "}
+                          miembros
+                        </span>
+                      </div>
+
+                      <div className="flex items-center space-x-6">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-muted-foreground">
+                            Elementos por página:
+                          </span>
+                          <Select
+                            value={itemsPerPage.toString()}
+                            onValueChange={(value) =>
+                              changeItemsPerPage(parseInt(value))
+                            }
+                          >
+                            <SelectTrigger className="w-16">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="5">5</SelectItem>
+                              <SelectItem value="10">10</SelectItem>
+                              <SelectItem value="25">25</SelectItem>
+                              <SelectItem value="50">50</SelectItem>
+                              <SelectItem value="100">100</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={goToPrevious}
+                            disabled={currentPage === 1}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                            Anterior
+                          </Button>
+
+                          <div className="flex items-center space-x-1">
+                            {Array.from(
+                              { length: Math.min(5, totalPages) },
+                              (_, i) => {
+                                let pageNumber;
+                                if (totalPages <= 5) {
+                                  pageNumber = i + 1;
+                                } else if (currentPage <= 3) {
+                                  pageNumber = i + 1;
+                                } else if (currentPage >= totalPages - 2) {
+                                  pageNumber = totalPages - 4 + i;
+                                } else {
+                                  pageNumber = currentPage - 2 + i;
+                                }
+
+                                return (
+                                  <Button
+                                    key={pageNumber}
+                                    variant={
+                                      currentPage === pageNumber
+                                        ? "default"
+                                        : "outline"
+                                    }
+                                    size="sm"
+                                    className="w-8 h-8 p-0"
+                                    onClick={() => goToPage(pageNumber)}
+                                  >
+                                    {pageNumber}
+                                  </Button>
+                                );
+                              }
+                            )}
+                          </div>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={goToNext}
+                            disabled={currentPage === totalPages}
+                          >
+                            Siguiente
+                            <ChevronRight className="h-4 w-4 ml-1" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
+
+        {/* Dialog de confirmación para eliminar */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>¿Estás seguro?</DialogTitle>
+              <DialogDescription>
+                Esta acción no se puede deshacer. Se eliminará permanentemente
+                el miembro{" "}
+                <strong>
+                  {miembroAEliminar?.nombres} {miembroAEliminar?.apellidos}
+                </strong>{" "}
+                y todos sus datos asociados.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={cancelarEliminacion}
+                disabled={isDeleting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmarEliminacion}
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Eliminando..." : "Eliminar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </SidebarInset>
-      <Dialog open={dialogOpen} onOpenChange={cancelarEliminacion}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Eliminar Miembro</DialogTitle>
-            <DialogDescription>
-              ¿Estás seguro de que deseas eliminar a{" "}
-              <strong>
-                {miembroAEliminar?.nombres} {miembroAEliminar?.apellidos}
-              </strong>
-              ? Esta acción no se puede deshacer.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={cancelarEliminacion}
-              disabled={isDeleting}
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmarEliminacion}
-              disabled={isDeleting}
-            >
-              {isDeleting ? "Eliminando..." : "Eliminar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </SidebarProvider>
   );
 }
