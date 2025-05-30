@@ -34,7 +34,7 @@ export function MiembroAvatar({
   if (foto) {
     return (
       <div
-        className={`${sizeClass} relative rounded-full overflow-hidden bg-gray-100 ${className}`}
+        className={`${sizeClass} relative rounded-full overflow-hidden bg-muted ${className}`}
       >
         <Image
           src={foto}
@@ -49,9 +49,9 @@ export function MiembroAvatar({
 
   return (
     <div
-      className={`${sizeClass} rounded-full bg-gray-100 flex items-center justify-center ${className}`}
+      className={`${sizeClass} rounded-full bg-muted flex items-center justify-center ${className}`}
     >
-      <User className={`${iconSize} text-gray-400`} />
+      <User className={`${iconSize} text-muted-foreground`} />
     </div>
   );
 }

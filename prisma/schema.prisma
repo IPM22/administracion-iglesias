@@ -32,6 +32,94 @@ model Miembro {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   ministerios     MinisterioMiembro[]
+  // Relaciones para invitaciones
+  visitasInvitadas HistorialVisita[] @relation("MiembroInvitador")
+  // Relación para visitas convertidas
+  visitaOriginal  Visita?       @relation("VisitaConvertida")
+  // Relaciones familiares
+  familiares      FamiliarMiembro[] @relation("MiembroFamiliar")
+  familiarDe      FamiliarMiembro[] @relation("FamiliarDeMiembro")
+}
+
+model Visita {
+  id              Int           @id @default(autoincrement())
+  nombres         String
+  apellidos       String
+  correo          String?
+  telefono        String?
+  celular         String?
+  direccion       String?
+  fechaNacimiento DateTime?
+  sexo            String?       // "Masculino" | "Femenino" | "Otro"
+  estadoCivil     String?       // "Soltero/a" | "Casado/a" | "Viudo/a" | "Divorciado/a"
+  ocupacion       String?
+  familia         String?
+  estado          String?       // "Activa" | "Inactiva" | "Convertida"
+  foto            String?       // URL de la imagen en Cloudinary
+  notasAdicionales String?
+  // Campos específicos para visitas
+  fechaPrimeraVisita DateTime?
+  miembroConvertidoId Int?      @unique // Si se convirtió en miembro, referencia al miembro
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Relaciones
+  historialVisitas HistorialVisita[]
+  miembroConvertido Miembro?    @relation("VisitaConvertida", fields: [miembroConvertidoId], references: [id])
+}
+
+model TipoActividad {
+  id          Int           @id @default(autoincrement())
+  nombre      String        @unique
+  descripcion String?
+  tipo        String        // "Regular" | "Especial"
+  esActivo    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  // Relaciones
+  historialVisitas HistorialVisita[]
+  actividades Actividad[]
+}
+
+model Actividad {
+  id              Int           @id @default(autoincrement())
+  nombre          String
+  descripcion     String?
+  fecha           DateTime
+  horaInicio      String?
+  horaFin         String?
+  ubicacion       String?
+  tipoActividadId Int
+  responsable     String?
+  estado          String        @default("Programada") // "Programada" | "En curso" | "Finalizada" | "Cancelada"
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Relaciones
+  tipoActividad   TipoActividad @relation(fields: [tipoActividadId], references: [id])
+  historialVisitas HistorialVisita[]
+}
+
+model HistorialVisita {
+  id              Int           @id @default(autoincrement())
+  visitaId        Int
+  fecha           DateTime      @default(now())
+  tipoActividadId Int?          // Si es actividad regular
+  actividadId     Int?          // Si es actividad especial específica
+  invitadoPorId   Int?          // Miembro que invitó
+  observaciones   String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Relaciones
+  visita          Visita        @relation(fields: [visitaId], references: [id], onDelete: Cascade)
+  tipoActividad   TipoActividad? @relation(fields: [tipoActividadId], references: [id])
+  actividad       Actividad?    @relation(fields: [actividadId], references: [id])
+  invitadoPor     Miembro?      @relation("MiembroInvitador", fields: [invitadoPorId], references: [id])
+  
+  @@index([visitaId])
+  @@index([fecha])
 }
 
 model Ministerio {
@@ -47,6 +135,7 @@ model MinisterioMiembro {
   id           Int        @id @default(autoincrement())
   miembroId    Int
   ministerioId Int
+  rol          String?    // Rol específico en el ministerio (Pastor, Líder, Colaborador, etc.)
   fechaInicio  DateTime   @default(now())
   fechaFin     DateTime?
   estado       String     // "Activo" | "Inactivo"
@@ -56,4 +145,19 @@ model MinisterioMiembro {
   ministerio   Ministerio @relation(fields: [ministerioId], references: [id])
 
   @@unique([miembroId, ministerioId])
+}
+
+model FamiliarMiembro {
+  id              Int     @id @default(autoincrement())
+  miembroId       Int     // El miembro principal
+  familiarId      Int     // El familiar (también miembro)
+  tipoRelacion    String  // "Esposo/a", "Hijo/a", "Padre", "Madre", "Hermano/a", etc.
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relaciones
+  miembro         Miembro @relation("MiembroFamiliar", fields: [miembroId], references: [id])
+  familiar        Miembro @relation("FamiliarDeMiembro", fields: [familiarId], references: [id])
+
+  @@unique([miembroId, familiarId])
 } 

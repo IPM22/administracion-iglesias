@@ -14,6 +14,7 @@ import {
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
 import { TeamSwitcher } from "./team-switcher";
+import { ModeToggle } from "./mode-toggle";
 import {
   Sidebar,
   SidebarContent,
@@ -170,6 +171,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={data.navMain} />
       </SidebarContent>
       <SidebarFooter>
+        <div className="flex items-center justify-center p-2">
+          <ModeToggle />
+        </div>
         <NavUser user={data.user} />
       </SidebarFooter>
       <SidebarRail />

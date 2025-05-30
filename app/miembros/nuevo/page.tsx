@@ -233,7 +233,7 @@ export default function NuevoMiembroPage() {
 
                         {/* Columna derecha - Foto (ocupa las 3 filas desde el inicio) */}
                         <div className="md:row-span-3 flex flex-col items-center justify-center">
-                          <div className="w-full bg-gray-50 border border-gray-200 rounded-lg p-4 h-full flex flex-col justify-center">
+                          <div className="w-full bg-muted border border-border rounded-lg p-4 h-full flex flex-col justify-center">
                             <FormField
                               control={form.control}
                               name="foto"

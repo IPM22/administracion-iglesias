@@ -27,11 +27,26 @@ export async function GET(
           include: {
             ministerio: {
               select: {
+                id: true,
                 nombre: true,
+                descripcion: true,
               },
             },
           },
         },
+        familiares: {
+          include: {
+            familiar: {
+              select: {
+                id: true,
+                nombres: true,
+                apellidos: true,
+                foto: true,
+              },
+            },
+          },
+        },
+        visitaOriginal: true, // Para saber si era una visita convertida
       },
     });
 
@@ -42,7 +57,43 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(miembro);
+    // Obtener visitas invitadas por este miembro
+    const visitasInvitadas = await prisma.visita.findMany({
+      where: {
+        historialVisitas: {
+          some: {
+            invitadoPorId: miembroId,
+          },
+        },
+        estado: {
+          not: "Convertida",
+        },
+      },
+      include: {
+        historialVisitas: {
+          where: {
+            invitadoPorId: miembroId,
+          },
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    // Procesar las visitas invitadas para incluir el total de visitas
+    const visitasConTotal = visitasInvitadas.map((visita) => ({
+      ...visita,
+      totalVisitas: visita.historialVisitas?.length || 0,
+      historialVisitas: undefined, // Removemos este campo para no enviarlo
+    }));
+
+    const miembroCompleto = {
+      ...miembro,
+      visitasInvitadas: visitasConTotal,
+    };
+
+    return NextResponse.json(miembroCompleto);
   } catch (error) {
     console.error("Error al obtener miembro:", error);
     return NextResponse.json(
@@ -198,6 +249,54 @@ export async function PUT(
     console.error("Error al actualizar miembro:", error);
     return NextResponse.json(
       { error: "Error al actualizar el miembro" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const miembroId = parseInt(params.id);
+
+    if (isNaN(miembroId)) {
+      return NextResponse.json(
+        { error: "ID de miembro inválido" },
+        { status: 400 }
+      );
+    }
+
+    // Verificar si el miembro existe
+    const miembroExistente = await prisma.miembro.findUnique({
+      where: {
+        id: miembroId,
+      },
+    });
+
+    if (!miembroExistente) {
+      return NextResponse.json(
+        { error: "Miembro no encontrado" },
+        { status: 404 }
+      );
+    }
+
+    // Eliminar el miembro
+    await prisma.miembro.delete({
+      where: {
+        id: miembroId,
+      },
+    });
+
+    return NextResponse.json(
+      { message: "Miembro eliminado correctamente" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error al eliminar miembro:", error);
+    return NextResponse.json(
+      { error: "Error al eliminar el miembro" },
       { status: 500 }
     );
   }

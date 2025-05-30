@@ -28,7 +28,7 @@ export function CloudinaryUploader({
             src={value}
             alt="Foto del miembro"
             fill
-            className="object-cover rounded-full border-2 border-gray-200"
+            className="object-cover rounded-full border-2 border-border dark:border-gray-600"
           />
           {onRemove && (
             <Button

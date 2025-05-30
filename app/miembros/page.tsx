@@ -51,6 +51,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Miembro } from "@prisma/client";
@@ -62,6 +70,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MiembroAvatar } from "../../components/MiembroAvatar";
+import { ModeToggle } from "../../components/mode-toggle";
 
 export default function MiembrosPage() {
   const router = useRouter();
@@ -73,6 +82,19 @@ export default function MiembrosPage() {
   // Estados para paginación
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Estados para eliminación
+  const [miembroAEliminar, setMiembroAEliminar] = useState<Miembro | null>(
+    null
+  );
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Estados para filtros
+  const [showFilters, setShowFilters] = useState(false);
+  const [filtroEstado, setFiltroEstado] = useState<string>("todos");
+  const [filtroSexo, setFiltroSexo] = useState<string>("todos");
+  const [filtroFamilia, setFiltroFamilia] = useState<string>("todos");
 
   useEffect(() => {
     const fetchMiembros = async () => {
@@ -96,37 +118,128 @@ export default function MiembrosPage() {
 
   useEffect(() => {
     const filtrarMiembros = () => {
-      if (!searchTerm.trim()) {
-        setMiembrosFiltrados(miembros);
-        return;
+      let filtrados = [...miembros];
+
+      // Aplicar filtro de búsqueda por texto
+      if (searchTerm.trim()) {
+        const termino = searchTerm.toLowerCase().trim();
+        filtrados = filtrados.filter((miembro) => {
+          const nombreCompleto =
+            `${miembro.nombres} ${miembro.apellidos}`.toLowerCase();
+          const correo = miembro.correo?.toLowerCase() || "";
+          const telefono = miembro.telefono || "";
+          const celular = miembro.celular || "";
+          const ocupacion = miembro.ocupacion?.toLowerCase() || "";
+          const familia = miembro.familia?.toLowerCase() || "";
+
+          return (
+            nombreCompleto.includes(termino) ||
+            correo.includes(termino) ||
+            telefono.includes(termino) ||
+            celular.includes(termino) ||
+            ocupacion.includes(termino) ||
+            familia.includes(termino)
+          );
+        });
       }
 
-      const termino = searchTerm.toLowerCase().trim();
-      const filtrados = miembros.filter((miembro) => {
-        const nombreCompleto =
-          `${miembro.nombres} ${miembro.apellidos}`.toLowerCase();
-        const correo = miembro.correo?.toLowerCase() || "";
-        const telefono = miembro.telefono || "";
-        const celular = miembro.celular || "";
-        const ocupacion = miembro.ocupacion?.toLowerCase() || "";
-        const familia = miembro.familia?.toLowerCase() || "";
-
-        return (
-          nombreCompleto.includes(termino) ||
-          correo.includes(termino) ||
-          telefono.includes(termino) ||
-          celular.includes(termino) ||
-          ocupacion.includes(termino) ||
-          familia.includes(termino)
+      // Aplicar filtro por estado
+      if (filtroEstado !== "todos") {
+        filtrados = filtrados.filter(
+          (miembro) => miembro.estado === filtroEstado
         );
-      });
+      }
+
+      // Aplicar filtro por sexo
+      if (filtroSexo !== "todos") {
+        filtrados = filtrados.filter((miembro) => miembro.sexo === filtroSexo);
+      }
+
+      // Aplicar filtro por familia
+      if (filtroFamilia !== "todos") {
+        filtrados = filtrados.filter(
+          (miembro) => (miembro.familia || "") === filtroFamilia
+        );
+      }
 
       setMiembrosFiltrados(filtrados);
-      setCurrentPage(1); // Resetear a la primera página cuando se filtra
+      setCurrentPage(1); // Resetear a la primera página
     };
 
     filtrarMiembros();
-  }, [searchTerm, miembros]);
+  }, [searchTerm, miembros, filtroEstado, filtroSexo, filtroFamilia]);
+
+  // Función para mostrar dialog de confirmación
+  const mostrarDialogEliminar = (miembro: Miembro) => {
+    setMiembroAEliminar(miembro);
+    setDialogOpen(true);
+  };
+
+  // Función para eliminar miembro
+  const confirmarEliminacion = async () => {
+    if (!miembroAEliminar) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/miembros/${miembroAEliminar.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error al eliminar el miembro");
+      }
+
+      // Actualizar la lista de miembros
+      const nuevosmiembros = miembros.filter(
+        (m) => m.id !== miembroAEliminar.id
+      );
+      setMiembros(nuevosmiembros);
+      setMiembrosFiltrados(
+        nuevosmiembros.filter((m) => {
+          if (!searchTerm.trim()) return true;
+          const termino = searchTerm.toLowerCase().trim();
+          const nombreCompleto = `${m.nombres} ${m.apellidos}`.toLowerCase();
+          return nombreCompleto.includes(termino);
+        })
+      );
+
+      setDialogOpen(false);
+      setMiembroAEliminar(null);
+      console.log("Miembro eliminado correctamente");
+    } catch (error) {
+      console.error("Error al eliminar miembro:", error);
+      alert("Error al eliminar el miembro. Por favor, intenta de nuevo.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Función para cancelar eliminación
+  const cancelarEliminacion = () => {
+    setDialogOpen(false);
+    setMiembroAEliminar(null);
+  };
+
+  // Función para limpiar filtros
+  const limpiarFiltros = () => {
+    setFiltroEstado("todos");
+    setFiltroSexo("todos");
+    setFiltroFamilia("todos");
+    setSearchTerm("");
+  };
+
+  // Obtener opciones únicas para filtros
+  const getOpcionesFamilias = (): string[] => {
+    const familias = miembros
+      .map((m) => m.familia)
+      .filter(
+        (f): f is string => f !== null && f !== undefined && f.trim() !== ""
+      )
+      .filter((value, index, self) => self.indexOf(value) === index)
+      .sort();
+    return familias;
+  };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -162,7 +275,7 @@ export default function MiembrosPage() {
       <AppSidebar />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4">
+          <div className="flex items-center gap-2 px-4 flex-1">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
             <Breadcrumb>
@@ -176,6 +289,9 @@ export default function MiembrosPage() {
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
+          </div>
+          <div className="px-4">
+            <ModeToggle />
           </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
@@ -216,7 +332,10 @@ export default function MiembrosPage() {
                       </Button>
                     )}
                   </div>
-                  <Button variant="outline">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowFilters(!showFilters)}
+                  >
                     <Filter className="mr-2 h-4 w-4" />
                     Filtros
                   </Button>
@@ -235,6 +354,80 @@ export default function MiembrosPage() {
                   </div>
                 )}
               </div>
+
+              {/* Panel de Filtros */}
+              {showFilters && (
+                <div className="border rounded-lg p-4 mb-4 bg-muted">
+                  <div className="flex flex-wrap items-end">
+                    <div className="w-40 space-y-1">
+                      <label className="text-sm font-medium">Estado</label>
+                      <Select
+                        value={filtroEstado}
+                        onValueChange={setFiltroEstado}
+                      >
+                        <SelectTrigger className="h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="todos">Todos</SelectItem>
+                          <SelectItem value="Activo">Activo</SelectItem>
+                          <SelectItem value="Inactivo">Inactivo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="w-40 space-y-1">
+                      <label className="text-sm font-medium">Sexo</label>
+                      <Select value={filtroSexo} onValueChange={setFiltroSexo}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="todos">Todos</SelectItem>
+                          <SelectItem value="Masculino">Masculino</SelectItem>
+                          <SelectItem value="Femenino">Femenino</SelectItem>
+                          <SelectItem value="Otro">Otro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="w-40 space-y-1">
+                      <label className="text-sm font-medium">Familia</label>
+                      <Select
+                        value={filtroFamilia}
+                        onValueChange={setFiltroFamilia}
+                      >
+                        <SelectTrigger className="h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="todos">Todas</SelectItem>
+                          {getOpcionesFamilias().map((familia) => (
+                            <SelectItem key={familia} value={familia}>
+                              {familia}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={limpiarFiltros}
+                    >
+                      Limpiar Filtros
+                    </Button>
+                  </div>
+
+                  <div className="mt-3">
+                    <span className="text-sm text-muted-foreground">
+                      Mostrando {miembrosFiltrados.length} de {miembros.length}{" "}
+                      miembros
+                    </span>
+                  </div>
+                </div>
+              )}
 
               <div className="rounded-md border">
                 <Table>
@@ -328,9 +521,13 @@ export default function MiembrosPage() {
                                   <Edit className="mr-2 h-4 w-4" />
                                   Editar
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="text-red-600">
+                                <DropdownMenuItem
+                                  className="text-red-600"
+                                  onClick={() => mostrarDialogEliminar(miembro)}
+                                  disabled={isDeleting}
+                                >
                                   <Trash2 className="mr-2 h-4 w-4" />
-                                  Eliminar
+                                  {isDeleting ? "Eliminando..." : "Eliminar"}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -438,6 +635,36 @@ export default function MiembrosPage() {
           </Card>
         </div>
       </SidebarInset>
+      <Dialog open={dialogOpen} onOpenChange={cancelarEliminacion}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Eliminar Miembro</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que deseas eliminar a{" "}
+              <strong>
+                {miembroAEliminar?.nombres} {miembroAEliminar?.apellidos}
+              </strong>
+              ? Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={cancelarEliminacion}
+              disabled={isDeleting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmarEliminacion}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Eliminando..." : "Eliminar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
   );
 }
