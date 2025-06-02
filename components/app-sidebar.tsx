@@ -32,7 +32,7 @@ const data = {
   },
   teams: [
     {
-      name: "Iglesia Central",
+      name: "Iglesia de Cristo Ozama",
       logo: HomeIcon,
       plan: "Principal",
     },

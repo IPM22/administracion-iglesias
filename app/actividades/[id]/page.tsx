@@ -316,7 +316,7 @@ export default function DetalleActividadPage({
 
           {/* Banner de la actividad */}
           {actividad.banner && (
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden p-0">
               <div className="relative w-full h-64 md:h-80">
                 <Image
                   src={actividad.banner}
