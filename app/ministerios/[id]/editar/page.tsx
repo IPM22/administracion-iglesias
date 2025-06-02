@@ -38,7 +38,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { ArrowLeft, Save, Users, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Save, Users, AlertTriangle, Loader2 } from "lucide-react";
 import { ModeToggle } from "../../../../components/mode-toggle";
 import {
   ministerioSchema,
@@ -149,20 +149,9 @@ export default function EditarMinisterioPage({
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
-          <div className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-            <div className="flex items-center gap-2 px-4">
-              <SidebarTrigger className="-ml-1" />
-              <Separator orientation="vertical" className="mr-2 h-4" />
-              <div className="flex items-center justify-between flex-1">
-                <h1 className="text-lg font-semibold">Cargando...</h1>
-                <ModeToggle />
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-            <div className="flex items-center justify-center py-20">
-              <p>Cargando ministerio...</p>
-            </div>
+          <div className="flex items-center justify-center h-screen">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Cargando ministerio...</span>
           </div>
         </SidebarInset>
       </SidebarProvider>

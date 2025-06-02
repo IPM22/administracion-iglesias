@@ -39,6 +39,7 @@ import {
   UserPlus,
   Calendar,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -171,20 +172,9 @@ export default function MinisteriosPage() {
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
-          <div className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-            <div className="flex items-center gap-2 px-4">
-              <SidebarTrigger className="-ml-1" />
-              <Separator orientation="vertical" className="mr-2 h-4" />
-              <div className="flex items-center justify-between flex-1">
-                <h1 className="text-lg font-semibold">Ministerios</h1>
-                <ModeToggle />
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-            <div className="flex items-center justify-center py-20">
-              <p>Cargando ministerios...</p>
-            </div>
+          <div className="flex items-center justify-center h-screen">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Cargando ministerios...</span>
           </div>
         </SidebarInset>
       </SidebarProvider>

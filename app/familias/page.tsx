@@ -123,6 +123,20 @@ export default function FamiliasPage() {
     return hoy.getFullYear() - fecha.getFullYear();
   };
 
+  if (cargando) {
+    return (
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <div className="flex items-center justify-center h-screen">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Cargando familias...</span>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    );
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar />

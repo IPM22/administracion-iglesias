@@ -11,9 +11,12 @@ import {
   Users,
   Share2,
   ExternalLink,
+  Loader2,
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
+import { AppSidebar } from "@/components/app-sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 
 interface TipoActividad {
   id: number;
@@ -155,12 +158,15 @@ export default function PromocionActividadPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Cargando evento...</p>
-        </div>
-      </div>
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <div className="flex items-center justify-center h-screen">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Cargando evento...</span>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
     );
   }
 

@@ -42,7 +42,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Calendar, Clock } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -192,10 +192,8 @@ export default function NuevaActividadPage() {
         <AppSidebar />
         <SidebarInset>
           <div className="flex items-center justify-center h-screen">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-4">Cargando formulario...</p>
-            </div>
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Cargando formulario...</span>
           </div>
         </SidebarInset>
       </SidebarProvider>

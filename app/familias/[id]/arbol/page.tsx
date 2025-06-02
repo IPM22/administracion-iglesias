@@ -120,7 +120,7 @@ export default function ArbolFamiliarPage({
   const router = useRouter();
   const { id } = use(params);
   const [familia, setFamilia] = useState<FamiliaDetalle | null>(null);
-  const [cargando, setCargando] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -131,7 +131,7 @@ export default function ArbolFamiliarPage({
 
   const cargarDatos = async () => {
     try {
-      setCargando(true);
+      setLoading(true);
       setError(null);
 
       const response = await fetch(`/api/familias/${id}`);
@@ -145,7 +145,7 @@ export default function ArbolFamiliarPage({
       console.error("Error:", error);
       setError("No se pudieron cargar los datos");
     } finally {
-      setCargando(false);
+      setLoading(false);
     }
   };
 
@@ -197,7 +197,7 @@ export default function ArbolFamiliarPage({
     return grupos;
   };
 
-  if (cargando) {
+  if (loading) {
     return (
       <SidebarProvider>
         <AppSidebar />

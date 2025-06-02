@@ -113,7 +113,7 @@ export default function ActividadesPage() {
   const [actividadesFiltradas, setActividadesFiltradas] = useState<Actividad[]>(
     []
   );
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
   // Estados para paginación
@@ -147,7 +147,7 @@ export default function ActividadesPage() {
       } catch (error) {
         console.error("Error:", error);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
@@ -377,7 +377,7 @@ export default function ActividadesPage() {
   const endIndex = startIndex + itemsPerPage;
   const gruposActuales = nombresGrupos.slice(startIndex, endIndex);
 
-  if (isLoading) {
+  if (loading) {
     return (
       <SidebarProvider>
         <AppSidebar />
