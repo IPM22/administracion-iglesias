@@ -103,6 +103,8 @@ model Familia {
   vinculosOrigen  VinculoFamiliar[] @relation("FamiliaOrigen")
   // Vínculos familiares - como familia relacionada
   vinculosRelacionados VinculoFamiliar[] @relation("FamiliaRelacionada")
+  // Relaciones familiares entre personas en esta familia
+  relacionesFamiliares RelacionFamiliar[] @relation("RelacionesFamiliares")
 }
 
 model VinculoFamiliar {
@@ -224,4 +226,28 @@ model FamiliarMiembro {
   familiar        Miembro @relation("FamiliarDeMiembro", fields: [familiarId], references: [id])
 
   @@unique([miembroId, familiarId])
+}
+
+// Nueva tabla para relaciones familiares flexibles entre personas
+model RelacionFamiliar {
+  id                  Int      @id @default(autoincrement())
+  persona1Id          Int      // ID de la primera persona
+  tipoPersona1        String   // "miembro" | "visita"
+  persona2Id          Int      // ID de la segunda persona
+  tipoPersona2        String   // "miembro" | "visita"
+  tipoRelacion        String   // "Esposo/a", "Hijo/a", "Padre", "Madre", "Hermano/a", etc.
+  relacionInversa     String?  // Relación desde la perspectiva de persona2 hacia persona1
+  esRecíproca         Boolean  @default(false) // Si la relación es bidireccional (ej: hermanos)
+  familiaContextoId   Int?     // Familia en la que se establece esta relación (opcional)
+  notas               String?  // Notas adicionales sobre la relación
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relación opcional con familia
+  familiaContexto     Familia? @relation("RelacionesFamiliares", fields: [familiaContextoId], references: [id])
+
+  @@unique([persona1Id, tipoPersona1, persona2Id, tipoPersona2])
+  @@index([persona1Id, tipoPersona1])
+  @@index([persona2Id, tipoPersona2])
+  @@index([familiaContextoId])
 } 

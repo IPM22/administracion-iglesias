@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "../../../lib/db";
+import { parseDateForAPI } from "@/lib/date-utils";
 
 // Helper function para manejar strings vacios
 function parseString(value: unknown): string | undefined {
@@ -9,13 +8,6 @@ function parseString(value: unknown): string | undefined {
     return undefined;
   }
   return value as string;
-}
-
-// Helper function para manejar fechas
-function parseDate(dateString: unknown): Date | undefined {
-  if (!dateString || dateString === "") return undefined;
-  const date = new Date(dateString as string);
-  return isNaN(date.getTime()) ? undefined : date;
 }
 
 export async function GET() {
@@ -96,7 +88,7 @@ export async function POST(request: NextRequest) {
         telefono: parseString(telefono),
         celular: parseString(celular),
         direccion: parseString(direccion),
-        fechaNacimiento: parseDate(fechaNacimiento),
+        fechaNacimiento: parseDateForAPI(fechaNacimiento as string),
         sexo: parseString(sexo),
         estadoCivil: parseString(estadoCivil),
         ocupacion: parseString(ocupacion),
@@ -104,7 +96,7 @@ export async function POST(request: NextRequest) {
         estado: parseString(estado) || "Nuevo",
         foto: parseString(foto),
         notasAdicionales: parseString(notasAdicionales),
-        fechaPrimeraVisita: parseDate(fechaPrimeraVisita),
+        fechaPrimeraVisita: parseDateForAPI(fechaPrimeraVisita as string),
       },
     });
 

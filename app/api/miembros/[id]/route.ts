@@ -1,12 +1,28 @@
 import { prisma } from "../../../../lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { parseDateForAPI } from "@/lib/date-utils";
+
+// Interfaz para familiares consolidados
+interface FamiliarConsolidado {
+  id: string | number;
+  familiar: {
+    id: number;
+    nombres: string;
+    apellidos: string;
+    foto?: string | null;
+    estado?: string | null;
+  };
+  tipoRelacion: string;
+  fuente: "directa" | "inversa" | "familia";
+}
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const miembroId = parseInt(params.id);
+    const { id } = await params;
+    const miembroId = parseInt(id);
 
     if (isNaN(miembroId)) {
       return NextResponse.json(
@@ -33,6 +49,9 @@ export async function GET(
               },
             },
           },
+          orderBy: {
+            fechaInicio: "desc",
+          },
         },
         familiares: {
           include: {
@@ -42,6 +61,7 @@ export async function GET(
                 nombres: true,
                 apellidos: true,
                 foto: true,
+                estado: true,
               },
             },
           },
@@ -49,6 +69,43 @@ export async function GET(
             { familiar: { apellidos: "asc" } },
             { familiar: { nombres: "asc" } },
           ],
+        },
+        familiarDe: {
+          include: {
+            miembro: {
+              select: {
+                id: true,
+                nombres: true,
+                apellidos: true,
+                foto: true,
+                estado: true,
+              },
+            },
+          },
+          orderBy: [
+            { miembro: { apellidos: "asc" } },
+            { miembro: { nombres: "asc" } },
+          ],
+        },
+        familiaEstructurada: {
+          include: {
+            miembros: {
+              where: {
+                id: {
+                  not: miembroId, // Excluir el miembro actual
+                },
+              },
+              select: {
+                id: true,
+                nombres: true,
+                apellidos: true,
+                foto: true,
+                estado: true,
+                parentescoFamiliar: true,
+              },
+              orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
+            },
+          },
         },
         visitaOriginal: true, // Para saber si era una visita convertida
       },
@@ -93,8 +150,67 @@ export async function GET(
       historialVisitas: undefined, // Removemos este campo para no enviarlo
     }));
 
+    // Consolidar familiares de todas las fuentes
+    const familiaresCombinados: FamiliarConsolidado[] = [];
+
+    // Familiares directos (donde este miembro es el principal)
+    if (miembro.familiares) {
+      miembro.familiares.forEach((rel) => {
+        familiaresCombinados.push({
+          id: rel.id,
+          familiar: rel.familiar,
+          tipoRelacion: rel.tipoRelacion,
+          fuente: "directa",
+        });
+      });
+    }
+
+    // Familiares inversos (donde este miembro es el familiar)
+    if (miembro.familiarDe) {
+      miembro.familiarDe.forEach((rel) => {
+        familiaresCombinados.push({
+          id: rel.id,
+          familiar: rel.miembro,
+          tipoRelacion: obtenerRelacionInversa(rel.tipoRelacion),
+          fuente: "inversa",
+        });
+      });
+    }
+
+    // Miembros de la misma familia estructurada
+    if (miembro.familiaEstructurada?.miembros) {
+      miembro.familiaEstructurada.miembros.forEach((familiar) => {
+        // Evitar duplicados
+        const yaExiste = familiaresCombinados.some(
+          (f) => f.familiar.id === familiar.id
+        );
+        if (!yaExiste) {
+          familiaresCombinados.push({
+            id: `familia-${familiar.id}`,
+            familiar: {
+              id: familiar.id,
+              nombres: familiar.nombres,
+              apellidos: familiar.apellidos,
+              foto: familiar.foto,
+              estado: familiar.estado,
+            },
+            tipoRelacion: familiar.parentescoFamiliar || "Familiar",
+            fuente: "familia",
+          });
+        }
+      });
+    }
+
     const miembroCompleto = {
       ...miembro,
+      familiares: familiaresCombinados,
+      familiarDe: undefined, // Remover para limpiar la respuesta
+      familiaEstructurada: miembro.familiaEstructurada
+        ? {
+            ...miembro.familiaEstructurada,
+            miembros: undefined, // Ya procesado en familiares
+          }
+        : undefined,
       visitasInvitadas: visitasConTotal,
     };
 
@@ -108,12 +224,37 @@ export async function GET(
   }
 }
 
+// Función auxiliar para obtener la relación inversa
+function obtenerRelacionInversa(tipoRelacion: string): string {
+  const relaciones: { [key: string]: string } = {
+    "Esposo/a": "Esposo/a",
+    Cónyuge: "Cónyuge",
+    "Hijo/a": "Padre/Madre",
+    Padre: "Hijo/a",
+    Madre: "Hijo/a",
+    "Hermano/a": "Hermano/a",
+    "Abuelo/a": "Nieto/a",
+    "Nieto/a": "Abuelo/a",
+    "Tío/a": "Sobrino/a",
+    "Sobrino/a": "Tío/a",
+    "Primo/a": "Primo/a",
+    "Cuñado/a": "Cuñado/a",
+    Yerno: "Suegro",
+    Nuera: "Suegra",
+    Suegro: "Yerno",
+    Suegra: "Nuera",
+  };
+
+  return relaciones[tipoRelacion] || "Familiar";
+}
+
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const miembroId = parseInt(params.id);
+    const { id } = await params;
+    const miembroId = parseInt(id);
 
     if (isNaN(miembroId)) {
       return NextResponse.json(
@@ -149,14 +290,6 @@ export async function PUT(
         { status: 400 }
       );
     }
-
-    // Función para manejar fechas vacías
-    const parseDate = (dateString: string) => {
-      if (!dateString || dateString.trim() === "") {
-        return null;
-      }
-      return new Date(dateString);
-    };
 
     // Función para manejar strings vacías
     const parseString = (value: string) => {
@@ -222,13 +355,13 @@ export async function PUT(
         telefono: parseString(telefono),
         celular: parseString(celular),
         direccion: parseString(direccion),
-        fechaNacimiento: parseDate(fechaNacimiento),
+        fechaNacimiento: parseDateForAPI(fechaNacimiento),
         sexo: parseString(sexo),
         estadoCivil: parseString(estadoCivil),
         ocupacion: parseString(ocupacion),
         familia: parseString(familia),
-        fechaIngreso: parseDate(fechaIngreso),
-        fechaBautismo: parseDate(fechaBautismo),
+        fechaIngreso: parseDateForAPI(fechaIngreso),
+        fechaBautismo: parseDateForAPI(fechaBautismo),
         estado: parseString(estado) || "Activo",
         foto: parseString(foto),
         notasAdicionales: parseString(notasAdicionales),
@@ -261,10 +394,11 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const miembroId = parseInt(params.id);
+    const { id } = await params;
+    const miembroId = parseInt(id);
 
     if (isNaN(miembroId)) {
       return NextResponse.json(
@@ -302,6 +436,65 @@ export async function DELETE(
     console.error("Error al eliminar miembro:", error);
     return NextResponse.json(
       { error: "Error al eliminar el miembro" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const miembroId = parseInt(id);
+
+    if (isNaN(miembroId)) {
+      return NextResponse.json(
+        { error: "ID de miembro inválido" },
+        { status: 400 }
+      );
+    }
+
+    const body = await request.json();
+    const { familiaId, parentescoFamiliar } = body;
+
+    // Verificar que el miembro existe
+    const miembroExistente = await prisma.miembro.findUnique({
+      where: { id: miembroId },
+    });
+
+    if (!miembroExistente) {
+      return NextResponse.json(
+        { error: "Miembro no encontrado" },
+        { status: 404 }
+      );
+    }
+
+    // Actualizar solo los campos proporcionados
+    const dataToUpdate: {
+      familiaId?: number | null;
+      parentescoFamiliar?: string | null;
+    } = {};
+
+    if (familiaId !== undefined) {
+      dataToUpdate.familiaId = familiaId;
+    }
+
+    if (parentescoFamiliar !== undefined) {
+      dataToUpdate.parentescoFamiliar = parentescoFamiliar;
+    }
+
+    const miembroActualizado = await prisma.miembro.update({
+      where: { id: miembroId },
+      data: dataToUpdate,
+    });
+
+    return NextResponse.json(miembroActualizado);
+  } catch (error) {
+    console.error("Error al actualizar miembro:", error);
+    return NextResponse.json(
+      { error: "Error al actualizar el miembro" },
       { status: 500 }
     );
   }

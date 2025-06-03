@@ -74,6 +74,29 @@ import {
 import { MiembroAvatar } from "../../components/MiembroAvatar";
 import { ModeToggle } from "../../components/mode-toggle";
 
+// Función para formatear teléfonos para mostrar
+const formatPhoneForDisplay = (phone: string | null | undefined): string => {
+  if (!phone) return "";
+
+  // Remover todo lo que no sea número
+  const numbers = phone.replace(/\D/g, "");
+
+  // Si no tiene números, retornar vacío
+  if (numbers.length === 0) return "";
+
+  // Aplicar formato XXX-XXX-XXXX
+  if (numbers.length <= 3) {
+    return numbers;
+  } else if (numbers.length <= 6) {
+    return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+  } else {
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(
+      6,
+      10
+    )}`;
+  }
+};
+
 // Interfaces para tipado
 interface HistorialVisita {
   id: number;
@@ -547,7 +570,13 @@ export default function VisitasPage() {
                           </TableRow>
                         ) : (
                           currentItems.map((visita) => (
-                            <TableRow key={visita.id}>
+                            <TableRow
+                              key={visita.id}
+                              className="cursor-pointer hover:bg-muted/50 transition-colors"
+                              onClick={() =>
+                                router.push(`/visitas/${visita.id}`)
+                              }
+                            >
                               <TableCell>
                                 <MiembroAvatar
                                   foto={visita.foto}
@@ -561,9 +590,9 @@ export default function VisitasPage() {
                                     {visita.nombres} {visita.apellidos}
                                   </div>
                                   {visita.miembroConvertido && (
-                                    <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <div className="text-xs text-green-600 flex items-center gap-1 mt-1">
                                       <UserCheck className="h-3 w-3" />
-                                      Convertido en miembro
+                                      Convertido a miembro
                                     </div>
                                   )}
                                 </div>
@@ -572,7 +601,9 @@ export default function VisitasPage() {
                                 <div className="text-sm">
                                   <div>{visita.correo}</div>
                                   <div className="text-muted-foreground">
-                                    {visita.telefono || visita.celular}
+                                    {formatPhoneForDisplay(
+                                      visita.telefono || visita.celular
+                                    )}
                                   </div>
                                 </div>
                               </TableCell>
@@ -600,7 +631,10 @@ export default function VisitasPage() {
                                   {visita.estado || "Recurrente"}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell
+                                className="text-right"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button

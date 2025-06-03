@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "../../../../../../lib/db";
+import { PrismaClient } from "@prisma/client";
 
-// DELETE - Remover miembro de familia
+const prisma = new PrismaClient();
+
+// DELETE - Remover miembro de la familia
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; miembroId: string }> }
@@ -9,58 +11,55 @@ export async function DELETE(
   try {
     const { id, miembroId } = await params;
     const familiaId = parseInt(id);
-    const miembroIdNum = parseInt(miembroId);
+    const miembroIdInt = parseInt(miembroId);
 
-    if (isNaN(familiaId) || isNaN(miembroIdNum)) {
+    if (
+      !familiaId ||
+      isNaN(familiaId) ||
+      !miembroIdInt ||
+      isNaN(miembroIdInt)
+    ) {
       return NextResponse.json({ error: "IDs inválidos" }, { status: 400 });
     }
 
-    // Verificar que la familia existe
-    const familia = await prisma.familia.findUnique({
-      where: { id: familiaId },
-    });
-
-    if (!familia) {
-      return NextResponse.json(
-        { error: "Familia no encontrada" },
-        { status: 404 }
-      );
-    }
-
-    // Verificar que el miembro existe y pertenece a esta familia
-    const miembro = await prisma.miembro.findUnique({
-      where: { id: miembroIdNum },
+    // Verificar que el miembro existe y pertenece a la familia
+    const miembro = await prisma.miembro.findFirst({
+      where: {
+        id: miembroIdInt,
+        familiaId: familiaId,
+      },
     });
 
     if (!miembro) {
       return NextResponse.json(
-        { error: "Miembro no encontrado" },
+        { error: "Miembro no encontrado en esta familia" },
         { status: 404 }
       );
     }
 
-    if (miembro.familiaId !== familiaId) {
-      return NextResponse.json(
-        { error: "El miembro no pertenece a esta familia" },
-        { status: 400 }
-      );
-    }
+    // Verificar si es el jefe de familia
+    const familia = await prisma.familia.findUnique({
+      where: { id: familiaId },
+      select: { jefeFamiliaId: true },
+    });
 
-    // Verificar si el miembro es el jefe de familia
-    if (familia.jefeFamiliaId === miembroIdNum) {
+    if (familia?.jefeFamiliaId === miembroIdInt) {
       return NextResponse.json(
         {
           error:
-            "No se puede remover al cabeza de familia. Primero cambie el cabeza de familia.",
+            "No se puede remover al jefe de familia. Asigna otro jefe primero.",
         },
         { status: 400 }
       );
     }
 
-    // Remover miembro de la familia
+    // Remover al miembro de la familia
     await prisma.miembro.update({
-      where: { id: miembroIdNum },
-      data: { familiaId: null },
+      where: { id: miembroIdInt },
+      data: {
+        familiaId: null,
+        parentescoFamiliar: null,
+      },
     });
 
     return NextResponse.json(
@@ -68,15 +67,17 @@ export async function DELETE(
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error al remover miembro de familia:", error);
+    console.error("Error al remover miembro de la familia:", error);
     return NextResponse.json(
-      { error: "Error al remover miembro de la familia" },
+      { error: "Error interno del servidor" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
-// PATCH - Actualizar parentesco familiar de un miembro
+// PATCH - Actualizar parentesco del miembro
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; miembroId: string }> }
@@ -84,9 +85,14 @@ export async function PATCH(
   try {
     const { id, miembroId } = await params;
     const familiaId = parseInt(id);
-    const miembroIdNum = parseInt(miembroId);
+    const miembroIdInt = parseInt(miembroId);
 
-    if (isNaN(familiaId) || isNaN(miembroIdNum)) {
+    if (
+      !familiaId ||
+      isNaN(familiaId) ||
+      !miembroIdInt ||
+      isNaN(miembroIdInt)
+    ) {
       return NextResponse.json({ error: "IDs inválidos" }, { status: 400 });
     }
 
@@ -95,60 +101,43 @@ export async function PATCH(
 
     if (!parentescoFamiliar) {
       return NextResponse.json(
-        { error: "El parentesco familiar es requerido" },
+        { error: "Parentesco familiar es requerido" },
         { status: 400 }
       );
     }
 
-    // Verificar que la familia existe
-    const familia = await prisma.familia.findUnique({
-      where: { id: familiaId },
-    });
-
-    if (!familia) {
-      return NextResponse.json(
-        { error: "Familia no encontrada" },
-        { status: 404 }
-      );
-    }
-
-    // Verificar que el miembro existe y pertenece a esta familia
-    const miembro = await prisma.miembro.findUnique({
-      where: { id: miembroIdNum },
+    // Verificar que el miembro existe y pertenece a la familia
+    const miembro = await prisma.miembro.findFirst({
+      where: {
+        id: miembroIdInt,
+        familiaId: familiaId,
+      },
     });
 
     if (!miembro) {
       return NextResponse.json(
-        { error: "Miembro no encontrado" },
+        { error: "Miembro no encontrado en esta familia" },
         { status: 404 }
       );
     }
 
-    if (miembro.familiaId !== familiaId) {
-      return NextResponse.json(
-        { error: "El miembro no pertenece a esta familia" },
-        { status: 400 }
-      );
-    }
-
-    // Actualizar el parentesco familiar
-    const miembroActualizado = await prisma.miembro.update({
-      where: { id: miembroIdNum },
+    // Actualizar el parentesco
+    await prisma.miembro.update({
+      where: { id: miembroIdInt },
       data: { parentescoFamiliar },
-      select: {
-        id: true,
-        nombres: true,
-        apellidos: true,
-        parentescoFamiliar: true,
-      },
     });
 
-    return NextResponse.json(miembroActualizado, { status: 200 });
-  } catch (error) {
-    console.error("Error al actualizar parentesco familiar:", error);
     return NextResponse.json(
-      { error: "Error al actualizar el parentesco familiar" },
+      { message: "Parentesco actualizado exitosamente" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error al actualizar parentesco del miembro:", error);
+    return NextResponse.json(
+      { error: "Error interno del servidor" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }

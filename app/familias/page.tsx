@@ -46,6 +46,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { calcularEdad } from "@/lib/date-utils";
+import { ModeToggle } from "../../components/mode-toggle";
 
 interface Familia {
   id: number;
@@ -77,19 +87,22 @@ interface Familia {
 export default function FamiliasPage() {
   const router = useRouter();
   const [familias, setFamilias] = useState<Familia[]>([]);
-  const [filtroTexto, setFiltroTexto] = useState("");
-  const [cargando, setCargando] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [busqueda, setBusqueda] = useState<string>("");
 
-  // Cargar familias desde el API
-  useEffect(() => {
-    cargarFamilias();
-  }, []);
+  // Estados para el dialog de eliminación
+  const [dialogEliminar, setDialogEliminar] = useState(false);
+  const [familiaAEliminar, setFamiliaAEliminar] = useState<Familia | null>(
+    null
+  );
+  const [eliminando, setEliminando] = useState(false);
 
   const cargarFamilias = async () => {
     try {
-      setCargando(true);
+      setLoading(true);
       setError(null);
+
       const response = await fetch("/api/familias");
       if (response.ok) {
         const data = await response.json();
@@ -101,29 +114,110 @@ export default function FamiliasPage() {
       console.error("Error:", error);
       setError("No se pudieron cargar las familias");
     } finally {
-      setCargando(false);
+      setLoading(false);
     }
   };
 
-  const familiasFiltradas = familias.filter(
-    (familia) =>
-      familia.apellido.toLowerCase().includes(filtroTexto.toLowerCase()) ||
-      familia.nombre?.toLowerCase().includes(filtroTexto.toLowerCase()) ||
-      familia.jefeFamilia?.nombres
-        .toLowerCase()
-        .includes(filtroTexto.toLowerCase()) ||
-      familia.jefeFamilia?.apellidos
-        .toLowerCase()
-        .includes(filtroTexto.toLowerCase())
-  );
-
-  const calcularEdad = (fechaNacimiento: string) => {
-    const fecha = new Date(fechaNacimiento);
-    const hoy = new Date();
-    return hoy.getFullYear() - fecha.getFullYear();
+  const abrirDialogEliminar = (familia: Familia) => {
+    setFamiliaAEliminar(familia);
+    setDialogEliminar(true);
   };
 
-  if (cargando) {
+  const eliminarFamilia = async () => {
+    if (!familiaAEliminar) return;
+
+    setEliminando(true);
+    try {
+      // Primero, remover todos los miembros de la familia
+      if (familiaAEliminar.miembros.length > 0) {
+        for (const miembro of familiaAEliminar.miembros) {
+          const miembroResponse = await fetch(`/api/miembros/${miembro.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              familiaId: null,
+              parentescoFamiliar: null,
+            }),
+          });
+
+          if (!miembroResponse.ok) {
+            throw new Error(
+              `Error al remover miembro ${miembro.nombres} ${miembro.apellidos}`
+            );
+          }
+        }
+      }
+
+      // También verificar y remover visitas si las hay
+      const visitasResponse = await fetch(
+        `/api/familias/${familiaAEliminar.id}/visitas`
+      );
+      if (visitasResponse.ok) {
+        const visitas = await visitasResponse.json();
+        for (const visita of visitas) {
+          const visitaUpdateResponse = await fetch(
+            `/api/visitas/${visita.id}`,
+            {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                familiaId: null,
+                parentescoFamiliar: null,
+              }),
+            }
+          );
+
+          if (!visitaUpdateResponse.ok) {
+            console.warn(
+              `Error al remover visita ${visita.nombres} ${visita.apellidos}`
+            );
+          }
+        }
+      }
+
+      // Luego eliminar la familia
+      const response = await fetch(`/api/familias/${familiaAEliminar.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error al eliminar la familia");
+      }
+
+      // Recargar la lista de familias
+      await cargarFamilias();
+
+      setDialogEliminar(false);
+      setFamiliaAEliminar(null);
+    } catch (error) {
+      console.error("Error:", error);
+      setError(
+        error instanceof Error ? error.message : "Error al eliminar la familia"
+      );
+    } finally {
+      setEliminando(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarFamilias();
+  }, []);
+
+  // Filtrar familias basado en la búsqueda
+  const familiasFiltradas = familias.filter(
+    (familia) =>
+      familia.apellido.toLowerCase().includes(busqueda.toLowerCase()) ||
+      familia.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      familia.jefeFamilia?.nombres
+        .toLowerCase()
+        .includes(busqueda.toLowerCase()) ||
+      familia.jefeFamilia?.apellidos
+        .toLowerCase()
+        .includes(busqueda.toLowerCase())
+  );
+
+  if (loading) {
     return (
       <SidebarProvider>
         <AppSidebar />
@@ -142,7 +236,7 @@ export default function FamiliasPage() {
       <AppSidebar />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4">
+          <div className="flex items-center gap-2 px-4 flex-1">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
             <Breadcrumb>
@@ -156,6 +250,9 @@ export default function FamiliasPage() {
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
+          </div>
+          <div className="px-4">
+            <ModeToggle />
           </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
@@ -181,8 +278,8 @@ export default function FamiliasPage() {
                   <Input
                     placeholder="Buscar familias..."
                     className="pl-8"
-                    value={filtroTexto}
-                    onChange={(e) => setFiltroTexto(e.target.value)}
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
                   />
                 </div>
                 <Button variant="outline">
@@ -191,12 +288,7 @@ export default function FamiliasPage() {
                 </Button>
               </div>
 
-              {cargando ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-                  <span className="ml-2">Cargando familias...</span>
-                </div>
-              ) : error ? (
+              {error ? (
                 <div className="text-center py-8">
                   <p className="text-red-600 mb-4">{error}</p>
                   <Button onClick={cargarFamilias}>Reintentar</Button>
@@ -253,7 +345,10 @@ export default function FamiliasPage() {
                                   <Edit className="mr-2 h-4 w-4" />
                                   Editar
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="text-red-600">
+                                <DropdownMenuItem
+                                  className="text-red-600"
+                                  onClick={() => abrirDialogEliminar(familia)}
+                                >
                                   <Trash2 className="mr-2 h-4 w-4" />
                                   Eliminar
                                 </DropdownMenuItem>
@@ -381,10 +476,10 @@ export default function FamiliasPage() {
                 </div>
               )}
 
-              {!cargando && familiasFiltradas.length === 0 && (
+              {!loading && familiasFiltradas.length === 0 && (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">
-                    {filtroTexto
+                    {busqueda
                       ? "No se encontraron familias que coincidan con tu búsqueda"
                       : "No hay familias registradas"}
                   </p>
@@ -393,6 +488,61 @@ export default function FamiliasPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Dialog de confirmación para eliminar familia */}
+        <Dialog open={dialogEliminar} onOpenChange={setDialogEliminar}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirmar Eliminación de Familia</DialogTitle>
+              <DialogDescription>
+                ¿Estás seguro de que deseas eliminar la familia{" "}
+                <strong>
+                  {familiaAEliminar?.nombre ||
+                    `Familia ${familiaAEliminar?.apellido}`}
+                </strong>
+                ?
+                <br />
+                <br />
+                Esta acción eliminará permanentemente:
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>La familia y toda su información</li>
+                  <li>
+                    Las relaciones familiares de{" "}
+                    {familiaAEliminar?.totalMiembros || 0} miembro(s)
+                  </li>
+                  <li>Las asociaciones con visitas</li>
+                </ul>
+                <br />
+                <strong className="text-red-600">
+                  Esta acción no se puede deshacer.
+                </strong>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDialogEliminar(false)}
+                disabled={eliminando}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={eliminarFamilia}
+                disabled={eliminando}
+              >
+                {eliminando ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Eliminando...
+                  </>
+                ) : (
+                  "Eliminar Familia"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </SidebarInset>
     </SidebarProvider>
   );

@@ -29,14 +29,36 @@ import {
   MapPin,
   Briefcase,
   Users,
-  UserCheck,
-  Plus,
-  ChevronRight,
+  UserPlus,
   Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { MiembroAvatar } from "../../../components/MiembroAvatar";
 import { ModeToggle } from "../../../components/mode-toggle";
+import { formatDate, calcularEdad } from "@/lib/date-utils";
+
+// Función para formatear teléfonos para mostrar
+const formatPhoneForDisplay = (phone: string | null | undefined): string => {
+  if (!phone) return "";
+
+  // Remover todo lo que no sea número
+  const numbers = phone.replace(/\D/g, "");
+
+  // Si no tiene números, retornar vacío
+  if (numbers.length === 0) return "";
+
+  // Aplicar formato XXX-XXX-XXXX
+  if (numbers.length <= 3) {
+    return numbers;
+  } else if (numbers.length <= 6) {
+    return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+  } else {
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(
+      6,
+      10
+    )}`;
+  }
+};
 
 // Interfaces para tipado
 interface HistorialVisita {
@@ -120,27 +142,6 @@ export default function DetalleVisitaPage({
   const getNombreCompleto = () => {
     if (!visita) return "Cargando...";
     return `${visita.nombres} ${visita.apellidos}`;
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "—";
-    return new Date(dateString).toLocaleDateString("es-ES", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const calcularEdad = (fechaNacimiento?: string) => {
-    if (!fechaNacimiento) return null;
-    const hoy = new Date();
-    const nacimiento = new Date(fechaNacimiento);
-    let edad = hoy.getFullYear() - nacimiento.getFullYear();
-    const mes = hoy.getMonth() - nacimiento.getMonth();
-    if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
-      edad--;
-    }
-    return edad;
   };
 
   const getBadgeVariant = (estado?: string) => {
@@ -342,7 +343,7 @@ export default function DetalleVisitaPage({
                         </label>
                         <p className="flex items-center gap-2">
                           <Phone className="h-4 w-4" />
-                          {visita.telefono}
+                          {formatPhoneForDisplay(visita.telefono)}
                         </p>
                       </div>
                     )}
@@ -353,7 +354,7 @@ export default function DetalleVisitaPage({
                         </label>
                         <p className="flex items-center gap-2">
                           <Phone className="h-4 w-4" />
-                          {visita.celular}
+                          {formatPhoneForDisplay(visita.celular)}
                         </p>
                       </div>
                     )}
@@ -468,7 +469,7 @@ export default function DetalleVisitaPage({
                     {visita.miembroConvertido && (
                       <div className="p-3 bg-secondary/50 rounded-lg">
                         <div className="flex items-center gap-2 text-secondary-foreground">
-                          <UserCheck className="h-4 w-4" />
+                          <UserPlus className="h-4 w-4" />
                           <span className="text-sm font-medium">
                             Convertido en miembro
                           </span>
@@ -544,7 +545,7 @@ export default function DetalleVisitaPage({
                       router.push(`/visitas/${id}/historial/nueva`)
                     }
                   >
-                    <Plus className="mr-2 h-4 w-4" />
+                    <UserPlus className="mr-2 h-4 w-4" />
                     Registrar Nueva Visita
                   </Button>
                   <Button
@@ -553,7 +554,7 @@ export default function DetalleVisitaPage({
                     onClick={() => router.push(`/visitas/${id}/convertir`)}
                     disabled={!!visita.miembroConvertido}
                   >
-                    <UserCheck className="mr-2 h-4 w-4" />
+                    <UserPlus className="mr-2 h-4 w-4" />
                     {visita.miembroConvertido
                       ? "Ya es miembro"
                       : "Convertir a Miembro"}

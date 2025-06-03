@@ -32,6 +32,14 @@ export async function GET(
             apellido: true,
             nombre: true,
             estado: true,
+            jefeFamilia: {
+              select: {
+                id: true,
+                nombres: true,
+                apellidos: true,
+                foto: true,
+              },
+            },
           },
         },
         familiaRelacionada: {
@@ -40,6 +48,14 @@ export async function GET(
             apellido: true,
             nombre: true,
             estado: true,
+            jefeFamilia: {
+              select: {
+                id: true,
+                nombres: true,
+                apellidos: true,
+                foto: true,
+              },
+            },
           },
         },
         miembroVinculo: {
@@ -47,6 +63,7 @@ export async function GET(
             id: true,
             nombres: true,
             apellidos: true,
+            foto: true,
           },
         },
       },
@@ -56,7 +73,7 @@ export async function GET(
   } catch (error) {
     console.error("Error al obtener vínculos familiares:", error);
     return NextResponse.json(
-      { error: "Error al obtener vínculos familiares" },
+      { error: "Error interno del servidor" },
       { status: 500 }
     );
   }
@@ -82,6 +99,7 @@ export async function POST(
     const { familiaRelacionadaId, tipoVinculo, descripcion, miembroVinculoId } =
       body;
 
+    // Validaciones
     if (!familiaRelacionadaId || !tipoVinculo) {
       return NextResponse.json(
         { error: "Familia relacionada y tipo de vínculo son requeridos" },
@@ -89,12 +107,17 @@ export async function POST(
       );
     }
 
+    if (familiaOrigenId === familiaRelacionadaId) {
+      return NextResponse.json(
+        { error: "Una familia no puede vincularse consigo misma" },
+        { status: 400 }
+      );
+    }
+
     // Verificar que ambas familias existen
     const [familiaOrigen, familiaRelacionada] = await Promise.all([
       prisma.familia.findUnique({ where: { id: familiaOrigenId } }),
-      prisma.familia.findUnique({
-        where: { id: parseInt(familiaRelacionadaId) },
-      }),
+      prisma.familia.findUnique({ where: { id: familiaRelacionadaId } }),
     ]);
 
     if (!familiaOrigen || !familiaRelacionada) {
@@ -104,24 +127,16 @@ export async function POST(
       );
     }
 
-    // Verificar que no es la misma familia
-    if (familiaOrigenId === parseInt(familiaRelacionadaId)) {
-      return NextResponse.json(
-        { error: "No se puede vincular una familia consigo misma" },
-        { status: 400 }
-      );
-    }
-
-    // Verificar si el vínculo ya existe
+    // Verificar que no existe ya un vínculo entre estas familias
     const vinculoExistente = await prisma.vinculoFamiliar.findFirst({
       where: {
         OR: [
           {
             familiaOrigenId: familiaOrigenId,
-            familiaRelacionadaId: parseInt(familiaRelacionadaId),
+            familiaRelacionadaId: familiaRelacionadaId,
           },
           {
-            familiaOrigenId: parseInt(familiaRelacionadaId),
+            familiaOrigenId: familiaRelacionadaId,
             familiaRelacionadaId: familiaOrigenId,
           },
         ],
@@ -135,14 +150,43 @@ export async function POST(
       );
     }
 
+    // Validar que el miembro conector pertenezca a una de las familias vinculadas
+    if (miembroVinculoId) {
+      const miembroVinculo = await prisma.miembro.findUnique({
+        where: { id: miembroVinculoId },
+        select: { id: true, familiaId: true, nombres: true, apellidos: true },
+      });
+
+      if (!miembroVinculo) {
+        return NextResponse.json(
+          { error: "El miembro conector no existe" },
+          { status: 404 }
+        );
+      }
+
+      // Verificar que el miembro pertenezca a una de las familias que se están vinculando
+      if (
+        miembroVinculo.familiaId !== familiaOrigenId &&
+        miembroVinculo.familiaId !== familiaRelacionadaId
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "El miembro conector debe pertenecer a una de las familias que se están vinculando",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // Crear el vínculo
     const nuevoVinculo = await prisma.vinculoFamiliar.create({
       data: {
-        familiaOrigenId: familiaOrigenId,
-        familiaRelacionadaId: parseInt(familiaRelacionadaId),
+        familiaOrigenId,
+        familiaRelacionadaId,
         tipoVinculo,
-        descripcion: descripcion || null,
-        miembroVinculoId: miembroVinculoId ? parseInt(miembroVinculoId) : null,
+        descripcion,
+        miembroVinculoId,
       },
       include: {
         familiaOrigen: {
@@ -175,7 +219,7 @@ export async function POST(
   } catch (error) {
     console.error("Error al crear vínculo familiar:", error);
     return NextResponse.json(
-      { error: "Error al crear vínculo familiar" },
+      { error: "Error interno del servidor" },
       { status: 500 }
     );
   }

@@ -48,7 +48,9 @@ import { useForm, type ControllerRenderProps } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { CloudinaryUploader } from "../../../../components/CloudinaryUploader";
+import { PhoneInput } from "../../../../components/PhoneInput";
 import { ModeToggle } from "../../../../components/mode-toggle";
+import { formatDateForInput } from "@/lib/date-utils";
 
 const formSchema = z.object({
   nombres: z.string().min(2, "Los nombres deben tener al menos 2 caracteres"),
@@ -135,12 +137,6 @@ export default function EditarVisitaPage({
           throw new Error("Error al obtener los datos de la visita");
         }
         const data: VisitaData = await response.json();
-
-        // Formatear fechas para el input date
-        const formatDateForInput = (dateString?: string) => {
-          if (!dateString) return "";
-          return new Date(dateString).toISOString().split("T")[0];
-        };
 
         // Llenar el formulario con los datos existentes
         form.reset({
@@ -538,7 +534,11 @@ export default function EditarVisitaPage({
                           <FormItem>
                             <FormLabel>Teléfono</FormLabel>
                             <FormControl>
-                              <Input placeholder="+1234567890" {...field} />
+                              <PhoneInput
+                                value={field.value}
+                                onChange={field.onChange}
+                                placeholder="809-699-7909"
+                              />
                             </FormControl>
                             <FormDescription>Opcional</FormDescription>
                             <FormMessage />
@@ -557,7 +557,11 @@ export default function EditarVisitaPage({
                           <FormItem>
                             <FormLabel>Celular</FormLabel>
                             <FormControl>
-                              <Input placeholder="+1234567890" {...field} />
+                              <PhoneInput
+                                value={field.value}
+                                onChange={field.onChange}
+                                placeholder="809-699-7909"
+                              />
                             </FormControl>
                             <FormDescription>Opcional</FormDescription>
                             <FormMessage />

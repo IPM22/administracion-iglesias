@@ -1,5 +1,6 @@
 import { prisma } from "../../../../../lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { parseDateForAPI } from "@/lib/date-utils";
 
 // Helper function para parsing seguro
 function parseString(value: unknown): string | null {
@@ -168,7 +169,7 @@ export async function POST(
         ministerioId,
         rol: parseString(rol),
         esLider,
-        fechaInicio: fechaInicio ? new Date(fechaInicio) : new Date(),
+        fechaInicio: parseDateForAPI(fechaInicio) || new Date(),
         estado,
       },
       include: {

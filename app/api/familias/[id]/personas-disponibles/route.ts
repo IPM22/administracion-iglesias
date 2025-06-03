@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "../../../../../lib/db";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 // GET - Obtener personas disponibles (miembros y visitas sin familia asignada)
 export async function GET(
@@ -10,29 +12,17 @@ export async function GET(
     const { id } = await params;
     const familiaId = parseInt(id);
 
-    if (isNaN(familiaId)) {
+    if (!familiaId || isNaN(familiaId)) {
       return NextResponse.json(
         { error: "ID de familia inválido" },
         { status: 400 }
       );
     }
 
-    // Verificar que la familia existe
-    const familia = await prisma.familia.findUnique({
-      where: { id: familiaId },
-    });
-
-    if (!familia) {
-      return NextResponse.json(
-        { error: "Familia no encontrada" },
-        { status: 404 }
-      );
-    }
-
-    // Obtener miembros sin familia asignada
-    const miembrosSinFamilia = await prisma.miembro.findMany({
+    // Obtener miembros que no pertenecen a esta familia
+    const miembrosDisponibles = await prisma.miembro.findMany({
       where: {
-        OR: [{ familiaId: null }, { familiaId: { equals: null } }],
+        OR: [{ familiaId: null }, { familiaId: { not: familiaId } }],
       },
       select: {
         id: true,
@@ -48,11 +38,11 @@ export async function GET(
       orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
     });
 
-    // Obtener visitas sin familia asignada
-    const visitasSinFamilia = await prisma.visita.findMany({
+    // Obtener visitas que no pertenecen a esta familia y no han sido convertidas
+    const visitasDisponibles = await prisma.visita.findMany({
       where: {
-        OR: [{ familiaId: null }, { familiaId: { equals: null } }],
-        estado: { not: "Convertido" }, // Excluir visitas ya convertidas a miembros
+        estado: { not: "Convertido" },
+        OR: [{ familiaId: null }, { familiaId: { not: familiaId } }],
       },
       select: {
         id: true,
@@ -68,10 +58,9 @@ export async function GET(
       orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
     });
 
-    // Combinar y formatear los resultados
+    // Combinar y formatear las personas disponibles
     const personasDisponibles = [
-      // Miembros
-      ...miembrosSinFamilia.map((miembro) => ({
+      ...miembrosDisponibles.map((miembro) => ({
         id: miembro.id,
         nombres: miembro.nombres,
         apellidos: miembro.apellidos,
@@ -83,8 +72,7 @@ export async function GET(
         tipo: "miembro" as const,
         fechaBautismo: miembro.fechaBautismo,
       })),
-      // Visitas
-      ...visitasSinFamilia.map((visita) => ({
+      ...visitasDisponibles.map((visita) => ({
         id: visita.id,
         nombres: visita.nombres,
         apellidos: visita.apellidos,
@@ -92,9 +80,9 @@ export async function GET(
         telefono: visita.telefono,
         celular: visita.celular,
         foto: visita.foto,
-        estado: visita.estado || "Activa",
+        estado: visita.estado || "Nuevo",
         tipo: "visita" as const,
-        fechaPrimeraVisita: visita.fechaPrimeraVisita,
+        fechaBautismo: null,
       })),
     ];
 
@@ -109,8 +97,10 @@ export async function GET(
   } catch (error) {
     console.error("Error al obtener personas disponibles:", error);
     return NextResponse.json(
-      { error: "Error al obtener personas disponibles" },
+      { error: "Error interno del servidor" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }

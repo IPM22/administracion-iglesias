@@ -48,6 +48,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useState } from "react";
 import { CloudinaryUploader } from "../../../components/CloudinaryUploader";
+import { PhoneInput } from "../../../components/PhoneInput";
 import { ModeToggle } from "../../../components/mode-toggle";
 
 const formSchema = z.object({
@@ -444,7 +445,11 @@ export default function NuevaVisitaPage() {
                           <FormItem>
                             <FormLabel>Teléfono</FormLabel>
                             <FormControl>
-                              <Input placeholder="+1234567890" {...field} />
+                              <PhoneInput
+                                value={field.value}
+                                onChange={field.onChange}
+                                placeholder="809-699-7909"
+                              />
                             </FormControl>
                             <FormDescription>Opcional</FormDescription>
                             <FormMessage />
@@ -463,7 +468,11 @@ export default function NuevaVisitaPage() {
                           <FormItem>
                             <FormLabel>Celular</FormLabel>
                             <FormControl>
-                              <Input placeholder="+1234567890" {...field} />
+                              <PhoneInput
+                                value={field.value}
+                                onChange={field.onChange}
+                                placeholder="809-699-7909"
+                              />
                             </FormControl>
                             <FormDescription>Opcional</FormDescription>
                             <FormMessage />

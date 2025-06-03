@@ -1,5 +1,6 @@
 import { prisma } from "../../../lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { parseDateForAPI } from "@/lib/date-utils";
 
 export async function GET() {
   try {
@@ -50,14 +51,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Función para manejar fechas vacías
-    const parseDate = (dateString: string) => {
-      if (!dateString || dateString.trim() === "") {
-        return null;
-      }
-      return new Date(dateString);
-    };
 
     // Función para manejar strings vacías
     const parseString = (value: string) => {
@@ -160,14 +153,14 @@ export async function POST(request: NextRequest) {
           telefono: parseString(telefono),
           celular: parseString(celular),
           direccion: parseString(direccion),
-          fechaNacimiento: parseDate(fechaNacimiento),
+          fechaNacimiento: parseDateForAPI(fechaNacimiento),
           sexo: parseString(sexo),
           estadoCivil: parseString(estadoCivil),
           ocupacion: parseString(ocupacion),
           familia: parseString(familia),
           familiaId: familiaIdParsed,
-          fechaIngreso: parseDate(fechaIngreso),
-          fechaBautismo: parseDate(fechaBautismo),
+          fechaIngreso: parseDateForAPI(fechaIngreso),
+          fechaBautismo: parseDateForAPI(fechaBautismo),
           estado: parseString(estado) || "Activo",
           foto: parseString(foto),
           notasAdicionales: parseString(notasAdicionales),

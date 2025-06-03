@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { AppSidebar } from "../../../components/app-sidebar";
 import {
   Breadcrumb,
@@ -20,6 +21,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   ArrowLeft,
   Edit,
   Calendar,
@@ -31,12 +39,40 @@ import {
   Users,
   Heart,
   UserPlus,
-  ChevronRight,
   Loader2,
+  CheckCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { MiembroAvatar } from "../../../components/MiembroAvatar";
 import { ModeToggle } from "../../../components/mode-toggle";
+import {
+  formatDate,
+  calcularEdad,
+  calcularAniosTranscurridos,
+} from "@/lib/date-utils";
+
+// Función para formatear teléfonos para mostrar
+const formatPhoneForDisplay = (phone: string | null | undefined): string => {
+  if (!phone) return "";
+
+  // Remover todo lo que no sea número
+  const numbers = phone.replace(/\D/g, "");
+
+  // Si no tiene números, retornar vacío
+  if (numbers.length === 0) return "";
+
+  // Aplicar formato XXX-XXX-XXXX
+  if (numbers.length <= 3) {
+    return numbers;
+  } else if (numbers.length <= 6) {
+    return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+  } else {
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(
+      6,
+      10
+    )}`;
+  }
+};
 
 // Interfaces para tipado
 interface Ministerio {
@@ -49,17 +85,20 @@ interface Ministerio {
   rol?: string;
   fechaInicio?: string;
   fechaFin?: string;
+  esLider?: boolean;
 }
 
 interface FamiliarRelacion {
-  id: number;
+  id: string | number;
   familiar: {
     id: number;
     nombres: string;
     apellidos: string;
     foto?: string;
+    estado?: string;
   };
   tipoRelacion: string;
+  fuente?: "directa" | "inversa" | "familia";
 }
 
 interface VisitaInvitada {
@@ -103,10 +142,24 @@ export default function MiembroDetallePage({
   params: Promise<{ id: string }>;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { id } = use(params);
   const [miembro, setMiembro] = useState<MiembroDetalle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [ministeriosDialogOpen, setMinisteriosDialogOpen] = useState(false);
+  const [showConvertedMessage, setShowConvertedMessage] = useState(false);
+
+  // Verificar si fue convertido desde una visita
+  useEffect(() => {
+    if (searchParams.get("converted") === "true") {
+      setShowConvertedMessage(true);
+      // Remover el parámetro después de 5 segundos
+      setTimeout(() => {
+        setShowConvertedMessage(false);
+      }, 5000);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchMiembro = async () => {
@@ -131,39 +184,6 @@ export default function MiembroDetallePage({
   const getNombreCompleto = () => {
     if (!miembro) return "Cargando...";
     return `${miembro.nombres} ${miembro.apellidos}`;
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "—";
-    return new Date(dateString).toLocaleDateString("es-ES", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const calcularEdad = (fechaNacimiento?: string) => {
-    if (!fechaNacimiento) return null;
-    const hoy = new Date();
-    const nacimiento = new Date(fechaNacimiento);
-    let edad = hoy.getFullYear() - nacimiento.getFullYear();
-    const mes = hoy.getMonth() - nacimiento.getMonth();
-    if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
-      edad--;
-    }
-    return edad;
-  };
-
-  const calcularAnosEnIglesia = (fechaIngreso?: string) => {
-    if (!fechaIngreso) return null;
-    const hoy = new Date();
-    const ingreso = new Date(fechaIngreso);
-    let anos = hoy.getFullYear() - ingreso.getFullYear();
-    const mes = hoy.getMonth() - ingreso.getMonth();
-    if (mes < 0 || (mes === 0 && hoy.getDate() < ingreso.getDate())) {
-      anos--;
-    }
-    return anos;
   };
 
   const getBadgeVariant = (estado?: string) => {
@@ -271,7 +291,7 @@ export default function MiembroDetallePage({
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                onClick={() => router.push(`/miembros/${id}/ministerios`)}
+                onClick={() => setMinisteriosDialogOpen(true)}
               >
                 <Users className="mr-2 h-4 w-4" />
                 Ministerios
@@ -282,6 +302,28 @@ export default function MiembroDetallePage({
               </Button>
             </div>
           </div>
+
+          {/* Mensaje de conversión exitosa */}
+          {showConvertedMessage && (
+            <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/10">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/20">
+                    <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-green-800 dark:text-green-200">
+                      ¡Conversión Exitosa!
+                    </h3>
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      La visita ha sido convertida exitosamente en miembro de la
+                      iglesia.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="grid gap-6 md:grid-cols-3">
             {/* Columna principal - Información personal */}
@@ -382,7 +424,7 @@ export default function MiembroDetallePage({
                         </label>
                         <p className="flex items-center gap-2">
                           <Phone className="h-4 w-4" />
-                          {miembro.telefono}
+                          {formatPhoneForDisplay(miembro.telefono)}
                         </p>
                       </div>
                     )}
@@ -393,7 +435,7 @@ export default function MiembroDetallePage({
                         </label>
                         <p className="flex items-center gap-2">
                           <Phone className="h-4 w-4" />
-                          {miembro.celular}
+                          {formatPhoneForDisplay(miembro.celular)}
                         </p>
                       </div>
                     )}
@@ -419,6 +461,12 @@ export default function MiembroDetallePage({
                     <CardTitle className="flex items-center gap-2">
                       <Users className="h-5 w-5" />
                       Ministerios Activos
+                      {miembro.ministerios &&
+                        miembro.ministerios.length > 0 && (
+                          <Badge variant="secondary" className="ml-2">
+                            {miembro.ministerios.length}
+                          </Badge>
+                        )}
                     </CardTitle>
                     <Button
                       variant="outline"
@@ -431,34 +479,91 @@ export default function MiembroDetallePage({
                 </CardHeader>
                 <CardContent>
                   {miembro.ministerios && miembro.ministerios.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-4">
-                      No participa en ministerios actualmente
-                    </p>
+                    <div className="text-center py-8 border-2 border-dashed border-muted rounded-lg">
+                      <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground mb-4">
+                        No participa en ministerios actualmente
+                      </p>
+                      <Button
+                        variant="outline"
+                        onClick={() =>
+                          router.push(`/miembros/${id}/ministerios/nuevo`)
+                        }
+                      >
+                        <Users className="mr-2 h-4 w-4" />
+                        Asignar Primer Ministerio
+                      </Button>
+                    </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {miembro.ministerios?.slice(0, 3).map((ministerioRel) => (
                         <div
                           key={ministerioRel.id}
-                          className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                          className="border rounded-lg p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 hover:shadow-md transition-all duration-200"
                         >
-                          <div>
-                            <p className="font-medium">
-                              {ministerioRel.ministerio.nombre}
-                            </p>
-                            {ministerioRel.rol && (
-                              <p className="text-sm text-muted-foreground">
-                                {ministerioRel.rol}
-                              </p>
-                            )}
-                            {ministerioRel.fechaInicio && (
-                              <p className="text-xs text-muted-foreground">
-                                Desde: {formatDate(ministerioRel.fechaInicio)}
-                              </p>
-                            )}
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <h4 className="font-semibold text-lg text-blue-900 dark:text-blue-100">
+                                  {ministerioRel.ministerio.nombre}
+                                </h4>
+                                {ministerioRel.esLider && (
+                                  <Badge
+                                    variant="default"
+                                    className="bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400"
+                                  >
+                                    Líder
+                                  </Badge>
+                                )}
+                              </div>
+                              {ministerioRel.rol && (
+                                <p className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">
+                                  {ministerioRel.rol}
+                                </p>
+                              )}
+                              {ministerioRel.ministerio.descripcion && (
+                                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                                  {ministerioRel.ministerio.descripcion}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-4 text-sm">
+                                {ministerioRel.fechaInicio && (
+                                  <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Calendar className="h-4 w-4" />
+                                    <span>
+                                      Desde{" "}
+                                      {formatDate(ministerioRel.fechaInicio)}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <Badge
+                              variant="default"
+                              className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                            >
+                              Activo
+                            </Badge>
                           </div>
-                          <Badge variant="outline">Activo</Badge>
                         </div>
                       ))}
+                      {miembro.ministerios &&
+                        miembro.ministerios.length > 3 && (
+                          <div className="text-center pt-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setMinisteriosDialogOpen(true)}
+                              className="text-muted-foreground hover:text-primary"
+                            >
+                              Ver {miembro.ministerios.length - 3} ministerio
+                              {miembro.ministerios.length - 3 !== 1
+                                ? "s"
+                                : ""}{" "}
+                              más
+                            </Button>
+                          </div>
+                        )}
                     </div>
                   )}
                 </CardContent>
@@ -471,6 +576,11 @@ export default function MiembroDetallePage({
                     <CardTitle className="flex items-center gap-2">
                       <Heart className="h-5 w-5" />
                       Núcleo Familiar
+                      {miembro.familiares && miembro.familiares.length > 0 && (
+                        <Badge variant="secondary" className="ml-2">
+                          {miembro.familiares.length}
+                        </Badge>
+                      )}
                     </CardTitle>
                     <Button
                       variant="outline"
@@ -483,15 +593,27 @@ export default function MiembroDetallePage({
                 </CardHeader>
                 <CardContent>
                   {miembro.familiares && miembro.familiares.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-4">
-                      No hay familiares registrados
-                    </p>
+                    <div className="text-center py-8 border-2 border-dashed border-muted rounded-lg">
+                      <Heart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground mb-4">
+                        No hay familiares registrados
+                      </p>
+                      <Button
+                        variant="outline"
+                        onClick={() =>
+                          router.push(`/miembros/${id}/familia/agregar`)
+                        }
+                      >
+                        <Heart className="mr-2 h-4 w-4" />
+                        Agregar Primer Familiar
+                      </Button>
+                    </div>
                   ) : (
                     <div className="space-y-3">
                       {miembro.familiares?.slice(0, 4).map((familiarRel) => (
                         <div
                           key={familiarRel.id}
-                          className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted/80 transition-colors cursor-pointer"
+                          className="flex items-center justify-between p-4 bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-950/20 dark:to-rose-950/20 rounded-lg hover:shadow-md transition-all duration-200 cursor-pointer border"
                           onClick={() =>
                             router.push(`/miembros/${familiarRel.familiar.id}`)
                           }
@@ -503,22 +625,64 @@ export default function MiembroDetallePage({
                               size="sm"
                             />
                             <div>
-                              <p className="font-medium">
+                              <p className="font-medium text-gray-900 dark:text-gray-100">
                                 {familiarRel.familiar.nombres}{" "}
                                 {familiarRel.familiar.apellidos}
                               </p>
-                              <span
-                                className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getRelacionColor(
-                                  familiarRel.tipoRelacion
-                                )}`}
-                              >
-                                {familiarRel.tipoRelacion}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getRelacionColor(
+                                    familiarRel.tipoRelacion
+                                  )}`}
+                                >
+                                  {familiarRel.tipoRelacion}
+                                </span>
+                                {familiarRel.familiar.estado && (
+                                  <Badge
+                                    variant={
+                                      familiarRel.familiar.estado === "Activo"
+                                        ? "default"
+                                        : "outline"
+                                    }
+                                    className="text-xs"
+                                  >
+                                    {familiarRel.familiar.estado}
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                           </div>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          <div className="flex items-center gap-2">
+                            {familiarRel.fuente && (
+                              <span className="text-xs text-muted-foreground px-2 py-1 bg-white/50 rounded">
+                                {familiarRel.fuente === "directa"
+                                  ? "Directo"
+                                  : familiarRel.fuente === "inversa"
+                                  ? "Referencia"
+                                  : "Familia"}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       ))}
+                      {miembro.familiares && miembro.familiares.length > 4 && (
+                        <div className="text-center pt-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              router.push(`/miembros/${id}/familia`)
+                            }
+                            className="text-muted-foreground hover:text-primary"
+                          >
+                            Ver {miembro.familiares.length - 4} familiar
+                            {miembro.familiares.length - 4 !== 1
+                              ? "es"
+                              : ""}{" "}
+                            más
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </CardContent>
@@ -666,11 +830,14 @@ export default function MiembroDetallePage({
                         <span className="font-medium">
                           {formatDate(miembro.fechaIngreso)}
                         </span>
-                        {calcularAnosEnIglesia(miembro.fechaIngreso) !==
+                        {calcularAniosTranscurridos(miembro.fechaIngreso) !==
                           null && (
                           <p className="text-xs text-muted-foreground">
-                            {calcularAnosEnIglesia(miembro.fechaIngreso)} año
-                            {calcularAnosEnIglesia(miembro.fechaIngreso) !== 1
+                            {calcularAniosTranscurridos(miembro.fechaIngreso)}{" "}
+                            año
+                            {calcularAniosTranscurridos(
+                              miembro.fechaIngreso
+                            ) !== 1
                               ? "s"
                               : ""}{" "}
                             en la iglesia
@@ -768,6 +935,122 @@ export default function MiembroDetallePage({
             </div>
           </div>
         </div>
+
+        {/* Dialog de Ministerios */}
+        <Dialog
+          open={ministeriosDialogOpen}
+          onOpenChange={setMinisteriosDialogOpen}
+        >
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Ministerios de {miembro.nombres} {miembro.apellidos}
+              </DialogTitle>
+              <DialogDescription>
+                Lista completa de ministerios en los que participa el miembro
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {miembro.ministerios && miembro.ministerios.length === 0 ? (
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">
+                    No participa en ministerios actualmente
+                  </p>
+                  <Button
+                    className="mt-4"
+                    onClick={() => {
+                      setMinisteriosDialogOpen(false);
+                      router.push(`/miembros/${id}/ministerios/nuevo`);
+                    }}
+                  >
+                    <Users className="mr-2 h-4 w-4" />
+                    Asignar Primer Ministerio
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {miembro.ministerios?.map((ministerioRel) => (
+                    <Card key={ministerioRel.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-lg">
+                              {ministerioRel.ministerio.nombre}
+                            </h4>
+                            {ministerioRel.rol && (
+                              <p className="text-sm text-muted-foreground mb-2">
+                                {ministerioRel.rol}
+                              </p>
+                            )}
+                            {ministerioRel.ministerio.descripcion && (
+                              <p className="text-sm text-muted-foreground mb-3">
+                                {ministerioRel.ministerio.descripcion}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-4 text-sm">
+                              {ministerioRel.fechaInicio && (
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-muted-foreground">
+                                    Inicio:
+                                  </span>
+                                  <span>
+                                    {formatDate(ministerioRel.fechaInicio)}
+                                  </span>
+                                </div>
+                              )}
+                              {ministerioRel.fechaFin && (
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-muted-foreground">
+                                    Fin:
+                                  </span>
+                                  <span>
+                                    {formatDate(ministerioRel.fechaFin)}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <Badge
+                            variant={
+                              ministerioRel.fechaFin ? "outline" : "default"
+                            }
+                            className={
+                              ministerioRel.fechaFin
+                                ? "text-gray-600"
+                                : "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                            }
+                          >
+                            {ministerioRel.fechaFin ? "Finalizado" : "Activo"}
+                          </Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setMinisteriosDialogOpen(false)}
+              >
+                Cerrar
+              </Button>
+              <Button
+                onClick={() => {
+                  setMinisteriosDialogOpen(false);
+                  router.push(`/miembros/${id}/ministerios`);
+                }}
+              >
+                Ver Todos los Ministerios
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </SidebarInset>
     </SidebarProvider>
   );

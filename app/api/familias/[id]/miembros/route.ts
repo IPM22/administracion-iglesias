@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db";
+import { sincronizarRelacionesFamiliares } from "../../../../../lib/familiares-sync";
 
 // GET - Obtener miembros de una familia
 export async function GET(
@@ -75,7 +76,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { miembroId } = body;
+    const { miembroId, parentescoFamiliar } = body;
 
     if (!miembroId) {
       return NextResponse.json(
@@ -134,7 +135,7 @@ export async function POST(
         parentescoFamiliar:
           familia.jefeFamiliaId === parseInt(miembroId)
             ? "Cabeza de Familia"
-            : null,
+            : parentescoFamiliar || null,
       },
       select: {
         id: true,
@@ -152,7 +153,31 @@ export async function POST(
       },
     });
 
-    return NextResponse.json(miembroActualizado, { status: 201 });
+    // **NUEVA FUNCIONALIDAD: Sincronización automática de relaciones familiares**
+    let mensajeSincronizacion = "";
+    try {
+      const resultadoSync = await sincronizarRelacionesFamiliares(
+        parseInt(miembroId),
+        familiaId,
+        parentescoFamiliar
+      );
+      mensajeSincronizacion = resultadoSync.mensaje;
+    } catch (syncError) {
+      console.error(
+        "Error en sincronización automática de relaciones:",
+        syncError
+      );
+      mensajeSincronizacion =
+        "Miembro agregado a familia, pero hubo un problema creando las relaciones familiares automáticas";
+    }
+
+    return NextResponse.json(
+      {
+        miembro: miembroActualizado,
+        sincronizacion: mensajeSincronizacion,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Error al agregar miembro a familia:", error);
     return NextResponse.json(

@@ -52,28 +52,28 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Miembro } from "@prisma/client";
+import { calcularEdad, formatDate } from "@/lib/date-utils";
 
 export default function ReportesPage() {
   const [miembros, setMiembros] = useState<Miembro[]>([]);
   const [miembrosFiltrados, setMiembrosFiltrados] = useState<Miembro[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filtroEstado, setFiltroEstado] = useState<string>("todos");
-  const [filtroSexo, setFiltroSexo] = useState<string>("todos");
-  const [filtroEdadMin, setFiltroEdadMin] = useState<string>("");
-  const [filtroEdadMax, setFiltroEdadMax] = useState<string>("");
+  const [filtroEstado, setFiltroEstado] = useState("todos");
+  const [filtroSexo, setFiltroSexo] = useState("todos");
+  const [filtroEdadMin, setFiltroEdadMin] = useState("");
+  const [filtroEdadMax, setFiltroEdadMax] = useState("");
 
   useEffect(() => {
     const fetchMiembros = async () => {
       try {
         const response = await fetch("/api/miembros");
-        if (!response.ok) {
-          throw new Error("Error al cargar los miembros");
+        if (response.ok) {
+          const data = await response.json();
+          setMiembros(data);
+          setMiembrosFiltrados(data);
         }
-        const data = await response.json();
-        setMiembros(data);
-        setMiembrosFiltrados(data);
       } catch (error) {
-        console.error("Error:", error);
+        console.error("Error al cargar miembros:", error);
       } finally {
         setIsLoading(false);
       }
@@ -104,6 +104,8 @@ export default function ReportesPage() {
           if (!miembro.fechaNacimiento) return false;
 
           const edad = calcularEdad(miembro.fechaNacimiento);
+          if (edad === null) return false;
+
           const edadMin = filtroEdadMin ? parseInt(filtroEdadMin) : 0;
           const edadMax = filtroEdadMax ? parseInt(filtroEdadMax) : 999;
 
@@ -116,27 +118,6 @@ export default function ReportesPage() {
 
     aplicarFiltros();
   }, [miembros, filtroEstado, filtroSexo, filtroEdadMin, filtroEdadMax]);
-
-  const calcularEdad = (fechaNacimiento: string | Date) => {
-    const hoy = new Date();
-    const fechaNac = new Date(fechaNacimiento);
-    let edad = hoy.getFullYear() - fechaNac.getFullYear();
-    const diferenciaMes = hoy.getMonth() - fechaNac.getMonth();
-
-    if (
-      diferenciaMes < 0 ||
-      (diferenciaMes === 0 && hoy.getDate() < fechaNac.getDate())
-    ) {
-      edad--;
-    }
-
-    return edad;
-  };
-
-  const formatFecha = (fecha?: string | Date | null) => {
-    if (!fecha) return "No especificada";
-    return new Date(fecha).toLocaleDateString("es-ES");
-  };
 
   const limpiarFiltros = () => {
     setFiltroEstado("todos");
@@ -177,8 +158,8 @@ export default function ReportesPage() {
           miembro.ocupacion || "",
           miembro.familia || "",
           miembro.estado || "",
-          formatFecha(miembro.fechaIngreso),
-          formatFecha(miembro.fechaBautismo),
+          formatDate(miembro.fechaIngreso),
+          formatDate(miembro.fechaBautismo),
         ].join(",")
       ),
     ].join("\n");

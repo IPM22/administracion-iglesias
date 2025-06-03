@@ -67,6 +67,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import PersonaSelector from "../../../components/PersonaSelector";
+import { calcularEdad } from "@/lib/date-utils";
 
 interface FamiliaDetalle {
   id: number;
@@ -176,6 +177,7 @@ export default function FamiliaDetallePage({
   const [personaParentesco, setPersonaParentesco] =
     useState<PersonaFamilia | null>(null);
   const [parentescoSeleccionado, setParentescoSeleccionado] = useState("");
+  const [parentescoNuevaMiembro, setParentescoNuevaMiembro] = useState("");
   const [agregandoPersona, setAgregandoPersona] = useState(false);
   const [actualizandoParentesco, setActualizandoParentesco] = useState(false);
 
@@ -280,21 +282,33 @@ export default function FamiliaDetallePage({
 
     try {
       setAgregandoPersona(true);
+      const requestBody: {
+        personaId: number;
+        tipo: string;
+        parentescoFamiliar?: string;
+      } = {
+        personaId: personaSeleccionada.id,
+        tipo: personaSeleccionada.tipo,
+      };
+
+      // Solo agregar parentesco si se seleccionó uno
+      if (parentescoNuevaMiembro.trim()) {
+        requestBody.parentescoFamiliar = parentescoNuevaMiembro;
+      }
+
       const response = await fetch(`/api/familias/${id}/personas`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          personaId: personaSeleccionada.id,
-          tipo: personaSeleccionada.tipo,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (response.ok) {
         await cargarDatos(); // Recargar datos
         setDialogAgregar(false);
         setPersonaSeleccionada(null);
+        setParentescoNuevaMiembro("");
       } else {
         const errorData = await response.json();
         alert(errorData.error || "Error al agregar persona");
@@ -310,47 +324,38 @@ export default function FamiliaDetallePage({
   const removerPersona = async (persona: PersonaFamilia) => {
     if (
       !confirm(
-        `¿Estás seguro de remover a ${persona.nombres} ${persona.apellidos} de la familia?`
+        `¿Estás seguro de que quieres remover a ${persona.nombres} ${persona.apellidos} de esta familia?`
       )
     ) {
       return;
     }
 
     try {
-      // Determinar la ruta de la API según el tipo de persona
-      const apiUrl =
+      const endpoint =
         persona.tipo === "miembro"
-          ? `/api/familias/${id}/miembros/${persona.id}`
-          : `/api/familias/${id}/visitas/${persona.id}`;
+          ? `/api/miembros/${persona.id}`
+          : `/api/visitas/${persona.id}`;
 
-      const response = await fetch(apiUrl, {
-        method: "DELETE",
+      const response = await fetch(endpoint, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          familia: null,
+          familiaId: null,
+          parentescoFamiliar: null,
+        }),
       });
 
-      if (response.ok) {
-        await cargarDatos(); // Recargar datos
-      } else {
-        const errorData = await response.json();
-        alert(errorData.error || "Error al remover persona");
+      if (!response.ok) {
+        throw new Error("Error al remover persona");
       }
+
+      // Recargar datos
+      cargarDatos();
     } catch (error) {
       console.error("Error:", error);
       alert("Error al remover persona");
     }
-  };
-
-  const calcularEdad = (fechaNacimiento: string) => {
-    const fecha = new Date(fechaNacimiento);
-    const hoy = new Date();
-    return hoy.getFullYear() - fecha.getFullYear();
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("es-ES", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
   };
 
   // Función para obtener el color del badge según el estado y tipo de persona
@@ -480,6 +485,13 @@ export default function FamiliaDetallePage({
             </Button>
             <Button
               variant="outline"
+              onClick={() => router.push(`/familias/${id}/vinculos`)}
+            >
+              <GitBranch className="mr-2 h-4 w-4" />
+              Vínculos Familiares
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => router.push(`/familias/${id}/arbol`)}
             >
               <GitBranch className="mr-2 h-4 w-4" />
@@ -511,7 +523,7 @@ export default function FamiliaDetallePage({
                 <div>
                   <span className="text-sm font-medium">Registro:</span>
                   <p className="text-sm text-muted-foreground">
-                    {formatDate(familia.fechaRegistro)}
+                    {familia.fechaRegistro}
                   </p>
                 </div>
                 {familia.edadPromedio && (
@@ -837,16 +849,26 @@ export default function FamiliaDetallePage({
           </Card>
 
           {/* Dialog para Agregar Miembro */}
-          <Dialog open={dialogAgregar} onOpenChange={setDialogAgregar}>
-            <DialogContent>
+          <Dialog
+            open={dialogAgregar}
+            onOpenChange={(open) => {
+              setDialogAgregar(open);
+              if (!open) {
+                // Limpiar estados cuando se cierra el diálogo
+                setPersonaSeleccionada(null);
+                setParentescoNuevaMiembro("");
+              }
+            }}
+          >
+            <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>Agregar Miembro a la Familia</DialogTitle>
+                <DialogTitle>Agregar Persona a la Familia</DialogTitle>
                 <DialogDescription>
-                  Selecciona un miembro para agregarlo a la familia{" "}
+                  Selecciona una persona para agregarla a la familia{" "}
                   {familia.nombre || `Familia ${familia.apellido}`}
                 </DialogDescription>
               </DialogHeader>
-              <div className="py-4">
+              <div className="space-y-4 py-4">
                 <PersonaSelector
                   personas={personasDisponibles}
                   onSeleccionar={setPersonaSeleccionada}
@@ -854,11 +876,101 @@ export default function FamiliaDetallePage({
                   placeholder="Buscar persona disponible..."
                   disabled={agregandoPersona}
                 />
+
+                {/* Selector de Parentesco */}
+                {personaSeleccionada && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Parentesco Familiar (Opcional)
+                    </label>
+                    <Select
+                      value={parentescoNuevaMiembro}
+                      onValueChange={setParentescoNuevaMiembro}
+                      disabled={agregandoPersona}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona el parentesco..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tiposParentesco.map((tipo) => (
+                          <SelectItem key={tipo} value={tipo}>
+                            {tipo}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Puedes asignar el parentesco ahora o hacerlo después desde
+                      el menú de opciones
+                    </p>
+                  </div>
+                )}
+
+                {/* Vista previa de la adición */}
+                {personaSeleccionada && (
+                  <div className="p-4 bg-muted/50 rounded-lg border-2 border-dashed border-primary/20">
+                    <p className="text-sm font-medium text-center mb-3">
+                      Se agregará a la familia:
+                    </p>
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="text-center">
+                        <Badge variant="outline" className="mb-1">
+                          {familia.nombre || `Familia ${familia.apellido}`}
+                        </Badge>
+                        <p className="text-xs text-muted-foreground">
+                          {familia.totalPersonas} persona
+                          {familia.totalPersonas !== 1 ? "s" : ""}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-2xl">+</span>
+                        <span className="text-xs text-muted-foreground">
+                          agregar
+                        </span>
+                      </div>
+                      <div className="text-center">
+                        <Badge
+                          variant={
+                            personaSeleccionada.tipo === "miembro"
+                              ? "default"
+                              : "outline"
+                          }
+                          className="mb-1"
+                        >
+                          {personaSeleccionada.nombres}{" "}
+                          {personaSeleccionada.apellidos}
+                        </Badge>
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {personaSeleccionada.tipo}
+                        </p>
+                      </div>
+                    </div>
+                    {parentescoNuevaMiembro && (
+                      <div className="mt-3 p-2 bg-green-50 rounded text-center dark:bg-green-950/20">
+                        <p className="text-xs text-green-800 dark:text-green-200">
+                          Se asignará como:{" "}
+                          <strong>{parentescoNuevaMiembro}</strong>
+                        </p>
+                      </div>
+                    )}
+                    {!parentescoNuevaMiembro && (
+                      <div className="mt-3 p-2 bg-blue-50 rounded text-center dark:bg-blue-950/20">
+                        <p className="text-xs text-blue-800 dark:text-blue-200">
+                          Sin parentesco asignado (puede agregarse después)
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button
                   variant="outline"
-                  onClick={() => setDialogAgregar(false)}
+                  onClick={() => {
+                    setDialogAgregar(false);
+                    setPersonaSeleccionada(null);
+                    setParentescoNuevaMiembro("");
+                  }}
                 >
                   Cancelar
                 </Button>
@@ -869,7 +981,7 @@ export default function FamiliaDetallePage({
                   {agregandoPersona && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Agregar
+                  Agregar a la Familia
                 </Button>
               </DialogFooter>
             </DialogContent>

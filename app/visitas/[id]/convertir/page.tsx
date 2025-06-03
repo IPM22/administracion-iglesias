@@ -35,12 +35,20 @@ import {
   Phone,
   MapPin,
   UserPlus,
-  Save,
   Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ModeToggle } from "../../../../components/mode-toggle";
 import { MiembroAvatar } from "../../../../components/MiembroAvatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { formatDate } from "@/lib/date-utils";
 
 interface VisitaDetalle {
   id: number;
@@ -80,6 +88,8 @@ export default function ConvertirVisitaPage({
   const [visita, setVisita] = useState<VisitaDetalle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isConverting, setIsConverting] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchVisita = async () => {
@@ -101,41 +111,38 @@ export default function ConvertirVisitaPage({
     fetchVisita();
   }, [id]);
 
-  const handleConvertir = () => {
+  const handleConvertir = async () => {
     if (!visita) return;
 
-    // Construir parámetros de query con los datos de la visita
-    const params = new URLSearchParams();
-    if (visita.nombres) params.set("nombres", visita.nombres);
-    if (visita.apellidos) params.set("apellidos", visita.apellidos);
-    if (visita.correo) params.set("correo", visita.correo);
-    if (visita.telefono) params.set("telefono", visita.telefono);
-    if (visita.celular) params.set("celular", visita.celular);
-    if (visita.direccion) params.set("direccion", visita.direccion);
-    if (visita.fechaNacimiento)
-      params.set("fechaNacimiento", visita.fechaNacimiento);
-    if (visita.sexo) params.set("sexo", visita.sexo);
-    if (visita.estadoCivil) params.set("estadoCivil", visita.estadoCivil);
-    if (visita.ocupacion) params.set("ocupacion", visita.ocupacion);
-    if (visita.familia) params.set("familia", visita.familia);
-    if (visita.foto) params.set("foto", visita.foto);
-    if (visita.notasAdicionales)
-      params.set("notasAdicionales", visita.notasAdicionales);
+    setIsConverting(true);
+    try {
+      const response = await fetch(`/api/visitas/${id}/convertir`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
-    // Agregar parámetro especial para indicar que viene de conversión
-    params.set("fromVisita", id);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error al convertir la visita");
+      }
 
-    // Redirigir al formulario de nuevo miembro con datos pre-poblados
-    router.push(`/miembros/nuevo?${params.toString()}`);
-  };
+      const data = await response.json();
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "—";
-    return new Date(dateString).toLocaleDateString("es-ES", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+      // Redirigir al perfil del nuevo miembro
+      router.push(`/miembros/${data.miembro.id}?converted=true`);
+    } catch (error) {
+      console.error("Error:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Error al convertir la visita en miembro"
+      );
+    } finally {
+      setIsConverting(false);
+      setDialogOpen(false);
+    }
   };
 
   const getNombreCompleto = () => {
@@ -208,7 +215,7 @@ export default function ConvertirVisitaPage({
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
-                    <BreadcrumbPage>Convertir</BreadcrumbPage>
+                    <BreadcrumbPage>Convertir a Miembro</BreadcrumbPage>
                   </BreadcrumbItem>
                 </BreadcrumbList>
               </Breadcrumb>
@@ -218,50 +225,47 @@ export default function ConvertirVisitaPage({
             </div>
           </header>
           <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-            <div className="flex items-center justify-between">
-              <Button variant="outline" onClick={() => router.back()}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Volver
-              </Button>
-            </div>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center space-y-4">
-                  <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto">
-                    <UserCheck className="h-8 w-8 text-green-600" />
+            <div className="flex items-center justify-center h-full">
+              <Card className="w-full max-w-md">
+                <CardHeader className="text-center">
+                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/20">
+                    <UserCheck className="h-6 w-6 text-green-600 dark:text-green-400" />
                   </div>
-                  <div>
-                    <h2 className="text-xl font-bold mb-2">
-                      {getNombreCompleto()} ya es miembro
-                    </h2>
-                    <p className="text-muted-foreground">
-                      Esta visita ya ha sido convertida en miembro de la
-                      iglesia.
+                  <CardTitle className="text-xl">Ya es Miembro</CardTitle>
+                  <CardDescription>
+                    Esta visita ya ha sido convertida en miembro de la iglesia
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-center space-y-4">
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="font-medium">
+                      {visita.miembroConvertido.nombres}{" "}
+                      {visita.miembroConvertido.apellidos}
                     </p>
-                    <div className="mt-4">
-                      <Badge variant="secondary" className="text-sm">
-                        Miembro: {visita.miembroConvertido.nombres}{" "}
-                        {visita.miembroConvertido.apellidos}
-                      </Badge>
-                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Miembro ID: {visita.miembroConvertido.id}
+                    </p>
                   </div>
-                  <div className="flex gap-2 justify-center">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <Button
                       variant="outline"
+                      className="flex-1"
+                      onClick={() => router.push(`/visitas/${id}`)}
+                    >
+                      Ver Visita
+                    </Button>
+                    <Button
+                      className="flex-1"
                       onClick={() =>
-                        router.push(`/miembros/${visita.miembroConvertido?.id}`)
+                        router.push(`/miembros/${visita.miembroConvertido!.id}`)
                       }
                     >
                       Ver Miembro
                     </Button>
-                    <Button onClick={() => router.push(`/visitas/${id}`)}>
-                      Ver Visita
-                    </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </SidebarInset>
       </SidebarProvider>
@@ -310,244 +314,274 @@ export default function ConvertirVisitaPage({
             </Button>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3">
-            {/* Información de la visita */}
-            <div className="md:col-span-2 space-y-6">
-              <Card>
+          <div className="max-w-4xl mx-auto w-full space-y-6">
+            {/* Información de Confirmación */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/20">
+                    <UserPlus className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <CardTitle>Convertir Visita a Miembro</CardTitle>
+                    <CardDescription>
+                      Revisa los datos antes de proceder con la conversión
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+
+            {/* Información de la Visita */}
+            <div className="grid gap-6 lg:grid-cols-3">
+              {/* Datos Personales */}
+              <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <UserCheck className="h-5 w-5" />
-                    Convertir Visita a Miembro
+                    <Info className="h-5 w-5" />
+                    Datos que se transferirán
                   </CardTitle>
-                  <CardDescription>
-                    Convierte a {getNombreCompleto()} de visita a miembro activo
-                    de la iglesia
-                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Información importante */}
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <Info className="h-5 w-5 text-blue-600 mt-0.5" />
-                      <div>
-                        <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-                          ¿Qué sucederá al convertir esta visita?
-                        </h4>
-                        <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                          <li>
-                            • Se creará un nuevo registro de miembro con la
-                            información existente
-                          </li>
-                          <li>
-                            • La visita mantendrá su historial de asistencias
-                          </li>
-                          <li>
-                            • Podrás completar información adicional como fecha
-                            de bautismo
-                          </li>
-                          <li>
-                            • El estado de la visita cambiará a
-                            &ldquo;Convertido&rdquo;
-                          </li>
-                        </ul>
-                      </div>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Nombres
+                      </label>
+                      <p className="font-medium">{visita.nombres}</p>
                     </div>
-                  </div>
-
-                  {/* Requisitos */}
-                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Apellidos
+                      </label>
+                      <p className="font-medium">{visita.apellidos}</p>
+                    </div>
+                    {visita.correo && (
                       <div>
-                        <h4 className="font-medium text-amber-900 dark:text-amber-100 mb-2">
-                          Requisitos para ser miembro
-                        </h4>
-                        <ul className="text-sm text-amber-800 dark:text-amber-200 space-y-1">
-                          <li>• Debe estar bautizado/a</li>
-                          <li>• Debe haber asistido regularmente</li>
-                          <li>
-                            • Debe haber expresado su deseo de ser miembro
-                          </li>
-                          <li>
-                            • Debe estar de acuerdo con la doctrina de la
-                            iglesia
-                          </li>
-                        </ul>
-                        <p className="text-xs mt-2 text-amber-700 dark:text-amber-300">
-                          Asegúrate de que estos requisitos se cumplan antes de
-                          proceder.
+                        <label className="text-sm font-medium text-muted-foreground">
+                          Correo
+                        </label>
+                        <p className="flex items-center gap-2">
+                          <Mail className="h-4 w-4" />
+                          {visita.correo}
                         </p>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Resumen de datos */}
-                  <div>
-                    <h4 className="font-medium mb-3">
-                      Datos que se transferirán:
-                    </h4>
-                    <div className="grid gap-3 md:grid-cols-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">
-                          Nombre completo:
-                        </span>
-                        <span className="font-medium">
-                          {getNombreCompleto()}
-                        </span>
+                    )}
+                    {visita.telefono && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">
+                          Teléfono
+                        </label>
+                        <p className="flex items-center gap-2">
+                          <Phone className="h-4 w-4" />
+                          {visita.telefono}
+                        </p>
                       </div>
-                      {visita.correo && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Correo:</span>
-                          <span>{visita.correo}</span>
-                        </div>
-                      )}
-                      {visita.celular && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Celular:
-                          </span>
-                          <span>{visita.celular}</span>
-                        </div>
-                      )}
-                      {visita.fechaNacimiento && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Fecha de nacimiento:
-                          </span>
-                          <span>{formatDate(visita.fechaNacimiento)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">
-                          Total de visitas:
-                        </span>
-                        <span className="font-medium">
-                          {visita.historialVisitas.length}
-                        </span>
+                    )}
+                    {visita.celular && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">
+                          Celular
+                        </label>
+                        <p className="flex items-center gap-2">
+                          <Phone className="h-4 w-4" />
+                          {visita.celular}
+                        </p>
                       </div>
-                      {visita.fechaPrimeraVisita && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Primera visita:
-                          </span>
-                          <span>{formatDate(visita.fechaPrimeraVisita)}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Botón de acción */}
-                  <div className="flex justify-end space-x-4 pt-4 border-t">
-                    <Button variant="outline" onClick={() => router.back()}>
-                      Cancelar
-                    </Button>
-                    <Button
-                      onClick={handleConvertir}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <UserCheck className="mr-2 h-4 w-4" />
-                      Convertir a Miembro
-                    </Button>
+                    )}
+                    {visita.direccion && (
+                      <div className="md:col-span-2">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          Dirección
+                        </label>
+                        <p className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4" />
+                          {visita.direccion}
+                        </p>
+                      </div>
+                    )}
+                    {visita.fechaNacimiento && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">
+                          Fecha de Nacimiento
+                        </label>
+                        <p className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          {formatDate(visita.fechaNacimiento)}
+                        </p>
+                      </div>
+                    )}
+                    {visita.sexo && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">
+                          Sexo
+                        </label>
+                        <p>{visita.sexo}</p>
+                      </div>
+                    )}
+                    {visita.estadoCivil && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">
+                          Estado Civil
+                        </label>
+                        <p>{visita.estadoCivil}</p>
+                      </div>
+                    )}
+                    {visita.ocupacion && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">
+                          Ocupación
+                        </label>
+                        <p>{visita.ocupacion}</p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
-            </div>
 
-            {/* Panel lateral con información de la visita */}
-            <div className="space-y-6">
-              {/* Foto y resumen */}
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center space-y-4">
-                    <MiembroAvatar
-                      foto={visita.foto}
-                      nombre={getNombreCompleto()}
-                      size="xl"
-                      className="mx-auto"
-                    />
-                    <div>
-                      <h3 className="font-bold text-lg">
-                        {getNombreCompleto()}
-                      </h3>
-                      <Badge variant="outline" className="mt-2">
-                        {visita.estado || "Activa"}
-                      </Badge>
+              {/* Resumen */}
+              <div className="space-y-6">
+                {/* Foto y Estado */}
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-center space-y-4">
+                      <MiembroAvatar
+                        foto={visita.foto}
+                        nombre={getNombreCompleto()}
+                        size="xl"
+                        className="mx-auto"
+                      />
+                      <div>
+                        <h3 className="font-semibold">{getNombreCompleto()}</h3>
+                        <Badge variant="outline" className="mt-1">
+                          {visita.estado || "Activa"}
+                        </Badge>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
 
-              {/* Información de contacto */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">
-                    Información de Contacto
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                  {visita.correo && (
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span className="truncate">{visita.correo}</span>
-                    </div>
-                  )}
-                  {visita.celular && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span>{visita.celular}</span>
-                    </div>
-                  )}
-                  {visita.direccion && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-xs">{visita.direccion}</span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Estadísticas de visitas */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    Historial de Visitas
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">
-                      Total de visitas:
-                    </span>
-                    <span className="font-medium text-primary text-lg">
-                      {visita.historialVisitas.length}
-                    </span>
-                  </div>
-                  {visita.fechaPrimeraVisita && (
+                {/* Estadísticas */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Historial</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">
-                        Primera visita:
+                        Total de visitas:
                       </span>
                       <span className="font-medium">
-                        {formatDate(visita.fechaPrimeraVisita)}
+                        {visita.historialVisitas.length}
                       </span>
                     </div>
-                  )}
-                  {visita.historialVisitas.length > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        Última visita:
-                      </span>
-                      <span className="font-medium">
-                        {formatDate(visita.historialVisitas[0]?.fecha)}
-                      </span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                    {visita.fechaPrimeraVisita && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Primera visita:
+                        </span>
+                        <span className="font-medium">
+                          {formatDate(visita.fechaPrimeraVisita)}
+                        </span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Información Importante */}
+                <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/10">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-400">
+                      <AlertTriangle className="h-5 w-5" />
+                      Información Importante
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-amber-700 dark:text-amber-300 space-y-2">
+                    <p>
+                      • Esta acción convertirá la visita en un miembro activo
+                    </p>
+                    <p>• Los datos se transferirán automáticamente</p>
+                    <p>• Se establecerá el estado como &quot;Nuevo&quot;</p>
+                    <p>• Esta acción no se puede deshacer</p>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
+
+            {/* Botón de Conversión */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push(`/visitas/${id}`)}
+                    disabled={isConverting}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={() => setDialogOpen(true)}
+                    disabled={isConverting}
+                    className="min-w-[200px]"
+                  >
+                    {isConverting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Convirtiendo...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Convertir a Miembro
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
+
+        {/* Dialog de Confirmación */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirmar Conversión</DialogTitle>
+              <DialogDescription>
+                ¿Estás seguro de que deseas convertir a{" "}
+                <strong>{getNombreCompleto()}</strong> en miembro de la iglesia?
+                <br />
+                <br />
+                Esta acción:
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>Creará un nuevo registro de miembro</li>
+                  <li>Marcará la visita como &quot;Convertido&quot;</li>
+                  <li>Transferirá todos los datos disponibles</li>
+                  <li>No se puede deshacer</li>
+                </ul>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+                disabled={isConverting}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleConvertir} disabled={isConverting}>
+                {isConverting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Convirtiendo...
+                  </>
+                ) : (
+                  "Confirmar Conversión"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </SidebarInset>
     </SidebarProvider>
   );

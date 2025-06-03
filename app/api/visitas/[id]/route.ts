@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "../../../../lib/db";
+import { parseDateForAPI } from "@/lib/date-utils";
 
 // Helper function para manejar strings vacios
 function parseString(value: unknown): string | undefined {
@@ -9,14 +8,6 @@ function parseString(value: unknown): string | undefined {
     return undefined;
   }
   return value as string;
-}
-
-// Helper function para manejar fechas
-function parseDate(value: unknown): Date | undefined {
-  if (!value || (typeof value === "string" && value.trim() === "")) {
-    return undefined;
-  }
-  return new Date(value as string);
 }
 
 export async function GET(
@@ -131,7 +122,7 @@ export async function PUT(
         telefono: parseString(telefono),
         celular: parseString(celular),
         direccion: parseString(direccion),
-        fechaNacimiento: parseDate(fechaNacimiento),
+        fechaNacimiento: parseDateForAPI(fechaNacimiento as string),
         sexo: parseString(sexo),
         estadoCivil: parseString(estadoCivil),
         ocupacion: parseString(ocupacion),
@@ -139,7 +130,7 @@ export async function PUT(
         estado: parseString(estado),
         foto: parseString(foto),
         notasAdicionales: parseString(notasAdicionales),
-        fechaPrimeraVisita: parseDate(fechaPrimeraVisita),
+        fechaPrimeraVisita: parseDateForAPI(fechaPrimeraVisita as string),
       },
     });
 
@@ -215,6 +206,65 @@ export async function DELETE(
 
     return NextResponse.json(
       { error: "Error al eliminar la visita" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const visitaId = parseInt(id);
+
+    if (isNaN(visitaId)) {
+      return NextResponse.json(
+        { error: "ID de visita inválido" },
+        { status: 400 }
+      );
+    }
+
+    const body = await request.json();
+    const { familiaId, parentescoFamiliar } = body;
+
+    // Verificar que la visita existe
+    const visitaExistente = await prisma.visita.findUnique({
+      where: { id: visitaId },
+    });
+
+    if (!visitaExistente) {
+      return NextResponse.json(
+        { error: "Visita no encontrada" },
+        { status: 404 }
+      );
+    }
+
+    // Actualizar solo los campos proporcionados
+    const dataToUpdate: {
+      familiaId?: number | null;
+      parentescoFamiliar?: string | null;
+    } = {};
+
+    if (familiaId !== undefined) {
+      dataToUpdate.familiaId = familiaId;
+    }
+
+    if (parentescoFamiliar !== undefined) {
+      dataToUpdate.parentescoFamiliar = parentescoFamiliar;
+    }
+
+    const visitaActualizada = await prisma.visita.update({
+      where: { id: visitaId },
+      data: dataToUpdate,
+    });
+
+    return NextResponse.json(visitaActualizada);
+  } catch (error) {
+    console.error("Error al actualizar visita:", error);
+    return NextResponse.json(
+      { error: "Error al actualizar la visita" },
       { status: 500 }
     );
   }

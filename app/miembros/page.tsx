@@ -73,6 +73,29 @@ import {
 import { MiembroAvatar } from "../../components/MiembroAvatar";
 import { ModeToggle } from "../../components/mode-toggle";
 
+// Función para formatear teléfonos para mostrar
+const formatPhoneForDisplay = (phone: string | null | undefined): string => {
+  if (!phone) return "";
+
+  // Remover todo lo que no sea número
+  const numbers = phone.replace(/\D/g, "");
+
+  // Si no tiene números, retornar vacío
+  if (numbers.length === 0) return "";
+
+  // Aplicar formato XXX-XXX-XXXX
+  if (numbers.length <= 3) {
+    return numbers;
+  } else if (numbers.length <= 6) {
+    return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+  } else {
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(
+      6,
+      10
+    )}`;
+  }
+};
+
 export default function MiembrosPage() {
   const router = useRouter();
   const [miembros, setMiembros] = useState<Miembro[]>([]);
@@ -468,7 +491,13 @@ export default function MiembrosPage() {
                           </TableRow>
                         ) : (
                           currentItems.map((miembro) => (
-                            <TableRow key={miembro.id}>
+                            <TableRow
+                              key={miembro.id}
+                              className="cursor-pointer hover:bg-muted/50 transition-colors"
+                              onClick={() =>
+                                router.push(`/miembros/${miembro.id}`)
+                              }
+                            >
                               <TableCell>
                                 <MiembroAvatar
                                   foto={miembro.foto}
@@ -487,7 +516,7 @@ export default function MiembrosPage() {
                                 <div className="text-sm">
                                   <div>{miembro.correo}</div>
                                   <div className="text-muted-foreground">
-                                    {miembro.telefono}
+                                    {formatPhoneForDisplay(miembro.telefono)}
                                   </div>
                                 </div>
                               </TableCell>
@@ -504,7 +533,10 @@ export default function MiembrosPage() {
                                   {miembro.estado}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell
+                                className="text-right"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button
