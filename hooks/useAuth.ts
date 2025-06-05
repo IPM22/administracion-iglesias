@@ -246,6 +246,12 @@ export function useAuth() {
     return await supabase.auth.resetPasswordForEmail(email);
   };
 
+  const refetch = async () => {
+    if (user) {
+      await cargarUsuarioCompleto(user);
+    }
+  };
+
   return {
     user,
     usuarioCompleto,
@@ -260,5 +266,6 @@ export function useAuth() {
     cambiarIglesia,
     seleccionarIglesia,
     cargarUsuarioCompleto,
+    refetch,
   };
 }
