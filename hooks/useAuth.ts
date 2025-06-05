@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { type User } from "@supabase/supabase-js";
 import { useIglesiaStore, type IglesiaActiva } from "@/stores/iglesiaStore";
 
@@ -33,6 +33,12 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [initializing, setInitializing] = useState(true);
 
+  // Refs para evitar llamadas duplicadas
+  const cargandoUsuario = useRef(false);
+  const ultimoUsuarioId = useRef<string | null>(null);
+  const cacheTimestamp = useRef<number>(0);
+  const CACHE_DURATION = 30000; // 30 segundos de caché
+
   // Zustand store
   const {
     iglesiaActiva,
@@ -57,12 +63,40 @@ export function useAuth() {
     return null;
   };
 
-  const cargarUsuarioCompleto = async (authUser: User) => {
+  const cargarUsuarioCompleto = async (
+    authUser: User,
+    forzarRecarga = false
+  ) => {
+    // Verificar si ya estamos cargando el mismo usuario
+    if (
+      cargandoUsuario.current &&
+      ultimoUsuarioId.current === authUser.id &&
+      !forzarRecarga
+    ) {
+      return;
+    }
+
+    // Verificar caché (si no es recarga forzada)
+    const ahora = Date.now();
+    if (
+      !forzarRecarga &&
+      ultimoUsuarioId.current === authUser.id &&
+      usuarioCompleto &&
+      ahora - cacheTimestamp.current < CACHE_DURATION
+    ) {
+      setInitializing(false);
+      return;
+    }
+
+    cargandoUsuario.current = true;
+    ultimoUsuarioId.current = authUser.id;
+
     try {
       const response = await fetch(`/api/usuarios/${authUser.id}`);
       if (response.ok) {
         const usuario = await response.json();
         setUsuarioCompleto(usuario);
+        cacheTimestamp.current = ahora;
 
         // Si ya hay una iglesia en Zustand, verificar que sea válida
         if (iglesiaActiva) {
@@ -104,13 +138,13 @@ export function useAuth() {
           }
         }
       } else if (response.status === 404) {
-        console.log("👤 Usuario no encontrado, creando automáticamente...");
         await crearUsuarioAutomaticamente(authUser);
       }
     } catch (error) {
       console.error("Error cargando usuario completo:", error);
     } finally {
       setInitializing(false);
+      cargandoUsuario.current = false;
     }
   };
 
@@ -248,7 +282,7 @@ export function useAuth() {
 
   const refetch = async () => {
     if (user) {
-      await cargarUsuarioCompleto(user);
+      await cargarUsuarioCompleto(user, true);
     }
   };
 

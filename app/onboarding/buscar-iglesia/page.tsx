@@ -16,7 +16,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Search,
@@ -45,7 +44,7 @@ interface Iglesia {
 
 export default function BuscarIglesiaPage() {
   const router = useRouter();
-  const { user, cargarUsuarioCompleto } = useAuth();
+  const { user, signOut } = useAuth();
   const [iglesias, setIglesias] = useState<Iglesia[]>([]);
   const [loading, setLoading] = useState(false);
   const [busqueda, setBusqueda] = useState("");
@@ -120,9 +119,10 @@ export default function BuscarIglesiaPage() {
       setModalAbierto(false);
       setMensaje("");
 
-      // Mostrar mensaje de éxito por 3 segundos y redirigir
-      setTimeout(() => {
-        router.push("/dashboard");
+      // Mostrar mensaje de éxito por 3 segundos, luego desloguear y redirigir al login
+      setTimeout(async () => {
+        await signOut();
+        router.push("/login?mensaje=solicitud-enviada");
       }, 3000);
     } catch (error) {
       console.error("Error:", error);
@@ -156,7 +156,7 @@ export default function BuscarIglesiaPage() {
             </p>
             <div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
             <p className="text-sm text-muted-foreground mt-2">
-              Redirigiendo al dashboard...
+              Redirigiendo al login...
             </p>
           </CardContent>
         </Card>

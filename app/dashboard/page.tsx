@@ -99,7 +99,6 @@ export default function DashboardPage() {
     loading: authLoading,
     initializing,
     mostrarSelectorIglesias,
-    cargarUsuarioCompleto,
     seleccionarIglesia,
   } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -166,14 +165,6 @@ export default function DashboardPage() {
     }
   }, [iglesiaActiva?.id]);
 
-  // Efecto optimizado para recargar datos del usuario
-  useEffect(() => {
-    if (user && !usuarioCompleto && !authLoading && !initializing) {
-      console.log("🔄 Recargando datos del usuario en dashboard...");
-      cargarUsuarioCompleto(user);
-    }
-  }, [user?.id, usuarioCompleto, authLoading, initializing]); // Depender solo de user.id
-
   // Mostrar spinner mientras se autentica o inicializa
   if (authLoading || initializing) {
     return (
@@ -212,8 +203,33 @@ export default function DashboardPage() {
     );
   }
 
+  // Mostrar selector de iglesias si hay múltiples iglesias activas (ANTES que sin iglesia)
+  if (mostrarSelectorIglesias && usuarioCompleto) {
+    return (
+      <SelectorIglesias
+        iglesias={usuarioCompleto.iglesias}
+        onSeleccionarIglesia={seleccionarIglesia}
+        usuario={{
+          nombres: usuarioCompleto.nombres,
+          apellidos: usuarioCompleto.apellidos,
+        }}
+      />
+    );
+  }
+
   // Solo mostrar "Sin iglesia" si ya terminó de inicializar y no hay iglesia
   if (!iglesiaActiva && !initializing) {
+    // Verificar si el usuario tiene solicitudes pendientes
+    const tieneSolicitudesPendientes = usuarioCompleto?.iglesias?.some(
+      (iglesia) => iglesia.estado === "PENDIENTE"
+    );
+
+    if (tieneSolicitudesPendientes) {
+      // Si tiene solicitudes pendientes, redirigir al login con mensaje
+      router.push("/login?mensaje=solicitud-pendiente");
+      return null;
+    }
+
     return (
       <div className="flex items-center justify-center h-screen">
         <Card className="w-full max-w-md">
@@ -229,20 +245,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-    );
-  }
-
-  // Mostrar selector de iglesias si hay múltiples iglesias activas
-  if (mostrarSelectorIglesias && usuarioCompleto) {
-    return (
-      <SelectorIglesias
-        iglesias={usuarioCompleto.iglesias}
-        onSeleccionarIglesia={seleccionarIglesia}
-        usuario={{
-          nombres: usuarioCompleto.nombres,
-          apellidos: usuarioCompleto.apellidos,
-        }}
-      />
     );
   }
 
