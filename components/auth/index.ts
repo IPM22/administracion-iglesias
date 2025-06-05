@@ -1,0 +1,1 @@
+export { SelectorIglesias } from "./SelectorIglesias";

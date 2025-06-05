@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../lib/db";
 import { parseDateForAPI } from "@/lib/date-utils";
+import { createClient } from "@/lib/supabase/server";
 
 // Helper function para manejar strings vacios
 function parseString(value: unknown): string | undefined {
@@ -12,19 +13,47 @@ function parseString(value: unknown): string | undefined {
 
 export async function GET() {
   try {
+    // Obtener el usuario autenticado
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
+    // Obtener la iglesia activa del usuario
+    const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
+      where: {
+        usuarioId: user.id,
+        estado: "ACTIVO",
+      },
+      include: {
+        iglesia: true,
+      },
+    });
+
+    if (!usuarioIglesia) {
+      return NextResponse.json(
+        { error: "No tienes acceso a ninguna iglesia activa" },
+        { status: 403 }
+      );
+    }
+
     const visitas = await prisma.visita.findMany({
+      where: {
+        iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
+      },
       include: {
         historialVisitas: {
           include: {
             tipoActividad: true,
             actividad: true,
-            invitadoPor: {
-              select: {
-                id: true,
-                nombres: true,
-                apellidos: true,
-              },
-            },
           },
           orderBy: {
             fecha: "desc",
@@ -53,6 +82,38 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Obtener el usuario autenticado
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
+    // Obtener la iglesia activa del usuario
+    const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
+      where: {
+        usuarioId: user.id,
+        estado: "ACTIVO",
+      },
+      include: {
+        iglesia: true,
+      },
+    });
+
+    if (!usuarioIglesia) {
+      return NextResponse.json(
+        { error: "No tienes acceso a ninguna iglesia activa" },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const {
       nombres,
@@ -82,6 +143,7 @@ export async function POST(request: NextRequest) {
 
     const nuevaVisita = await prisma.visita.create({
       data: {
+        iglesiaId: usuarioIglesia.iglesiaId, // AGREGAR IGLESIA ID
         nombres: nombres.trim(),
         apellidos: apellidos.trim(),
         correo: parseString(correo),
@@ -95,7 +157,7 @@ export async function POST(request: NextRequest) {
         familia: parseString(familia),
         estado: parseString(estado) || "Nuevo",
         foto: parseString(foto),
-        notasAdicionales: parseString(notasAdicionales),
+        notas: parseString(notasAdicionales), // Corregido: el campo se llama 'notas' en el schema
         fechaPrimeraVisita: parseDateForAPI(fechaPrimeraVisita as string),
       },
     });

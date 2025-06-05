@@ -1,5 +1,6 @@
 import { prisma } from "../../../lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 // Helper function para parsing seguro
 function parseString(value: unknown): string | null {
@@ -9,11 +10,46 @@ function parseString(value: unknown): string | null {
 
 export async function GET() {
   try {
+    // Obtener el usuario autenticado
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
+    // Obtener la iglesia activa del usuario
+    const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
+      where: {
+        usuarioId: user.id,
+        estado: "ACTIVO",
+      },
+      include: {
+        iglesia: true,
+      },
+    });
+
+    if (!usuarioIglesia) {
+      return NextResponse.json(
+        { error: "No tienes acceso a ninguna iglesia activa" },
+        { status: 403 }
+      );
+    }
+
     const ministerios = await prisma.ministerio.findMany({
+      where: {
+        iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
+      },
       include: {
         miembros: {
           where: {
-            estado: "Activo",
+            activo: true,
           },
           include: {
             miembro: {
@@ -38,7 +74,7 @@ export async function GET() {
           select: {
             miembros: {
               where: {
-                estado: "Activo",
+                activo: true,
               },
             },
             actividades: true,
@@ -62,6 +98,38 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Obtener el usuario autenticado
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
+    // Obtener la iglesia activa del usuario
+    const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
+      where: {
+        usuarioId: user.id,
+        estado: "ACTIVO",
+      },
+      include: {
+        iglesia: true,
+      },
+    });
+
+    if (!usuarioIglesia) {
+      return NextResponse.json(
+        { error: "No tienes acceso a ninguna iglesia activa" },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { nombre, descripcion } = body;
 
@@ -73,27 +141,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar que no existe un ministerio con el mismo nombre
-    const ministerioExistente = await prisma.ministerio.findUnique({
-      where: { nombre: nombre.trim() },
+    // Verificar que no existe un ministerio con el mismo nombre en la misma iglesia
+    const ministerioExistente = await prisma.ministerio.findFirst({
+      where: {
+        nombre: nombre.trim(),
+        iglesiaId: usuarioIglesia.iglesiaId,
+      },
     });
 
     if (ministerioExistente) {
       return NextResponse.json(
-        { error: "Ya existe un ministerio con ese nombre" },
+        { error: "Ya existe un ministerio con ese nombre en tu iglesia" },
         { status: 409 }
       );
     }
 
     const nuevoMinisterio = await prisma.ministerio.create({
       data: {
+        iglesiaId: usuarioIglesia.iglesiaId, // AGREGAR IGLESIA ID
         nombre: nombre.trim(),
         descripcion: parseString(descripcion),
       },
       include: {
         miembros: {
           where: {
-            estado: "Activo",
+            activo: true,
           },
           include: {
             miembro: {
@@ -110,7 +182,7 @@ export async function POST(request: NextRequest) {
           select: {
             miembros: {
               where: {
-                estado: "Activo",
+                activo: true,
               },
             },
             actividades: true,

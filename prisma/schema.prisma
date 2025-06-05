@@ -1,253 +1,385 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
-model Miembro {
-  id              Int           @id @default(autoincrement())
-  nombres         String
-  apellidos       String
-  correo          String?       @unique
-  telefono        String?
-  celular         String?
-  direccion       String?
-  fechaNacimiento DateTime?
-  sexo            String?       // "Masculino" | "Femenino" | "Otro"
-  estadoCivil     String?       // "Soltero/a" | "Casado/a" | "Viudo/a" | "Divorciado/a"
-  ocupacion       String?
-  familia         String?       // Campo legacy, mantenemos por compatibilidad
-  familiaId       Int?          // Nueva referencia a la familia
-  parentescoFamiliar String?    // Relación con el cabeza de familia: "Cabeza de Familia", "Esposo/a", "Hijo/a", "Padre/Madre", etc.
-  fechaIngreso    DateTime?
-  fechaBautismo   DateTime?
-  estado          String?       // "Activo" | "Inactivo"
-  foto            String?       // URL de la imagen en Cloudinary
-  notasAdicionales String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  ministerios     MinisterioMiembro[]
-  // Relaciones para invitaciones
-  visitasInvitadas HistorialVisita[] @relation("MiembroInvitador")
-  // Relación para visitas convertidas
-  visitaOriginal  Visita?       @relation("VisitaConvertida")
-  // Relaciones familiares
-  familiares      FamiliarMiembro[] @relation("MiembroFamiliar")
-  familiarDe      FamiliarMiembro[] @relation("FamiliarDeMiembro")
-  // Nueva relación con familia
-  familiaEstructurada Familia?  @relation("MiembroFamilia", fields: [familiaId], references: [id])
-  // Familias donde es jefe de familia
-  familiasComoJefe Familia[]    @relation("JefeFamilia")
-  // Vínculos familiares donde es el miembro conector
-  vinculosFamiliares VinculoFamiliar[] @relation("MiembroVinculo")
-}
+// ===== NUEVAS TABLAS MULTI-TENANT =====
 
-model Visita {
-  id              Int           @id @default(autoincrement())
-  nombres         String
-  apellidos       String
-  correo          String?
-  telefono        String?
-  celular         String?
-  direccion       String?
-  fechaNacimiento DateTime?
-  sexo            String?       // "Masculino" | "Femenino" | "Otro"
-  estadoCivil     String?       // "Soltero/a" | "Casado/a" | "Viudo/a" | "Divorciado/a"
-  ocupacion       String?
-  familia         String?       // Campo legacy para visitantes
-  familiaId       Int?          // Nueva referencia a la familia
-  parentescoFamiliar String?    // Relación con el cabeza de familia
-  estado          String?       // "Nuevo" | "Convertido" | "Recurrente"
-  foto            String?       // URL de la imagen en Cloudinary
-  notasAdicionales String?
-  // Campos específicos para visitas
-  fechaPrimeraVisita DateTime?
-  miembroConvertidoId Int?      @unique // Si se convirtió en miembro, referencia al miembro
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+model Iglesia {
+  id            Int      @id @default(autoincrement())
+  nombre        String
+  descripcion   String?
+  direccion     String?
+  telefono      String?
+  correo        String?
+  sitioWeb      String?
+  logoUrl       String?
+  
+  // Configuración
+  configuracion Json?    // Para settings específicos de la iglesia
+  activa        Boolean  @default(true)
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
   
   // Relaciones
-  historialVisitas HistorialVisita[]
-  miembroConvertido Miembro?    @relation("VisitaConvertida", fields: [miembroConvertidoId], references: [id])
-  // Nueva relación con familia
-  familiaEstructurada Familia?  @relation("VisitaFamilia", fields: [familiaId], references: [id])
+  usuarios      UsuarioIglesia[]
+  miembros      Miembro[]
+  familias      Familia[]
+  visitas       Visita[]
+  ministerios   Ministerio[]
+  actividades   Actividad[]
+  tiposActividad TipoActividad[]
+  
+  @@map("iglesias")
+}
+
+model Usuario {
+  id            String   @id @default(cuid()) // Compatible con Supabase Auth
+  email         String   @unique
+  nombres       String
+  apellidos     String
+  avatar        String?
+  telefono      String?
+  
+  // Estado del usuario
+  emailVerified Boolean  @default(false)
+  activo        Boolean  @default(true)
+  primerLogin   Boolean  @default(true) // Para mostrar wizard
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  ultimoLogin   DateTime?
+  
+  // Relaciones
+  iglesias      UsuarioIglesia[]
+  
+  @@map("usuarios")
+}
+
+model UsuarioIglesia {
+  id        Int      @id @default(autoincrement())
+  usuarioId String
+  iglesiaId Int
+  rol       RolUsuario @default(MIEMBRO)
+  estado    EstadoUsuarioIglesia @default(PENDIENTE)
+  
+  // Permisos específicos (JSON para flexibilidad)
+  permisos  Json?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relaciones
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  iglesia   Iglesia  @relation(fields: [iglesiaId], references: [id], onDelete: Cascade)
+  
+  @@unique([usuarioId, iglesiaId])
+  @@map("usuario_iglesias")
+}
+
+enum RolUsuario {
+  ADMIN       // Administrador total de la iglesia
+  PASTOR      // Pastor principal
+  LIDER       // Líder de ministerio
+  SECRETARIO  // Secretario/administrativa
+  MIEMBRO     // Miembro regular
+}
+
+enum EstadoUsuarioIglesia {
+  ACTIVO
+  PENDIENTE   // Esperando aprobación
+  RECHAZADO
+  SUSPENDIDO
+}
+
+// ===== TABLAS EXISTENTES ACTUALIZADAS =====
+
+model Miembro {
+  id                Int       @id @default(autoincrement())
+  iglesiaId         Int       // NUEVO: Filtro por iglesia
+  nombres           String
+  apellidos         String
+  correo            String?
+  telefono          String?
+  celular           String?
+  direccion         String?
+  fechaNacimiento   DateTime?
+  sexo              String?
+  estadoCivil       String?
+  ocupacion         String?
+  foto              String?
+  notas             String?
+  
+  // Información eclesiástica
+  fechaIngreso      DateTime  @default(now())
+  fechaBautismo     DateTime?
+  fechaConfirmacion DateTime?
+  estado            String    @default("Activo")
+  
+  // Relación familiar
+  familiaId         Int?
+  relacion          String?
+  
+  // Timestamps
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relaciones
+  iglesia           Iglesia   @relation(fields: [iglesiaId], references: [id], onDelete: Cascade)
+  familia           Familia?  @relation(fields: [familiaId], references: [id])
+  ministerios       MiembroMinisterio[]
+  visitasInvitadas  Visita[]  @relation("MiembroInvita")
+  historialVisitas  HistorialVisita[]
+  familiares        Familiar[]
+  
+  // Para conversiones desde visitas
+  visitaOriginal    Visita?   @relation("VisitaConvertida")
+  
+  @@map("miembros")
 }
 
 model Familia {
-  id              Int           @id @default(autoincrement())
-  apellido        String        // Apellido familiar principal
-  nombre          String?       // Nombre opcional (ej: "Los García", "Familia Rodríguez")
-  direccion       String?       // Dirección del hogar
-  telefono        String?       // Teléfono principal
-  celular         String?       // Celular alternativo
-  email           String?       // Email familiar
-  jefeFamiliaId   Int?          // Referencia al miembro que es jefe de familia
-  estado          String        @default("Activa") // "Activa" | "Inactiva"
-  notas           String?       // Notas adicionales sobre la familia
-  fechaRegistro   DateTime      @default(now())
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id              Int       @id @default(autoincrement())
+  iglesiaId       Int       // NUEVO: Filtro por iglesia
+  apellido        String
+  nombre          String?
+  direccion       String?
+  telefono        String?
+  correo          String?
+  notas           String?
+  estado          String    @default("Activa")
+  
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
   
   // Relaciones
-  jefeFamilia     Miembro?      @relation("JefeFamilia", fields: [jefeFamiliaId], references: [id])
-  miembros        Miembro[]     @relation("MiembroFamilia")
-  visitas         Visita[]      @relation("VisitaFamilia")
-  // Vínculos familiares - como familia origen
-  vinculosOrigen  VinculoFamiliar[] @relation("FamiliaOrigen")
-  // Vínculos familiares - como familia relacionada
+  iglesia         Iglesia   @relation(fields: [iglesiaId], references: [id], onDelete: Cascade)
+  miembros        Miembro[]
+  visitas         Visita[]
+  vinculos        VinculoFamiliar[] @relation("FamiliaOrigen")
   vinculosRelacionados VinculoFamiliar[] @relation("FamiliaRelacionada")
-  // Relaciones familiares entre personas en esta familia
-  relacionesFamiliares RelacionFamiliar[] @relation("RelacionesFamiliares")
+  
+  @@map("familias")
 }
 
-model VinculoFamiliar {
-  id                    Int      @id @default(autoincrement())
-  familiaOrigenId       Int      // Familia principal
-  familiaRelacionadaId  Int      // Familia relacionada
-  tipoVinculo          String   // "Familia extendida", "Familia política", "Familia adoptiva", etc.
-  descripcion          String?  // Descripción adicional del vínculo
-  miembroVinculoId     Int?     // Miembro que establece la conexión entre familias
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+model Visita {
+  id                    Int       @id @default(autoincrement())
+  iglesiaId             Int       // NUEVO: Filtro por iglesia
+  nombres               String
+  apellidos             String
+  correo                String?
+  telefono              String?
+  celular               String?
+  direccion             String?
+  fechaNacimiento       DateTime?
+  sexo                  String?
+  estadoCivil           String?
+  ocupacion             String?
+  foto                  String?
+  
+  // Información de la visita
+  fechaPrimeraVisita    DateTime?
+  comoConocioIglesia    String?
+  motivoVisita          String?
+  intereses             String?
+  notas                 String?
+  estado                String    @default("Activa")
+  
+  // Relación familiar
+  familia               String?
+  familiaId             Int?
+  
+  // Invitación
+  miembroInvitaId       Int?
+  
+  // Conversión a miembro
+  miembroConvertidoId   Int?      @unique
+  fechaConversion       DateTime?
+  
+  // Timestamps
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
   
   // Relaciones
-  familiaOrigen        Familia  @relation("FamiliaOrigen", fields: [familiaOrigenId], references: [id])
-  familiaRelacionada   Familia  @relation("FamiliaRelacionada", fields: [familiaRelacionadaId], references: [id])
-  miembroVinculo       Miembro? @relation("MiembroVinculo", fields: [miembroVinculoId], references: [id])
+  iglesia               Iglesia   @relation(fields: [iglesiaId], references: [id], onDelete: Cascade)
+  familiaRelacion       Familia?  @relation(fields: [familiaId], references: [id])
+  miembroInvita         Miembro?  @relation("MiembroInvita", fields: [miembroInvitaId], references: [id])
+  miembroConvertido     Miembro?  @relation("VisitaConvertida", fields: [miembroConvertidoId], references: [id])
+  historialVisitas      HistorialVisita[]
   
-  @@unique([familiaOrigenId, familiaRelacionadaId])
+  @@map("visitas")
 }
 
-model TipoActividad {
-  id          Int           @id @default(autoincrement())
-  nombre      String        @unique
-  descripcion String?
-  tipo        String        // "Regular" | "Especial"
-  esActivo    Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+model Ministerio {
+  id                Int       @id @default(autoincrement())
+  iglesiaId         Int       // NUEVO: Filtro por iglesia
+  nombre            String
+  descripcion       String?
+  liderPrincipalId  Int?
+  estado            String    @default("Activo")
+  colorHex          String?
+  
+  // Timestamps
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
   
   // Relaciones
-  historialVisitas HistorialVisita[]
-  actividades Actividad[]
+  iglesia           Iglesia   @relation(fields: [iglesiaId], references: [id], onDelete: Cascade)
+  miembros          MiembroMinisterio[]
+  actividades       Actividad[]
+  
+  @@map("ministerios")
 }
 
 model Actividad {
-  id              Int           @id @default(autoincrement())
-  nombre          String
-  descripcion     String?
-  fecha           DateTime
-  horaInicio      String?
-  horaFin         String?
-  ubicacion       String?       // Dirección de texto
-  latitud         Float?        // Coordenada GPS
-  longitud        Float?        // Coordenada GPS
-  tipoActividadId Int
-  ministerioId    Int?          // Ministerio organizador
-  responsable     String?       // Campo legacy, mantenemos por compatibilidad
-  estado          String        @default("Programada") // "Programada" | "En curso" | "Finalizada" | "Cancelada"
-  banner          String?       // URL del banner de la actividad en Cloudinary
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                Int       @id @default(autoincrement())
+  iglesiaId         Int       // NUEVO: Filtro por iglesia
+  nombre            String
+  descripcion       String?
+  fecha             DateTime
+  horaInicio        String?
+  horaFin           String?
+  ubicacion         String?
+  estado            String    @default("Programada")
   
   // Relaciones
-  tipoActividad   TipoActividad @relation(fields: [tipoActividadId], references: [id])
-  ministerio      Ministerio?   @relation(fields: [ministerioId], references: [id])
+  tipoActividadId   Int
+  ministerioId      Int?
+  
+  // Timestamps
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relaciones
+  iglesia           Iglesia       @relation(fields: [iglesiaId], references: [id], onDelete: Cascade)
+  tipoActividad     TipoActividad @relation(fields: [tipoActividadId], references: [id])
+  ministerio        Ministerio?   @relation(fields: [ministerioId], references: [id])
+  historialVisitas  HistorialVisita[]
+  
+  @@map("actividades")
+}
+
+model TipoActividad {
+  id          Int       @id @default(autoincrement())
+  iglesiaId   Int       // NUEVO: Filtro por iglesia
+  nombre      String
+  descripcion String?
+  tipo        String    @default("Regular") // Regular, Especial
+  colorHex    String?
+  activo      Boolean   @default(true)
+  
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relaciones
+  iglesia     Iglesia     @relation(fields: [iglesiaId], references: [id], onDelete: Cascade)
+  actividades Actividad[]
   historialVisitas HistorialVisita[]
+  
+  @@map("tipos_actividad")
+}
+
+// ===== TABLAS DE RELACIÓN (SIN CAMBIOS MAYORES) =====
+
+model MiembroMinisterio {
+  id          Int         @id @default(autoincrement())
+  miembroId   Int
+  ministerioId Int
+  cargo       String?
+  fechaInicio DateTime    @default(now())
+  fechaFin    DateTime?
+  activo      Boolean     @default(true)
+  
+  // Timestamps
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  // Relaciones
+  miembro     Miembro     @relation(fields: [miembroId], references: [id], onDelete: Cascade)
+  ministerio  Ministerio  @relation(fields: [ministerioId], references: [id], onDelete: Cascade)
+  
+  @@unique([miembroId, ministerioId])
+  @@map("miembro_ministerios")
 }
 
 model HistorialVisita {
   id              Int           @id @default(autoincrement())
-  visitaId        Int
+  miembroId       Int?
+  visitaId        Int?
+  actividadId     Int?
+  tipoActividadId Int?
   fecha           DateTime      @default(now())
-  tipoActividadId Int?          // Si es actividad regular
-  actividadId     Int?          // Si es actividad especial específica
-  invitadoPorId   Int?          // Miembro que invitó
-  observaciones   String?
+  notas           String?
+  
+  // Timestamps
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   
   // Relaciones
-  visita          Visita        @relation(fields: [visitaId], references: [id], onDelete: Cascade)
-  tipoActividad   TipoActividad? @relation(fields: [tipoActividadId], references: [id])
-  actividad       Actividad?    @relation(fields: [actividadId], references: [id])
-  invitadoPor     Miembro?      @relation("MiembroInvitador", fields: [invitadoPorId], references: [id])
+  miembro         Miembro?      @relation(fields: [miembroId], references: [id], onDelete: Cascade)
+  visita          Visita?       @relation(fields: [visitaId], references: [id], onDelete: Cascade)
+  actividad       Actividad?    @relation(fields: [actividadId], references: [id], onDelete: Cascade)
+  tipoActividad   TipoActividad? @relation(fields: [tipoActividadId], references: [id], onDelete: Cascade)
   
-  @@index([visitaId])
-  @@index([fecha])
+  @@map("historial_visitas")
 }
 
-model Ministerio {
-  id          Int           @id @default(autoincrement())
-  nombre      String        @unique
-  descripcion String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  miembros    MinisterioMiembro[]
-  actividades Actividad[]
-}
-
-model MinisterioMiembro {
-  id           Int        @id @default(autoincrement())
-  miembroId    Int
-  ministerioId Int
-  rol          String?
-  esLider      Boolean    @default(false)
-  fechaInicio  DateTime   @default(now())
-  fechaFin     DateTime?
-  estado       String     @default("Activo")
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  miembro    Miembro    @relation(fields: [miembroId], references: [id], onDelete: Cascade)
-  ministerio Ministerio @relation(fields: [ministerioId], references: [id], onDelete: Cascade)
-
-  @@unique([miembroId, ministerioId])
-  @@map("ministerio_miembros")
-}
-
-model FamiliarMiembro {
-  id              Int     @id @default(autoincrement())
-  miembroId       Int     // El miembro principal
-  familiarId      Int     // El familiar (también miembro)
-  tipoRelacion    String  // "Esposo/a", "Hijo/a", "Padre", "Madre", "Hermano/a", etc.
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+model Familiar {
+  id            Int     @id @default(autoincrement())
+  miembroId     Int
+  nombres       String
+  apellidos     String
+  relacion      String
+  fechaNacimiento DateTime?
+  telefono      String?
+  esMiembro     Boolean @default(false)
+  miembroRelacionadoId Int?
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
   
   // Relaciones
-  miembro         Miembro @relation("MiembroFamiliar", fields: [miembroId], references: [id])
-  familiar        Miembro @relation("FamiliarDeMiembro", fields: [familiarId], references: [id])
-
-  @@unique([miembroId, familiarId])
+  miembro       Miembro  @relation(fields: [miembroId], references: [id], onDelete: Cascade)
+  
+  @@map("familiares")
 }
 
-// Nueva tabla para relaciones familiares flexibles entre personas
-model RelacionFamiliar {
-  id                  Int      @id @default(autoincrement())
-  persona1Id          Int      // ID de la primera persona
-  tipoPersona1        String   // "miembro" | "visita"
-  persona2Id          Int      // ID de la segunda persona
-  tipoPersona2        String   // "miembro" | "visita"
-  tipoRelacion        String   // "Esposo/a", "Hijo/a", "Padre", "Madre", "Hermano/a", etc.
-  relacionInversa     String?  // Relación desde la perspectiva de persona2 hacia persona1
-  esRecíproca         Boolean  @default(false) // Si la relación es bidireccional (ej: hermanos)
-  familiaContextoId   Int?     // Familia en la que se establece esta relación (opcional)
-  notas               String?  // Notas adicionales sobre la relación
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-
-  // Relación opcional con familia
-  familiaContexto     Familia? @relation("RelacionesFamiliares", fields: [familiaContextoId], references: [id])
-
-  @@unique([persona1Id, tipoPersona1, persona2Id, tipoPersona2])
-  @@index([persona1Id, tipoPersona1])
-  @@index([persona2Id, tipoPersona2])
-  @@index([familiaContextoId])
+model VinculoFamiliar {
+  id                    Int      @id @default(autoincrement())
+  familiaOrigenId       Int
+  familiaRelacionadaId  Int
+  tipoVinculo           String
+  descripcion           String?
+  miembroVinculoId      Int?
+  fechaCreacion         DateTime @default(now())
+  activo                Boolean  @default(true)
+  
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  // Relaciones
+  familiaOrigen         Familia  @relation("FamiliaOrigen", fields: [familiaOrigenId], references: [id], onDelete: Cascade)
+  familiaRelacionada    Familia  @relation("FamiliaRelacionada", fields: [familiaRelacionadaId], references: [id], onDelete: Cascade)
+  
+  @@unique([familiaOrigenId, familiaRelacionadaId])
+  @@map("vinculos_familiares")
 } 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../lib/db";
+import { createClient } from "@/lib/supabase/server";
 
 // Helper function para manejar strings vacíos
 function parseString(value: unknown): string | undefined {
@@ -85,19 +86,43 @@ const familiasEjemplo = [
 
 export async function GET() {
   try {
-    const familias = await prisma.familia.findMany({
+    // Obtener el usuario autenticado
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
+    // Obtener la iglesia activa del usuario
+    const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
+      where: {
+        usuarioId: user.id,
+        estado: "ACTIVO",
+      },
       include: {
-        jefeFamilia: {
-          select: {
-            id: true,
-            nombres: true,
-            apellidos: true,
-            foto: true,
-            fechaNacimiento: true,
-            estado: true,
-            parentescoFamiliar: true,
-          },
-        },
+        iglesia: true,
+      },
+    });
+
+    if (!usuarioIglesia) {
+      return NextResponse.json(
+        { error: "No tienes acceso a ninguna iglesia activa" },
+        { status: 403 }
+      );
+    }
+
+    const familias = await prisma.familia.findMany({
+      where: {
+        iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
+      },
+      include: {
         miembros: {
           select: {
             id: true,
@@ -106,7 +131,7 @@ export async function GET() {
             foto: true,
             fechaNacimiento: true,
             estado: true,
-            parentescoFamiliar: true,
+            relacion: true,
           },
           orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
         },
@@ -121,32 +146,35 @@ export async function GET() {
 
     // Calcular estadísticas adicionales para cada familia
     const familiasConEstadisticas = familias.map((familia) => {
-      // Asegurar que el jefe de familia esté incluido en la lista de miembros
-      const todosMiembros = [...familia.miembros];
-
-      // Si hay jefe de familia y no está en la lista de miembros, agregarlo
-      if (
-        familia.jefeFamilia &&
-        !todosMiembros.some((m) => m.id === familia.jefeFamilia!.id)
-      ) {
-        todosMiembros.push({
-          id: familia.jefeFamilia.id,
-          nombres: familia.jefeFamilia.nombres,
-          apellidos: familia.jefeFamilia.apellidos,
-          foto: familia.jefeFamilia.foto,
-          fechaNacimiento: familia.jefeFamilia.fechaNacimiento,
-          estado: familia.jefeFamilia.estado || "Activo",
-          parentescoFamiliar: "Cabeza de Familia",
-        });
-      }
+      const todosMiembros = familia.miembros;
 
       const miembrosActivos = todosMiembros.filter(
         (m) => m.estado === "Activo"
       ).length;
 
+      // Encontrar el jefe de familia (primer miembro con relacion "Cabeza de Familia" o similar)
+      const jefeFamilia =
+        todosMiembros.find(
+          (m) =>
+            m.relacion === "Cabeza de Familia" ||
+            m.relacion === "Jefe de Familia" ||
+            m.relacion === "Padre" ||
+            m.relacion === "Madre"
+        ) || todosMiembros[0]; // Si no hay jefe explícito, tomar el primero
+
       return {
         ...familia,
-        miembros: todosMiembros, // Usar la lista completa que incluye al jefe
+        jefeFamilia: jefeFamilia
+          ? {
+              id: jefeFamilia.id,
+              nombres: jefeFamilia.nombres,
+              apellidos: jefeFamilia.apellidos,
+              foto: jefeFamilia.foto,
+              fechaNacimiento: jefeFamilia.fechaNacimiento,
+              estado: jefeFamilia.estado,
+              relacion: jefeFamilia.relacion,
+            }
+          : null,
         totalMiembros: todosMiembros.length,
         miembrosActivos,
         edadPromedio:
@@ -175,6 +203,38 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Obtener el usuario autenticado
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
+    // Obtener la iglesia activa del usuario
+    const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
+      where: {
+        usuarioId: user.id,
+        estado: "ACTIVO",
+      },
+      include: {
+        iglesia: true,
+      },
+    });
+
+    if (!usuarioIglesia) {
+      return NextResponse.json(
+        { error: "No tienes acceso a ninguna iglesia activa" },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { apellido, nombre, jefeFamiliaId, estado, notas } = body;
 
@@ -186,15 +246,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar que el jefe de familia existe si se proporciona
+    // Verificar que el jefe de familia existe si se proporciona y pertenece a la misma iglesia
     if (jefeFamiliaId && jefeFamiliaId.trim() !== "") {
-      const jefeFamilia = await prisma.miembro.findUnique({
-        where: { id: parseInt(jefeFamiliaId) },
+      const jefeFamilia = await prisma.miembro.findFirst({
+        where: {
+          id: parseInt(jefeFamiliaId),
+          iglesiaId: usuarioIglesia.iglesiaId, // Verificar que pertenece a la misma iglesia
+        },
       });
 
       if (!jefeFamilia) {
         return NextResponse.json(
-          { error: "El miembro seleccionado como cabeza de familia no existe" },
+          {
+            error:
+              "El miembro seleccionado como cabeza de familia no existe o no pertenece a tu iglesia",
+          },
           { status: 404 }
         );
       }
@@ -202,27 +268,13 @@ export async function POST(request: NextRequest) {
 
     const nuevaFamilia = await prisma.familia.create({
       data: {
+        iglesiaId: usuarioIglesia.iglesiaId, // AGREGAR IGLESIA ID
         apellido: apellido.trim(),
         nombre: parseString(nombre),
-        jefeFamiliaId:
-          jefeFamiliaId && jefeFamiliaId.trim() !== ""
-            ? parseInt(jefeFamiliaId)
-            : undefined,
         estado: parseString(estado) || "Activa",
         notas: parseString(notas),
       },
       include: {
-        jefeFamilia: {
-          select: {
-            id: true,
-            nombres: true,
-            apellidos: true,
-            foto: true,
-            fechaNacimiento: true,
-            estado: true,
-            parentescoFamiliar: true,
-          },
-        },
         miembros: {
           select: {
             id: true,
@@ -230,6 +282,7 @@ export async function POST(request: NextRequest) {
             apellidos: true,
             foto: true,
             estado: true,
+            relacion: true,
           },
         },
         _count: {
@@ -246,7 +299,7 @@ export async function POST(request: NextRequest) {
         where: { id: parseInt(jefeFamiliaId) },
         data: {
           familiaId: nuevaFamilia.id,
-          parentescoFamiliar: "Cabeza de Familia",
+          relacion: "Cabeza de Familia",
         },
       });
     }

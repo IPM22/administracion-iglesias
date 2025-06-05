@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { WelcomeWizard } from "@/components/onboarding/welcome-wizard";
+import { SelectorIglesias } from "@/components/auth/SelectorIglesias";
 import { AppSidebar } from "../../components/app-sidebar";
 import {
   Breadcrumb,
@@ -89,32 +92,159 @@ interface DashboardStats {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const {
+    user,
+    usuarioCompleto,
+    iglesiaActiva,
+    loading: authLoading,
+    initializing,
+    mostrarSelectorIglesias,
+    cargarUsuarioCompleto,
+    seleccionarIglesia,
+  } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const cargarEstadisticas = async () => {
+  // Referencias para evitar cargas múltiples
+  const estadisticasCargadas = useRef<number | null>(null);
+  const cargandoEstadisticas = useRef(false);
+
+  const cargarEstadisticas = useCallback(async () => {
+    if (!iglesiaActiva || cargandoEstadisticas.current) return;
+
+    // Si ya cargamos las estadísticas para esta iglesia, no volver a cargar
+    if (estadisticasCargadas.current === iglesiaActiva.id) return;
+
+    cargandoEstadisticas.current = true;
+    setLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
-      setError(null);
-      const response = await fetch("/api/dashboard/stats");
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      } else {
-        throw new Error("Error al cargar estadísticas");
+      const response = await fetch(
+        `/api/dashboard/stats?iglesiaId=${iglesiaActiva.id}`,
+        {
+          // Agregar cache headers para evitar cargas innecesarias
+          headers: {
+            "Cache-Control": "max-age=30", // Cache por 30 segundos
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Error cargando estadísticas");
       }
+
+      const data = await response.json();
+      setStats(data);
+      estadisticasCargadas.current = iglesiaActiva.id;
     } catch (error) {
       console.error("Error:", error);
       setError("No se pudieron cargar las estadísticas");
     } finally {
       setLoading(false);
+      cargandoEstadisticas.current = false;
     }
-  };
+  }, [iglesiaActiva?.id]); // Solo depende del ID de la iglesia
 
   useEffect(() => {
-    cargarEstadisticas();
-  }, []);
+    if (
+      iglesiaActiva &&
+      !initializing &&
+      !loading &&
+      !cargandoEstadisticas.current
+    ) {
+      cargarEstadisticas();
+    }
+  }, [cargarEstadisticas, iglesiaActiva, initializing]);
+
+  // Limpiar caché cuando cambia la iglesia
+  useEffect(() => {
+    if (iglesiaActiva && estadisticasCargadas.current !== iglesiaActiva.id) {
+      estadisticasCargadas.current = null;
+      setStats(null);
+    }
+  }, [iglesiaActiva?.id]);
+
+  // Efecto optimizado para recargar datos del usuario
+  useEffect(() => {
+    if (user && !usuarioCompleto && !authLoading && !initializing) {
+      console.log("🔄 Recargando datos del usuario en dashboard...");
+      cargarUsuarioCompleto(user);
+    }
+  }, [user?.id, usuarioCompleto, authLoading, initializing]); // Depender solo de user.id
+
+  // Mostrar spinner mientras se autentica o inicializa
+  if (authLoading || initializing) {
+    return (
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <div className="flex items-center justify-center h-screen">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Cargando dashboard...</span>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    );
+  }
+
+  // Si no hay usuario, redirigir al login
+  if (!user) {
+    router.push("/login");
+    return null;
+  }
+
+  // Mostrar wizard de bienvenida si es primer login
+  if (usuarioCompleto?.primerLogin) {
+    return (
+      <WelcomeWizard
+        usuario={{
+          nombres: usuarioCompleto.nombres,
+          apellidos: usuarioCompleto.apellidos,
+          email: usuarioCompleto.email,
+        }}
+        onComplete={() => {
+          // Recargar datos del usuario
+          window.location.reload();
+        }}
+      />
+    );
+  }
+
+  // Solo mostrar "Sin iglesia" si ya terminó de inicializar y no hay iglesia
+  if (!iglesiaActiva && !initializing) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-8 text-center">
+            <Home className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Sin Iglesia Asignada</h2>
+            <p className="text-muted-foreground mb-4">
+              No perteneces a ninguna iglesia o tu solicitud aún está pendiente.
+            </p>
+            <Button onClick={() => router.push("/onboarding/buscar-iglesia")}>
+              Buscar Iglesia
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Mostrar selector de iglesias si hay múltiples iglesias activas
+  if (mostrarSelectorIglesias && usuarioCompleto) {
+    return (
+      <SelectorIglesias
+        iglesias={usuarioCompleto.iglesias}
+        onSeleccionarIglesia={seleccionarIglesia}
+        usuario={{
+          nombres: usuarioCompleto.nombres,
+          apellidos: usuarioCompleto.apellidos,
+        }}
+      />
+    );
+  }
 
   const formatearCambio = (porcentaje: number) => {
     const isPositive = porcentaje >= 0;
@@ -286,6 +416,31 @@ export default function DashboardPage() {
         </header>
 
         <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
+          {/* Información de la iglesia activa */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    {iglesiaActiva?.nombre}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Tu rol:{" "}
+                    <Badge variant="secondary">{iglesiaActiva?.rol}</Badge>
+                  </p>
+                </div>
+                <div className="text-right text-sm text-muted-foreground">
+                  <p>
+                    Usuario: {usuarioCompleto?.nombres}{" "}
+                    {usuarioCompleto?.apellidos}
+                  </p>
+                  <p>{usuarioCompleto?.email}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Resto del dashboard igual que antes... */}
           {/* Tarjetas principales de estadísticas */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {statsCards.map((card, index) => {

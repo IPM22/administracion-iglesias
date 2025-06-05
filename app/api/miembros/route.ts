@@ -1,12 +1,85 @@
 import { prisma } from "../../../lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { parseDateForAPI } from "@/lib/date-utils";
+import { createClient } from "@/lib/supabase/server";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Obtener el usuario autenticado
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
+    // Obtener iglesiaId del query parameter
+    const { searchParams } = new URL(request.url);
+    const iglesiaIdParam = searchParams.get("iglesiaId");
+
+    let iglesiaId: number;
+
+    if (iglesiaIdParam) {
+      // Usar iglesia específica del query parameter
+      iglesiaId = parseInt(iglesiaIdParam);
+
+      // Verificar que el usuario tiene acceso a esta iglesia
+      const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
+        where: {
+          usuarioId: user.id,
+          iglesiaId: iglesiaId,
+          estado: "ACTIVO",
+        },
+        include: {
+          iglesia: true,
+        },
+      });
+
+      if (!usuarioIglesia) {
+        return NextResponse.json(
+          { error: "No tienes acceso a esta iglesia" },
+          { status: 403 }
+        );
+      }
+    } else {
+      // Fallback: obtener cualquier iglesia activa del usuario
+      const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
+        where: {
+          usuarioId: user.id,
+          estado: "ACTIVO",
+        },
+        include: {
+          iglesia: true,
+        },
+      });
+
+      if (!usuarioIglesia) {
+        return NextResponse.json(
+          { error: "No tienes acceso a ninguna iglesia activa" },
+          { status: 403 }
+        );
+      }
+
+      iglesiaId = usuarioIglesia.iglesiaId;
+    }
+
     const miembros = await prisma.miembro.findMany({
+      where: {
+        iglesiaId: iglesiaId,
+      },
       orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
     });
+
+    console.log(`🏛️ Filtrando miembros para iglesia ID: ${iglesiaId}`);
+    console.log(
+      `👥 Se encontraron ${miembros.length} miembros para esta iglesia`
+    );
 
     return NextResponse.json(miembros);
   } catch (error) {
@@ -20,6 +93,38 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Obtener el usuario autenticado
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
+    // Obtener la iglesia activa del usuario
+    const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
+      where: {
+        usuarioId: user.id,
+        estado: "ACTIVO",
+      },
+      include: {
+        iglesia: true,
+      },
+    });
+
+    if (!usuarioIglesia) {
+      return NextResponse.json(
+        { error: "No tienes acceso a ninguna iglesia activa" },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
 
     const {
@@ -33,7 +138,6 @@ export async function POST(request: NextRequest) {
       sexo,
       estadoCivil,
       ocupacion,
-      familia,
       familiaId,
       fechaIngreso,
       fechaBautismo,
@@ -83,7 +187,10 @@ export async function POST(request: NextRequest) {
       const visitaId = parseInt(fromVisita);
       if (!isNaN(visitaId)) {
         visitaOriginal = await prisma.visita.findUnique({
-          where: { id: visitaId },
+          where: {
+            id: visitaId,
+            iglesiaId: usuarioIglesia.iglesiaId, // Verificar que la visita pertenece a la misma iglesia
+          },
         });
 
         if (!visitaOriginal) {
@@ -103,12 +210,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Verificar si ya existe un miembro con los mismos nombres y apellidos
+    // Verificar si ya existe un miembro con los mismos nombres y apellidos en la misma iglesia
     const nombresLimpio = nombres.trim().toLowerCase();
     const apellidosLimpio = apellidos.trim().toLowerCase();
 
     const miembroExistente = await prisma.miembro.findFirst({
       where: {
+        iglesiaId: usuarioIglesia.iglesiaId,
         nombres: {
           equals: nombresLimpio,
           mode: "insensitive",
@@ -131,7 +239,10 @@ export async function POST(request: NextRequest) {
     const familiaIdParsed = parseFamiliaId(familiaId);
     if (familiaIdParsed) {
       const familiaExistente = await prisma.familia.findUnique({
-        where: { id: familiaIdParsed },
+        where: {
+          id: familiaIdParsed,
+          iglesiaId: usuarioIglesia.iglesiaId, // Verificar que la familia pertenece a la misma iglesia
+        },
       });
 
       if (!familiaExistente) {
@@ -147,6 +258,7 @@ export async function POST(request: NextRequest) {
       // Crear el miembro
       const nuevoMiembro = await tx.miembro.create({
         data: {
+          iglesiaId: usuarioIglesia.iglesiaId, // ¡AGREGAR EL IGLESIAID!
           nombres: nombres?.trim() || "",
           apellidos: apellidos?.trim() || "",
           correo: parseEmail(correo),
@@ -157,14 +269,13 @@ export async function POST(request: NextRequest) {
           sexo: parseString(sexo),
           estadoCivil: parseString(estadoCivil),
           ocupacion: parseString(ocupacion),
-          familia: parseString(familia),
           familiaId: familiaIdParsed,
           fechaIngreso: parseDateForAPI(fechaIngreso),
           fechaBautismo: parseDateForAPI(fechaBautismo),
           estado: parseString(estado) || "Activo",
           foto: parseString(foto),
-          notasAdicionales: parseString(notasAdicionales),
-          parentescoFamiliar: parseString(parentescoFamiliar),
+          notas: parseString(notasAdicionales),
+          relacion: parseString(parentescoFamiliar),
         },
       });
 

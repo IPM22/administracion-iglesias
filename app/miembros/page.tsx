@@ -72,6 +72,7 @@ import {
 } from "@/components/ui/select";
 import { MiembroAvatar } from "../../components/MiembroAvatar";
 import { ModeToggle } from "../../components/mode-toggle";
+import { useApiConIglesia } from "../../hooks/useApiConIglesia";
 
 // Función para formatear teléfonos para mostrar
 const formatPhoneForDisplay = (phone: string | null | undefined): string => {
@@ -98,6 +99,7 @@ const formatPhoneForDisplay = (phone: string | null | undefined): string => {
 
 export default function MiembrosPage() {
   const router = useRouter();
+  const { fetchConIglesia, tieneIglesia, iglesiaActiva } = useApiConIglesia();
   const [miembros, setMiembros] = useState<Miembro[]>([]);
   const [miembrosFiltrados, setMiembrosFiltrados] = useState<Miembro[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,23 +124,30 @@ export default function MiembrosPage() {
 
   useEffect(() => {
     const fetchMiembros = async () => {
+      if (!tieneIglesia) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        const response = await fetch("/api/miembros");
-        if (!response.ok) {
-          throw new Error("Error al cargar los miembros");
-        }
-        const data = await response.json();
+        console.log(
+          `🔄 Cargando miembros para iglesia: ${iglesiaActiva?.nombre} (ID: ${iglesiaActiva?.id})`
+        );
+        const data = await fetchConIglesia("/api/miembros");
         setMiembros(data);
         setMiembrosFiltrados(data);
+        console.log(`✅ Cargados ${data.length} miembros`);
       } catch (error) {
         console.error("Error:", error);
+        setMiembros([]);
+        setMiembrosFiltrados([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchMiembros();
-  }, []);
+  }, [tieneIglesia, iglesiaActiva?.id, fetchConIglesia]);
 
   useEffect(() => {
     const filtrarMiembros = () => {
@@ -154,15 +163,13 @@ export default function MiembrosPage() {
           const telefono = miembro.telefono || "";
           const celular = miembro.celular || "";
           const ocupacion = miembro.ocupacion?.toLowerCase() || "";
-          const familia = miembro.familia?.toLowerCase() || "";
 
           return (
             nombreCompleto.includes(termino) ||
             correo.includes(termino) ||
             telefono.includes(termino) ||
             celular.includes(termino) ||
-            ocupacion.includes(termino) ||
-            familia.includes(termino)
+            ocupacion.includes(termino)
           );
         });
       }
@@ -177,13 +184,6 @@ export default function MiembrosPage() {
       // Aplicar filtro por sexo
       if (filtroSexo !== "todos") {
         filtrados = filtrados.filter((miembro) => miembro.sexo === filtroSexo);
-      }
-
-      // Aplicar filtro por familia
-      if (filtroFamilia !== "todos") {
-        filtrados = filtrados.filter(
-          (miembro) => (miembro.familia || "") === filtroFamilia
-        );
       }
 
       setMiembrosFiltrados(filtrados);
@@ -205,14 +205,9 @@ export default function MiembrosPage() {
 
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/miembros/${miembroAEliminar.id}`, {
+      await fetchConIglesia(`/api/miembros/${miembroAEliminar.id}`, {
         method: "DELETE",
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Error al eliminar el miembro");
-      }
 
       // Actualizar la lista de miembros
       const nuevosmiembros = miembros.filter(
@@ -253,16 +248,9 @@ export default function MiembrosPage() {
     setSearchTerm("");
   };
 
-  // Obtener opciones únicas para filtros
+  // Obtener opciones únicas para filtros (remover filtro familia por ahora)
   const getOpcionesFamilias = (): string[] => {
-    const familias = miembros
-      .map((m) => m.familia)
-      .filter(
-        (f): f is string => f !== null && f !== undefined && f.trim() !== ""
-      )
-      .filter((value, index, self) => self.indexOf(value) === index)
-      .sort();
-    return familias;
+    return []; // Temporalmente vacío hasta implementar relación con familias
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -293,6 +281,27 @@ export default function MiembrosPage() {
     setItemsPerPage(newItemsPerPage);
     setCurrentPage(1);
   };
+
+  // Si no hay iglesia seleccionada, mostrar mensaje
+  if (!tieneIglesia) {
+    return (
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <div className="flex items-center justify-center h-screen">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold mb-2">
+                Sin Iglesia Seleccionada
+              </h2>
+              <p className="text-muted-foreground">
+                Selecciona una iglesia para ver los miembros.
+              </p>
+            </div>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    );
+  }
 
   return (
     <SidebarProvider>
@@ -521,7 +530,9 @@ export default function MiembrosPage() {
                                 </div>
                               </TableCell>
                               <TableCell>{miembro.ocupacion}</TableCell>
-                              <TableCell>{miembro.familia}</TableCell>
+                              <TableCell>
+                                {miembro.familiaId || "N/A"}
+                              </TableCell>
                               <TableCell>
                                 <Badge
                                   variant={

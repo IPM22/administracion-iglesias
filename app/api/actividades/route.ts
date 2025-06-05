@@ -1,5 +1,6 @@
 import { prisma } from "../../../lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 // Helper function para parsing seguro
 function parseString(value: unknown): string | null {
@@ -7,15 +8,44 @@ function parseString(value: unknown): string | null {
   return String(value);
 }
 
-function parseNumber(value: unknown): number | null {
-  if (value === null || value === undefined || value === "") return null;
-  const num = Number(value);
-  return isNaN(num) ? null : num;
-}
-
 export async function GET() {
   try {
+    // Obtener el usuario autenticado
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
+    // Obtener la iglesia activa del usuario
+    const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
+      where: {
+        usuarioId: user.id,
+        estado: "ACTIVO",
+      },
+      include: {
+        iglesia: true,
+      },
+    });
+
+    if (!usuarioIglesia) {
+      return NextResponse.json(
+        { error: "No tienes acceso a ninguna iglesia activa" },
+        { status: 403 }
+      );
+    }
+
     const actividades = await prisma.actividad.findMany({
+      where: {
+        iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
+      },
       include: {
         tipoActividad: true,
         ministerio: {
@@ -54,6 +84,38 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Obtener el usuario autenticado
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
+    // Obtener la iglesia activa del usuario
+    const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
+      where: {
+        usuarioId: user.id,
+        estado: "ACTIVO",
+      },
+      include: {
+        iglesia: true,
+      },
+    });
+
+    if (!usuarioIglesia) {
+      return NextResponse.json(
+        { error: "No tienes acceso a ninguna iglesia activa" },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const {
       nombre,
@@ -62,13 +124,9 @@ export async function POST(request: NextRequest) {
       horaInicio,
       horaFin,
       ubicacion,
-      latitud,
-      longitud,
       tipoActividadId,
       ministerioId,
-      responsable,
       estado = "Programada",
-      banner,
     } = body;
 
     // Validaciones básicas
@@ -93,27 +151,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar que el tipo de actividad existe
-    const tipoActividad = await prisma.tipoActividad.findUnique({
-      where: { id: parseInt(tipoActividadId) },
+    // Verificar que el tipo de actividad existe y pertenece a la misma iglesia
+    const tipoActividad = await prisma.tipoActividad.findFirst({
+      where: {
+        id: parseInt(tipoActividadId),
+        iglesiaId: usuarioIglesia.iglesiaId,
+      },
     });
 
     if (!tipoActividad) {
       return NextResponse.json(
-        { error: "Tipo de actividad no encontrado" },
+        {
+          error: "Tipo de actividad no encontrado o no pertenece a tu iglesia",
+        },
         { status: 404 }
       );
     }
 
-    // Verificar que el ministerio existe (si se proporciona)
+    // Verificar que el ministerio existe y pertenece a la misma iglesia (si se proporciona)
     if (ministerioId) {
-      const ministerio = await prisma.ministerio.findUnique({
-        where: { id: parseInt(ministerioId) },
+      const ministerio = await prisma.ministerio.findFirst({
+        where: {
+          id: parseInt(ministerioId),
+          iglesiaId: usuarioIglesia.iglesiaId,
+        },
       });
 
       if (!ministerio) {
         return NextResponse.json(
-          { error: "Ministerio no encontrado" },
+          { error: "Ministerio no encontrado o no pertenece a tu iglesia" },
           { status: 404 }
         );
       }
@@ -121,19 +187,16 @@ export async function POST(request: NextRequest) {
 
     const nuevaActividad = await prisma.actividad.create({
       data: {
+        iglesiaId: usuarioIglesia.iglesiaId, // AGREGAR IGLESIA ID
         nombre,
         descripcion: parseString(descripcion),
         fecha: new Date(fecha),
         horaInicio: parseString(horaInicio),
         horaFin: parseString(horaFin),
         ubicacion: parseString(ubicacion),
-        latitud: parseNumber(latitud),
-        longitud: parseNumber(longitud),
         tipoActividadId: parseInt(tipoActividadId),
         ministerioId: ministerioId ? parseInt(ministerioId) : null,
-        responsable: parseString(responsable),
         estado,
-        banner: parseString(banner),
       },
       include: {
         tipoActividad: true,

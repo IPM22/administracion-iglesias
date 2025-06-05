@@ -446,9 +446,6 @@ export default function ArbolFamiliarPage({
       const nuevosNodos: Node[] = [];
       const nuevasAristas: Edge[] = [];
 
-      console.log("=== INICIO DEBUG REACTFLOW ===");
-      console.log("familiaData:", familiaData);
-
       // Validar que familiaData tenga la estructura correcta
       if (!familiaData || !familiaData.miembros || !familiaData.visitas) {
         console.error("Datos de familia inválidos:", familiaData);
@@ -465,10 +462,7 @@ export default function ArbolFamiliarPage({
         ...familiaData.visitas.map((v) => ({ ...v, tipo: "visita" as const })),
       ];
 
-      console.log("todasPersonas:", todasPersonas);
-
       if (todasPersonas.length === 0) {
-        console.log("No hay personas, creando nodos de prueba...");
         // Crear nodos de prueba si no hay datos
         nuevosNodos.push(
           {
@@ -541,8 +535,6 @@ export default function ArbolFamiliarPage({
           }
         );
 
-        console.log("NODOS DE PRUEBA:", nuevosNodos);
-        console.log("EDGES DE PRUEBA:", nuevasAristas);
         setNodes(nuevosNodos);
         setEdges(nuevasAristas);
         return;
@@ -617,7 +609,6 @@ export default function ArbolFamiliarPage({
       // === CREAR JEFE DE FAMILIA ===
       if (jefeFamilia) {
         const jefeNodeId = `jefe-${jefeFamilia.id}`;
-        console.log("Creando nodo jefe:", jefeNodeId);
 
         nuevosNodos.push({
           id: jefeNodeId,
@@ -640,7 +631,6 @@ export default function ArbolFamiliarPage({
         // === CREAR CÓNYUGE ===
         if (conyuge) {
           const conyugeNodeId = `conyuge-${conyuge.id}`;
-          console.log("Creando nodo cónyuge:", conyugeNodeId);
 
           const conyugePosition = {
             x: posicionActual.x + ESPACIO_HORIZONTAL,
@@ -666,11 +656,6 @@ export default function ArbolFamiliarPage({
 
           // CREAR CONEXIÓN MATRIMONIAL - del lado derecho del jefe al lado izquierdo del cónyuge
           const edgeId = `matrimonio-${jefeFamilia.id}-${conyuge.id}`;
-          console.log("Creando edge matrimonio:", {
-            edgeId,
-            source: jefeNodeId,
-            target: conyugeNodeId,
-          });
 
           nuevasAristas.push({
             id: edgeId,
@@ -686,8 +671,6 @@ export default function ArbolFamiliarPage({
 
         // === CREAR TODOS LOS HIJOS ===
         if (hijos.length > 0) {
-          console.log(`Creando ${hijos.length} hijos...`);
-
           // CORREGIR: Calcular posiciones para distribuir hijos horizontalmente sin superposición
           const anchoTotalHijos = (hijos.length - 1) * 300; // Más espacio entre hijos
           const startX = conyuge
@@ -697,7 +680,6 @@ export default function ArbolFamiliarPage({
 
           hijos.forEach((hijo, index) => {
             const hijoNodeId = `hijo-${hijo.id}`;
-            console.log(`Creando nodo hijo ${index + 1}:`, hijoNodeId);
 
             const hijoPosition = {
               x: startX + index * 300, // Más separación entre hijos
@@ -723,11 +705,6 @@ export default function ArbolFamiliarPage({
 
             // CREAR CONEXIÓN PADRE-HIJO - del centro inferior del padre al centro superior del hijo
             const edgeIdPadre = `padre-hijo-${jefeFamilia.id}-${hijo.id}`;
-            console.log(`Creando edge padre-hijo ${index + 1}:`, {
-              edgeIdPadre,
-              source: jefeNodeId,
-              target: hijoNodeId,
-            });
 
             nuevasAristas.push({
               id: edgeIdPadre,
@@ -744,11 +721,6 @@ export default function ArbolFamiliarPage({
             if (conyuge) {
               const conyugeNodeId = `conyuge-${conyuge.id}`;
               const edgeIdMadre = `madre-hijo-${conyuge.id}-${hijo.id}`;
-              console.log(`Creando edge madre-hijo ${index + 1}:`, {
-                edgeIdMadre,
-                source: conyugeNodeId,
-                target: hijoNodeId,
-              });
 
               nuevasAristas.push({
                 id: edgeIdMadre,
@@ -767,11 +739,8 @@ export default function ArbolFamiliarPage({
 
         // === CREAR PADRES (NIVEL SUPERIOR) ===
         if (padres.length > 0) {
-          console.log(`Creando ${padres.length} padres...`);
-
           padres.forEach((padre, index) => {
             const padreNodeId = `padre-${padre.id}`;
-            console.log(`Creando nodo padre ${index + 1}:`, padreNodeId);
 
             const padrePosition = {
               x:
@@ -800,11 +769,6 @@ export default function ArbolFamiliarPage({
 
             // CREAR CONEXIÓN PADRE-JEFE
             const edgeIdAbuelo = `abuelo-padre-${padre.id}-${jefeFamilia.id}`;
-            console.log(`Creando edge abuelo-padre ${index + 1}:`, {
-              edgeIdAbuelo,
-              source: padreNodeId,
-              target: jefeNodeId,
-            });
 
             nuevasAristas.push({
               id: edgeIdAbuelo,
@@ -1259,7 +1223,6 @@ export default function ArbolFamiliarPage({
 
       console.log("NODOS FINALES:", nuevosNodos);
       console.log("EDGES FINALES:", nuevasAristas);
-      console.log("=== FIN DEBUG REACTFLOW ===");
 
       setNodes(nuevosNodos);
       setEdges(nuevasAristas);

@@ -9,12 +9,13 @@ import {
   HomeIcon,
   Settings,
   BarChart3,
+  Building2,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
 import { TeamSwitcher } from "./team-switcher";
-import { ModeToggle } from "./mode-toggle";
 import {
   Sidebar,
   SidebarContent,
@@ -23,154 +24,174 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 
-// Datos del sistema de iglesia
-const data = {
-  user: {
-    name: "Pastor Juan",
-    email: "pastor@iglesia.com",
-    avatar: "/placeholder.svg?height=32&width=32",
+// Navegación principal del sistema
+const navMainItems = [
+  {
+    title: "Dashboard",
+    url: "/dashboard",
+    icon: BarChart3,
+    isActive: true,
   },
-  teams: [
-    {
-      name: "Iglesia de Cristo Ozama",
-      logo: HomeIcon,
-      plan: "Principal",
-    },
-  ],
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: BarChart3,
-      isActive: true,
-    },
-    {
-      title: "Miembros",
-      url: "/miembros",
-      icon: Users,
-      items: [
-        {
-          title: "Lista de Miembros",
-          url: "/miembros",
-        },
-        {
-          title: "Nuevo Miembro",
-          url: "/miembros/nuevo",
-        },
-        {
-          title: "Reportes",
-          url: "/miembros/reportes",
-        },
-      ],
-    },
-    {
-      title: "Visitas",
-      url: "/visitas",
-      icon: UserPlus,
-      items: [
-        {
-          title: "Lista de Visitas",
-          url: "/visitas",
-        },
-        {
-          title: "Nueva Visita",
-          url: "/visitas/nueva",
-        },
-        {
-          title: "Seguimiento",
-          url: "/visitas/seguimiento",
-        },
-      ],
-    },
-    {
-      title: "Actividades",
-      url: "/actividades",
-      icon: Calendar,
-      items: [
-        {
-          title: "Próximas Actividades",
-          url: "/actividades",
-        },
-        {
-          title: "Nueva Actividad",
-          url: "/actividades/nueva",
-        },
-        {
-          title: "Historial",
-          url: "/actividades/historial",
-        },
-      ],
-    },
-    {
-      title: "Ministerios",
-      url: "/ministerios",
-      icon: Heart,
-      items: [
-        {
-          title: "Lista de Ministerios",
-          url: "/ministerios",
-        },
-        {
-          title: "Nuevo Ministerio",
-          url: "/ministerios/nuevo",
-        },
-        {
-          title: "Asignaciones",
-          url: "/ministerios/asignaciones",
-        },
-      ],
-    },
-    {
-      title: "Familias",
-      url: "/familias",
-      icon: HomeIcon,
-      items: [
-        {
-          title: "Núcleos Familiares",
-          url: "/familias",
-        },
-        {
-          title: "Nueva Familia",
-          url: "/familias/nueva",
-        },
-      ],
-    },
-    {
-      title: "Configuración",
-      url: "/configuracion",
-      icon: Settings,
-      items: [
-        {
-          title: "General",
-          url: "/configuracion/general",
-        },
-        {
-          title: "Usuarios",
-          url: "/configuracion/usuarios",
-        },
-        {
-          title: "Respaldos",
-          url: "/configuracion/respaldos",
-        },
-      ],
-    },
-  ],
-};
+  {
+    title: "Miembros",
+    url: "/miembros",
+    icon: Users,
+    items: [
+      {
+        title: "Lista de Miembros",
+        url: "/miembros",
+      },
+      {
+        title: "Nuevo Miembro",
+        url: "/miembros/nuevo",
+      },
+      {
+        title: "Reportes",
+        url: "/miembros/reportes",
+      },
+    ],
+  },
+  {
+    title: "Visitas",
+    url: "/visitas",
+    icon: UserPlus,
+    items: [
+      {
+        title: "Lista de Visitas",
+        url: "/visitas",
+      },
+      {
+        title: "Nueva Visita",
+        url: "/visitas/nueva",
+      },
+      {
+        title: "Seguimiento",
+        url: "/visitas/seguimiento",
+      },
+    ],
+  },
+  {
+    title: "Actividades",
+    url: "/actividades",
+    icon: Calendar,
+    items: [
+      {
+        title: "Próximas Actividades",
+        url: "/actividades",
+      },
+      {
+        title: "Nueva Actividad",
+        url: "/actividades/nueva",
+      },
+      {
+        title: "Historial",
+        url: "/actividades/historial",
+      },
+    ],
+  },
+  {
+    title: "Ministerios",
+    url: "/ministerios",
+    icon: Heart,
+    items: [
+      {
+        title: "Lista de Ministerios",
+        url: "/ministerios",
+      },
+      {
+        title: "Nuevo Ministerio",
+        url: "/ministerios/nuevo",
+      },
+      {
+        title: "Asignaciones",
+        url: "/ministerios/asignaciones",
+      },
+    ],
+  },
+  {
+    title: "Familias",
+    url: "/familias",
+    icon: HomeIcon,
+    items: [
+      {
+        title: "Núcleos Familiares",
+        url: "/familias",
+      },
+      {
+        title: "Nueva Familia",
+        url: "/familias/nueva",
+      },
+    ],
+  },
+  {
+    title: "Configuración",
+    url: "/configuracion",
+    icon: Settings,
+  },
+];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { usuarioCompleto, iglesiaActiva, initializing } = useAuth();
+
+  // Datos del usuario
+  const userData = usuarioCompleto
+    ? {
+        name: `${usuarioCompleto.nombres} ${usuarioCompleto.apellidos}`,
+        email: usuarioCompleto.email,
+        avatar: usuarioCompleto.avatar || "/placeholder.svg?height=32&width=32",
+        rol: iglesiaActiva?.rol || "MIEMBRO",
+      }
+    : {
+        name: "Cargando...",
+        email: "",
+        avatar: "/placeholder.svg?height=32&width=32",
+        rol: "MIEMBRO",
+      };
+
+  // Datos de la iglesia - Evitar mostrar "Sin iglesia" mientras se inicializa
+  const teamsData = initializing
+    ? [
+        {
+          name: "Cargando...",
+          logo: Building2,
+          plan: "Iniciando...",
+        },
+      ]
+    : iglesiaActiva
+    ? [
+        {
+          name: iglesiaActiva.nombre,
+          logo: Building2,
+          plan:
+            iglesiaActiva.rol === "ADMIN"
+              ? "Administrador"
+              : iglesiaActiva.rol === "PASTOR"
+              ? "Pastor"
+              : iglesiaActiva.rol === "LIDER"
+              ? "Líder"
+              : iglesiaActiva.rol === "SECRETARIO"
+              ? "Secretario"
+              : "Miembro",
+        },
+      ]
+    : [
+        {
+          name: "Sin iglesia",
+          logo: Building2,
+          plan: "Sin acceso",
+        },
+      ];
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <TeamSwitcher teams={teamsData} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={navMainItems} />
       </SidebarContent>
       <SidebarFooter>
-        <div className="flex items-center justify-center p-2">
-          <ModeToggle />
-        </div>
-        <NavUser user={data.user} />
+        <NavUser user={userData} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

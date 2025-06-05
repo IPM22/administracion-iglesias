@@ -1,8 +1,69 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/db";
+import { createClient } from "@/lib/supabase/server";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    // Obtener el usuario autenticado
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
+    // Obtener la iglesia activa del usuario desde el parámetro o la primera iglesia activa
+    const { searchParams } = new URL(request.url);
+    const iglesiaIdParam = searchParams.get("iglesiaId");
+
+    let iglesiaId: number;
+
+    if (iglesiaIdParam) {
+      iglesiaId = parseInt(iglesiaIdParam);
+    } else {
+      // Si no se proporciona iglesiaId, obtener la primera iglesia activa del usuario
+      const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
+        where: {
+          usuarioId: user.id,
+          estado: "ACTIVO",
+        },
+        include: {
+          iglesia: true,
+        },
+      });
+
+      if (!usuarioIglesia) {
+        return NextResponse.json(
+          { error: "No tienes acceso a ninguna iglesia activa" },
+          { status: 403 }
+        );
+      }
+
+      iglesiaId = usuarioIglesia.iglesiaId;
+    }
+
+    // Verificar que el usuario tiene acceso a esta iglesia
+    const usuarioTieneAcceso = await prisma.usuarioIglesia.findFirst({
+      where: {
+        usuarioId: user.id,
+        iglesiaId: iglesiaId,
+        estado: "ACTIVO",
+      },
+    });
+
+    if (!usuarioTieneAcceso) {
+      return NextResponse.json(
+        { error: "No tienes acceso a esta iglesia" },
+        { status: 403 }
+      );
+    }
+
     // Obtener fecha actual y hace 30 días
     const ahora = new Date();
     const hace30Dias = new Date();
@@ -10,28 +71,37 @@ export async function GET() {
     const hace60Dias = new Date();
     hace60Dias.setDate(ahora.getDate() - 60);
 
-    // Estadísticas de miembros
+    // Estadísticas de miembros (CON FILTRO DE IGLESIA)
     const [
       totalMiembros,
       miembrosActivos,
       miembrosNuevos30Dias,
       miembrosNuevos60Dias,
     ] = await Promise.all([
-      prisma.miembro.count(),
-      prisma.miembro.count({ where: { estado: "Activo" } }),
+      prisma.miembro.count({
+        where: { iglesiaId },
+      }),
       prisma.miembro.count({
         where: {
+          iglesiaId,
+          estado: "Activo",
+        },
+      }),
+      prisma.miembro.count({
+        where: {
+          iglesiaId,
           createdAt: { gte: hace30Dias },
         },
       }),
       prisma.miembro.count({
         where: {
+          iglesiaId,
           createdAt: { gte: hace60Dias, lt: hace30Dias },
         },
       }),
     ]);
 
-    // Estadísticas de visitas
+    // Estadísticas de visitas (CON FILTRO DE IGLESIA)
     const [
       totalVisitas,
       visitasNuevas,
@@ -40,46 +110,75 @@ export async function GET() {
       visitasNuevas30Dias,
       visitasNuevas60Dias,
     ] = await Promise.all([
-      prisma.visita.count(),
-      prisma.visita.count({ where: { estado: "Nuevo" } }),
-      prisma.visita.count({ where: { estado: "Recurrente" } }),
-      prisma.visita.count({ where: { estado: "Convertido" } }),
+      prisma.visita.count({
+        where: { iglesiaId },
+      }),
       prisma.visita.count({
         where: {
+          iglesiaId,
+          estado: "Nuevo",
+        },
+      }),
+      prisma.visita.count({
+        where: {
+          iglesiaId,
+          estado: "Recurrente",
+        },
+      }),
+      prisma.visita.count({
+        where: {
+          iglesiaId,
+          estado: "Convertido",
+        },
+      }),
+      prisma.visita.count({
+        where: {
+          iglesiaId,
           createdAt: { gte: hace30Dias },
         },
       }),
       prisma.visita.count({
         where: {
+          iglesiaId,
           createdAt: { gte: hace60Dias, lt: hace30Dias },
         },
       }),
     ]);
 
-    // Estadísticas de familias
+    // Estadísticas de familias (CON FILTRO DE IGLESIA)
     const [
       totalFamilias,
       familiasActivas,
       familiasNuevas30Dias,
       familiasNuevas60Dias,
     ] = await Promise.all([
-      prisma.familia.count(),
-      prisma.familia.count({ where: { estado: "Activa" } }),
+      prisma.familia.count({
+        where: { iglesiaId },
+      }),
       prisma.familia.count({
         where: {
+          iglesiaId,
+          estado: "Activa",
+        },
+      }),
+      prisma.familia.count({
+        where: {
+          iglesiaId,
           createdAt: { gte: hace30Dias },
         },
       }),
       prisma.familia.count({
         where: {
+          iglesiaId,
           createdAt: { gte: hace60Dias, lt: hace30Dias },
         },
       }),
     ]);
 
-    // Distribución por edades de miembros
+    // Distribución por edades de miembros (CON FILTRO DE IGLESIA)
     const miembrosConEdad = await prisma.miembro.findMany({
       where: {
+        iglesiaId,
         fechaNacimiento: { not: null },
         estado: "Activo",
       },
@@ -106,9 +205,10 @@ export async function GET() {
       }
     });
 
-    // Conversiones recientes (últimas 10)
+    // Conversiones recientes (últimas 10) (CON FILTRO DE IGLESIA)
     const conversionesRecientes = await prisma.visita.findMany({
       where: {
+        iglesiaId,
         estado: "Convertido",
         miembroConvertidoId: { not: null },
       },
@@ -131,9 +231,10 @@ export async function GET() {
       return Math.round(((actual - anterior) / anterior) * 100);
     };
 
-    // Próximas actividades reales de la base de datos
+    // Próximas actividades reales de la base de datos (CON FILTRO DE IGLESIA)
     const proximasActividadesDB = await prisma.actividad.findMany({
       where: {
+        iglesiaId,
         fecha: { gte: ahora },
         estado: { in: ["Programada", "En curso"] },
       },
