@@ -121,6 +121,9 @@ export async function POST(request: NextRequest) {
       nombre,
       descripcion,
       fecha,
+      fechaInicio,
+      fechaFin,
+      esRangoFechas = false,
       horaInicio,
       horaFin,
       ubicacion,
@@ -140,11 +143,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!fecha) {
-      return NextResponse.json(
-        { error: "La fecha es requerida" },
-        { status: 400 }
-      );
+    // Validar fechas según el tipo de actividad
+    if (esRangoFechas) {
+      if (!fechaInicio || !fechaFin) {
+        return NextResponse.json(
+          {
+            error:
+              "Para actividades de múltiples días se requieren fecha de inicio y fin",
+          },
+          { status: 400 }
+        );
+      }
+
+      if (new Date(fechaFin) < new Date(fechaInicio)) {
+        return NextResponse.json(
+          {
+            error:
+              "La fecha de fin debe ser posterior o igual a la fecha de inicio",
+          },
+          { status: 400 }
+        );
+      }
+    } else {
+      if (!fecha) {
+        return NextResponse.json(
+          { error: "La fecha es requerida" },
+          { status: 400 }
+        );
+      }
     }
 
     if (!tipoActividadId) {
@@ -188,20 +214,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Preparar datos para la creación
+    const actividadData = {
+      iglesiaId: usuarioIglesia.iglesiaId,
+      nombre,
+      descripcion: parseString(descripcion),
+      fecha: esRangoFechas
+        ? fechaInicio
+          ? new Date(fechaInicio)
+          : new Date()
+        : new Date(fecha),
+      fechaInicio: esRangoFechas
+        ? fechaInicio
+          ? new Date(fechaInicio)
+          : null
+        : null,
+      fechaFin: esRangoFechas ? (fechaFin ? new Date(fechaFin) : null) : null,
+      esRangoFechas,
+      horaInicio: parseString(horaInicio),
+      horaFin: parseString(horaFin),
+      ubicacion: parseString(ubicacion),
+      tipoActividadId: parseInt(tipoActividadId),
+      ministerioId: ministerioId ? parseInt(ministerioId) : null,
+      estado,
+    };
+
     // Crear la actividad con los campos básicos
     const nuevaActividad = await prisma.actividad.create({
-      data: {
-        iglesiaId: usuarioIglesia.iglesiaId,
-        nombre,
-        descripcion: parseString(descripcion),
-        fecha: new Date(fecha),
-        horaInicio: parseString(horaInicio),
-        horaFin: parseString(horaFin),
-        ubicacion: parseString(ubicacion),
-        tipoActividadId: parseInt(tipoActividadId),
-        ministerioId: ministerioId ? parseInt(ministerioId) : null,
-        estado,
-      },
+      data: actividadData,
     });
 
     // Actualización raw para los campos nuevos (banner, googleMapsEmbed, responsable)
@@ -229,7 +269,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(actividadFinal, { status: 201 });
+    return NextResponse.json(actividadFinal);
   } catch (error) {
     console.error("Error al crear actividad:", error);
     return NextResponse.json(

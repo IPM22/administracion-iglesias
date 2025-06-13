@@ -82,6 +82,16 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+    const actividadId = parseInt(id);
+
+    if (isNaN(actividadId)) {
+      return NextResponse.json(
+        { error: "ID de actividad inválido" },
+        { status: 400 }
+      );
+    }
+
     // Obtener el usuario autenticado
     const supabase = await createClient();
     const {
@@ -114,13 +124,18 @@ export async function PUT(
       );
     }
 
-    const { id } = await params;
-    const actividadId = parseInt(id);
+    // Verificar que la actividad existe y pertenece a la iglesia del usuario
+    const actividadExistente = await prisma.actividad.findFirst({
+      where: {
+        id: actividadId,
+        iglesiaId: usuarioIglesia.iglesiaId,
+      },
+    });
 
-    if (isNaN(actividadId)) {
+    if (!actividadExistente) {
       return NextResponse.json(
-        { error: "ID de actividad inválido" },
-        { status: 400 }
+        { error: "Actividad no encontrada o no tienes permiso para editarla" },
+        { status: 404 }
       );
     }
 
@@ -129,15 +144,18 @@ export async function PUT(
       nombre,
       descripcion,
       fecha,
+      fechaInicio,
+      fechaFin,
+      esRangoFechas = false,
       horaInicio,
       horaFin,
       ubicacion,
       googleMapsEmbed,
+      responsable,
+      banner,
       tipoActividadId,
       ministerioId,
-      responsable,
-      estado,
-      banner,
+      estado = "Programada",
     } = body;
 
     // Validaciones básicas
@@ -148,32 +166,40 @@ export async function PUT(
       );
     }
 
-    if (!fecha) {
-      return NextResponse.json(
-        { error: "La fecha es requerida" },
-        { status: 400 }
-      );
+    // Validar fechas según el tipo de actividad
+    if (esRangoFechas) {
+      if (!fechaInicio || !fechaFin) {
+        return NextResponse.json(
+          {
+            error:
+              "Para actividades de múltiples días se requieren fecha de inicio y fin",
+          },
+          { status: 400 }
+        );
+      }
+
+      if (new Date(fechaFin) < new Date(fechaInicio)) {
+        return NextResponse.json(
+          {
+            error:
+              "La fecha de fin debe ser posterior o igual a la fecha de inicio",
+          },
+          { status: 400 }
+        );
+      }
+    } else {
+      if (!fecha) {
+        return NextResponse.json(
+          { error: "La fecha es requerida" },
+          { status: 400 }
+        );
+      }
     }
 
     if (!tipoActividadId) {
       return NextResponse.json(
         { error: "El tipo de actividad es requerido" },
         { status: 400 }
-      );
-    }
-
-    // Verificar que la actividad existe y pertenece a la iglesia del usuario
-    const actividadExiste = await prisma.actividad.findFirst({
-      where: {
-        id: actividadId,
-        iglesiaId: usuarioIglesia.iglesiaId,
-      },
-    });
-
-    if (!actividadExiste) {
-      return NextResponse.json(
-        { error: "Actividad no encontrada o no tienes acceso a ella" },
-        { status: 404 }
       );
     }
 
@@ -211,20 +237,34 @@ export async function PUT(
       }
     }
 
-    // Actualizar los campos conocidos
+    // Preparar datos para la actualización
+    const actividadData = {
+      nombre,
+      descripcion: parseString(descripcion),
+      fecha: esRangoFechas
+        ? fechaInicio
+          ? new Date(fechaInicio)
+          : new Date()
+        : new Date(fecha),
+      fechaInicio: esRangoFechas
+        ? fechaInicio
+          ? new Date(fechaInicio)
+          : null
+        : null,
+      fechaFin: esRangoFechas ? (fechaFin ? new Date(fechaFin) : null) : null,
+      esRangoFechas,
+      horaInicio: parseString(horaInicio),
+      horaFin: parseString(horaFin),
+      ubicacion: parseString(ubicacion),
+      tipoActividadId: parseInt(tipoActividadId),
+      ministerioId: ministerioId ? parseInt(ministerioId) : null,
+      estado,
+    };
+
+    // Actualizar la actividad con los campos básicos
     await prisma.actividad.update({
       where: { id: actividadId },
-      data: {
-        nombre,
-        descripcion: parseString(descripcion),
-        fecha: new Date(fecha),
-        horaInicio: parseString(horaInicio),
-        horaFin: parseString(horaFin),
-        ubicacion: parseString(ubicacion),
-        tipoActividadId: parseInt(tipoActividadId),
-        ministerioId: ministerioId ? parseInt(ministerioId) : null,
-        estado: estado || "Programada",
-      },
+      data: actividadData,
     });
 
     // Actualización raw para los campos nuevos (banner, googleMapsEmbed, responsable)

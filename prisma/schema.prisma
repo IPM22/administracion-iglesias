@@ -252,7 +252,10 @@ model Actividad {
   iglesiaId         Int       // NUEVO: Filtro por iglesia
   nombre            String
   descripcion       String?
-  fecha             DateTime
+  fecha             DateTime  // Mantener por compatibilidad
+  fechaInicio       DateTime? // Nueva fecha de inicio para rangos
+  fechaFin          DateTime? // Nueva fecha de fin para rangos
+  esRangoFechas     Boolean   @default(false) // Indica si es una actividad de múltiples días
   horaInicio        String?
   horaFin           String?
   ubicacion         String?

@@ -42,6 +42,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Calendar, Clock, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -64,20 +65,52 @@ interface Ministerio {
   descripcion?: string;
 }
 
-const formSchema = z.object({
-  nombre: z.string().min(1, "El nombre es requerido"),
-  descripcion: z.string().optional(),
-  fecha: z.string().min(1, "La fecha es requerida"),
-  horaInicio: z.string().optional(),
-  horaFin: z.string().optional(),
-  ubicacion: z.string().optional(),
-  googleMapsEmbed: z.string().optional(),
-  responsable: z.string().optional(),
-  tipoActividadId: z.string().min(1, "Selecciona un tipo de actividad"),
-  ministerioId: z.number().optional(),
-  estado: z.string().min(1, "El estado es requerido"),
-  banner: z.string().optional(),
-});
+const formSchema = z
+  .object({
+    nombre: z.string().min(1, "El nombre es requerido"),
+    descripcion: z.string().optional(),
+    fecha: z.string().optional(),
+    fechaInicio: z.string().optional(),
+    fechaFin: z.string().optional(),
+    esRangoFechas: z.boolean().default(false),
+    horaInicio: z.string().optional(),
+    horaFin: z.string().optional(),
+    ubicacion: z.string().optional(),
+    googleMapsEmbed: z.string().optional(),
+    responsable: z.string().optional(),
+    tipoActividadId: z.string().min(1, "Selecciona un tipo de actividad"),
+    ministerioId: z.number().optional(),
+    estado: z.string().min(1, "El estado es requerido"),
+    banner: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      // Si es rango de fechas, debe tener fechaInicio y fechaFin
+      if (data.esRangoFechas) {
+        return data.fechaInicio && data.fechaFin;
+      }
+      // Si no es rango de fechas, debe tener fecha
+      return data.fecha;
+    },
+    {
+      message: "Debe proporcionar una fecha o un rango de fechas válido",
+      path: ["fecha"],
+    }
+  )
+  .refine(
+    (data) => {
+      // Si es rango de fechas, fechaFin debe ser posterior a fechaInicio
+      if (data.esRangoFechas && data.fechaInicio && data.fechaFin) {
+        return new Date(data.fechaFin) >= new Date(data.fechaInicio);
+      }
+      return true;
+    },
+    {
+      message:
+        "La fecha de fin debe ser posterior o igual a la fecha de inicio",
+      path: ["fechaFin"],
+    }
+  );
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -97,6 +130,9 @@ export default function NuevaActividadPage() {
       nombre: "",
       descripcion: "",
       fecha: "",
+      fechaInicio: "",
+      fechaFin: "",
+      esRangoFechas: false,
       horaInicio: "",
       horaFin: "",
       ubicacion: "",
