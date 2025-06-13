@@ -45,24 +45,6 @@ export function WelcomeWizard({ usuario, onComplete }: WelcomeWizardProps) {
     setStep("join");
   };
 
-  const handleCompleteOnboarding = async () => {
-    setLoading(true);
-    try {
-      // Marcar que el usuario ya no es primer login
-      await fetch(`/api/usuarios/${usuario.email}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ primerLogin: false }),
-      });
-
-      onComplete();
-    } catch (error) {
-      console.error("Error completando onboarding:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <Dialog open={true}>
       <DialogContent className="max-w-2xl">

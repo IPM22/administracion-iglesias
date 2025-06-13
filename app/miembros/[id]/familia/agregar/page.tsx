@@ -105,7 +105,6 @@ export default function AgregarFamiliarPage({
   const [guardando, setGuardando] = useState(false);
   const [mensajeSincronizacion, setMensajeSincronizacion] =
     useState<string>("");
-  const [error, setError] = useState<string>("");
 
   const tiposRelacion = [
     "Esposo/a",
@@ -248,12 +247,10 @@ export default function AgregarFamiliarPage({
     e.preventDefault();
 
     if (!personaSeleccionada || !formData.tipoRelacion) {
-      setError("Debe seleccionar una persona y un tipo de relación");
       return;
     }
 
     setGuardando(true);
-    setError("");
     setMensajeSincronizacion("");
 
     try {
@@ -286,9 +283,6 @@ export default function AgregarFamiliarPage({
       }, 2000);
     } catch (error) {
       console.error("Error agregando familiar:", error);
-      setError(
-        error instanceof Error ? error.message : "Error al agregar familiar"
-      );
     } finally {
       setGuardando(false);
     }
