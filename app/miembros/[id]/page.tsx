@@ -50,6 +50,7 @@ import {
   calcularEdad,
   calcularAniosTranscurridos,
 } from "@/lib/date-utils";
+import { useApiConIglesia } from "@/hooks/useApiConIglesia";
 
 // Función para formatear teléfonos para mostrar
 const formatPhoneForDisplay = (phone: string | null | undefined): string => {
@@ -144,6 +145,7 @@ export default function MiembroDetallePage({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { id } = use(params);
+  const { iglesiaActiva } = useApiConIglesia();
   const [miembro, setMiembro] = useState<MiembroDetalle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -163,23 +165,50 @@ export default function MiembroDetallePage({
 
   useEffect(() => {
     const fetchMiembro = async () => {
+      if (!iglesiaActiva?.id) {
+        console.log("🔍 DEBUG - No hay iglesia seleccionada");
+        setLoading(false);
+        return;
+      }
+
       try {
-        const response = await fetch(`/api/miembros/${id}`);
+        console.log(
+          `🔄 Cargando detalles del miembro ${id} para iglesia: ${iglesiaActiva?.nombre} (ID: ${iglesiaActiva?.id})`
+        );
+
+        // Llamar directamente a la API para evitar bucles infinitos
+        const url = new URL(`/api/miembros/${id}`, window.location.origin);
+        url.searchParams.set("iglesiaId", iglesiaActiva.id.toString());
+
+        const response = await fetch(url.toString(), {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
         if (!response.ok) {
-          throw new Error("Error al obtener los datos del miembro");
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
+
         const data = await response.json();
+        console.log("✅ Detalles del miembro cargados correctamente");
         setMiembro(data);
       } catch (error) {
-        console.error("Error:", error);
-        setError("Error al cargar los datos del miembro");
+        console.error("Error al cargar miembro:", error);
+
+        // Mostrar mensaje de error más específico
+        if (error instanceof Error) {
+          setError(error.message);
+        } else {
+          setError("Error inesperado al cargar los datos del miembro");
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchMiembro();
-  }, [id]);
+  }, [id, iglesiaActiva?.id, iglesiaActiva?.nombre]);
 
   const getNombreCompleto = () => {
     if (!miembro) return "Cargando...";

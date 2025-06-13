@@ -50,6 +50,7 @@ import * as z from "zod";
 import { CloudinaryUploader } from "../../../../components/CloudinaryUploader";
 import { PhoneInput } from "../../../../components/PhoneInput";
 import { formatDateForInput } from "@/lib/date-utils";
+import { useApiConIglesia } from "@/hooks/useApiConIglesia";
 
 const formSchema = z.object({
   nombres: z.string().min(2, "Los nombres deben tener al menos 2 caracteres"),
@@ -68,7 +69,6 @@ const formSchema = z.object({
     .enum(["Soltero/a", "Casado/a", "Viudo/a", "Divorciado/a"])
     .optional(),
   ocupacion: z.string().optional(),
-  familia: z.string().optional(),
   fechaIngreso: z.string().optional(),
   fechaBautismo: z.string().optional(),
   estado: z.enum(["Activo", "Inactivo"]).optional(),
@@ -90,7 +90,6 @@ interface MiembroData {
   sexo?: string;
   estadoCivil?: string;
   ocupacion?: string;
-  familia?: string;
   fechaIngreso?: string;
   fechaBautismo?: string;
   estado?: string;
@@ -105,6 +104,7 @@ export default function EditarMiembroPage({
 }) {
   const router = useRouter();
   const { id } = use(params);
+  const { iglesiaActiva } = useApiConIglesia();
   const [miembro, setMiembro] = useState<MiembroData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +123,6 @@ export default function EditarMiembroPage({
       sexo: undefined,
       estadoCivil: undefined,
       ocupacion: "",
-      familia: "",
       fechaIngreso: "",
       fechaBautismo: "",
       estado: "Activo",
@@ -134,12 +133,33 @@ export default function EditarMiembroPage({
 
   useEffect(() => {
     const fetchMiembro = async () => {
+      if (!iglesiaActiva?.id) {
+        console.log("🔍 DEBUG - No hay iglesia seleccionada para edición");
+        setLoading(false);
+        return;
+      }
+
       try {
-        const response = await fetch(`/api/miembros/${id}`);
+        console.log(
+          `🔄 Cargando datos del miembro ${id} para edición - Iglesia: ${iglesiaActiva?.nombre} (ID: ${iglesiaActiva?.id})`
+        );
+
+        // Llamar directamente a la API para evitar bucles infinitos
+        const url = new URL(`/api/miembros/${id}`, window.location.origin);
+        url.searchParams.set("iglesiaId", iglesiaActiva.id.toString());
+
+        const response = await fetch(url.toString(), {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
         if (!response.ok) {
-          throw new Error("Error al obtener los datos del miembro");
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
+
         const data = await response.json();
+        console.log("✅ Datos del miembro para edición cargados correctamente");
         setMiembro(data);
 
         // Actualizar el formulario con los datos del miembro
@@ -154,12 +174,23 @@ export default function EditarMiembroPage({
           sexo: data.sexo,
           estadoCivil: data.estadoCivil,
           ocupacion: data.ocupacion || "",
-          familia: data.familia || "",
           fechaIngreso: formatDateForInput(data.fechaIngreso),
           fechaBautismo: formatDateForInput(data.fechaBautismo),
           estado: data.estado || "Activo",
           foto: data.foto || "",
           notasAdicionales: data.notasAdicionales || "",
+        });
+
+        // Log para debug de fechas
+        console.log("📅 Fechas formateadas para el formulario:", {
+          fechaNacimiento: formatDateForInput(data.fechaNacimiento),
+          fechaIngreso: formatDateForInput(data.fechaIngreso),
+          fechaBautismo: formatDateForInput(data.fechaBautismo),
+          raw: {
+            fechaNacimiento: data.fechaNacimiento,
+            fechaIngreso: data.fechaIngreso,
+            fechaBautismo: data.fechaBautismo,
+          },
         });
       } catch (error) {
         console.error("Error:", error);
@@ -170,12 +201,21 @@ export default function EditarMiembroPage({
     };
 
     fetchMiembro();
-  }, [id, form]);
+  }, [id, form, iglesiaActiva?.id, iglesiaActiva?.nombre]);
 
   async function onSubmit(values: FormValues) {
+    if (!iglesiaActiva?.id) {
+      setError("No hay iglesia seleccionada");
+      return;
+    }
+
     setSaving(true);
     try {
-      const response = await fetch(`/api/miembros/${id}`, {
+      // Llamar directamente a la API para evitar problemas
+      const url = new URL(`/api/miembros/${id}`, window.location.origin);
+      url.searchParams.set("iglesiaId", iglesiaActiva.id.toString());
+
+      const response = await fetch(url.toString(), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -184,10 +224,10 @@ export default function EditarMiembroPage({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Error al actualizar el miembro");
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
 
+      console.log("✅ Miembro actualizado correctamente");
       router.push(`/miembros/${id}`);
     } catch (error) {
       console.error("Error:", error);
@@ -475,9 +515,9 @@ export default function EditarMiembroPage({
                           </div>
                         </div>
 
-                        {/* Tercera fila - Ocupación y Familia */}
+                        {/* Tercera fila - Solo Ocupación */}
                         <div className="md:col-span-2">
-                          <div className="grid gap-4 md:grid-cols-2">
+                          <div className="grid gap-4 md:grid-cols-1">
                             <FormField
                               control={form.control}
                               name="ocupacion"
@@ -491,27 +531,6 @@ export default function EditarMiembroPage({
                                   <FormControl>
                                     <Input
                                       placeholder="Ingeniero, Enfermera, etc."
-                                      {...field}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={form.control}
-                              name="familia"
-                              render={({
-                                field,
-                              }: {
-                                field: ControllerRenderProps<FormValues>;
-                              }) => (
-                                <FormItem>
-                                  <FormLabel>Familia</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      placeholder="Familia García"
                                       {...field}
                                     />
                                   </FormControl>

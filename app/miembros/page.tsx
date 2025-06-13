@@ -61,7 +61,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Miembro } from "@prisma/client";
 import {
   Select,
@@ -104,6 +104,7 @@ export default function MiembrosPage() {
   const [miembrosFiltrados, setMiembrosFiltrados] = useState<Miembro[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
   // Estados para paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -120,11 +121,20 @@ export default function MiembrosPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [filtroEstado, setFiltroEstado] = useState<string>("todos");
   const [filtroSexo, setFiltroSexo] = useState<string>("todos");
-  const [filtroFamilia, setFiltroFamilia] = useState<string>("todos");
+
+  // Debounce para el término de búsqueda
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   useEffect(() => {
     const fetchMiembros = async () => {
-      if (!tieneIglesia) {
+      if (!iglesiaActiva?.id) {
+        console.log("🔍 DEBUG - No hay iglesia seleccionada");
         setLoading(false);
         return;
       }
@@ -133,12 +143,31 @@ export default function MiembrosPage() {
         console.log(
           `🔄 Cargando miembros para iglesia: ${iglesiaActiva?.nombre} (ID: ${iglesiaActiva?.id})`
         );
-        const data = await fetchConIglesia("/api/miembros");
+
+        // Llamar directamente a la API en lugar de usar fetchConIglesia para evitar bucles
+        const url = new URL("/api/miembros", window.location.origin);
+        url.searchParams.set("iglesiaId", iglesiaActiva.id.toString());
+
+        const response = await fetch(url.toString(), {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log("🔍 DEBUG - Datos recibidos:", data);
+        console.log("🔍 DEBUG - Tipo de datos:", typeof data);
+        console.log("🔍 DEBUG - Es array:", Array.isArray(data));
+
         setMiembros(data);
         setMiembrosFiltrados(data);
         console.log(`✅ Cargados ${data.length} miembros`);
       } catch (error) {
-        console.error("Error:", error);
+        console.error("🔍 DEBUG - Error completo:", error);
         setMiembros([]);
         setMiembrosFiltrados([]);
       } finally {
@@ -147,15 +176,23 @@ export default function MiembrosPage() {
     };
 
     fetchMiembros();
-  }, [tieneIglesia, iglesiaActiva?.id, fetchConIglesia]);
+  }, [iglesiaActiva?.id, iglesiaActiva?.nombre]); // Solo depender del ID y nombre de la iglesia
 
   useEffect(() => {
     const filtrarMiembros = () => {
+      console.log("🔍 DEBUG - Filtrado:", {
+        miembrosTotal: miembros.length,
+        termino: debouncedSearchTerm,
+        estado: filtroEstado,
+        sexo: filtroSexo,
+      });
+
       let filtrados = [...miembros];
 
       // Aplicar filtro de búsqueda por texto
-      if (searchTerm.trim()) {
-        const termino = searchTerm.toLowerCase().trim();
+      if (debouncedSearchTerm.trim()) {
+        const termino = debouncedSearchTerm.toLowerCase().trim();
+
         filtrados = filtrados.filter((miembro) => {
           const nombreCompleto =
             `${miembro.nombres} ${miembro.apellidos}`.toLowerCase();
@@ -186,12 +223,13 @@ export default function MiembrosPage() {
         filtrados = filtrados.filter((miembro) => miembro.sexo === filtroSexo);
       }
 
+      console.log("🔍 DEBUG - Resultados:", filtrados.length);
       setMiembrosFiltrados(filtrados);
       setCurrentPage(1); // Resetear a la primera página
     };
 
     filtrarMiembros();
-  }, [searchTerm, miembros, filtroEstado, filtroSexo, filtroFamilia]);
+  }, [debouncedSearchTerm, miembros, filtroEstado, filtroSexo]);
 
   // Función para mostrar dialog de confirmación
   const mostrarDialogEliminar = (miembro: Miembro) => {
@@ -209,19 +247,11 @@ export default function MiembrosPage() {
         method: "DELETE",
       });
 
-      // Actualizar la lista de miembros
+      // Actualizar la lista de miembros - el useEffect se encargará del filtrado
       const nuevosmiembros = miembros.filter(
         (m) => m.id !== miembroAEliminar.id
       );
       setMiembros(nuevosmiembros);
-      setMiembrosFiltrados(
-        nuevosmiembros.filter((m) => {
-          if (!searchTerm.trim()) return true;
-          const termino = searchTerm.toLowerCase().trim();
-          const nombreCompleto = `${m.nombres} ${m.apellidos}`.toLowerCase();
-          return nombreCompleto.includes(termino);
-        })
-      );
 
       setDialogOpen(false);
       setMiembroAEliminar(null);
@@ -244,25 +274,40 @@ export default function MiembrosPage() {
   const limpiarFiltros = () => {
     setFiltroEstado("todos");
     setFiltroSexo("todos");
-    setFiltroFamilia("todos");
     setSearchTerm("");
-  };
-
-  // Obtener opciones únicas para filtros (remover filtro familia por ahora)
-  const getOpcionesFamilias = (): string[] => {
-    return []; // Temporalmente vacío hasta implementar relación con familias
+    setDebouncedSearchTerm("");
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
   };
 
-  // Calcular datos de paginación
-  const totalItems = miembrosFiltrados.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentItems = miembrosFiltrados.slice(startIndex, endIndex);
+  // Calcular datos de paginación con useMemo para optimizar
+  const paginationData = useMemo(() => {
+    const totalItems = miembrosFiltrados.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentItems = miembrosFiltrados.slice(startIndex, endIndex);
+
+    return {
+      totalItems,
+      totalPages,
+      startIndex,
+      endIndex,
+      currentItems,
+    };
+  }, [miembrosFiltrados, currentPage, itemsPerPage]);
+
+  const { totalItems, totalPages, startIndex, endIndex, currentItems } =
+    paginationData;
+
+  // Resetear página actual si excede el total de páginas disponibles
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
 
   // Funciones de paginación
   const goToPage = (page: number) => {
@@ -382,7 +427,7 @@ export default function MiembrosPage() {
                         Filtros
                       </Button>
                     </div>
-                    {searchTerm && (
+                    {debouncedSearchTerm && (
                       <div className="text-sm text-muted-foreground ml-4">
                         {miembrosFiltrados.length} resultado
                         {miembrosFiltrados.length !== 1 ? "s" : ""} encontrado
@@ -438,26 +483,6 @@ export default function MiembrosPage() {
                           </Select>
                         </div>
 
-                        <div className="w-40 space-y-1">
-                          <label className="text-sm font-medium">Familia</label>
-                          <Select
-                            value={filtroFamilia}
-                            onValueChange={setFiltroFamilia}
-                          >
-                            <SelectTrigger className="h-9">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="todos">Todas</SelectItem>
-                              {getOpcionesFamilias().map((familia) => (
-                                <SelectItem key={familia} value={familia}>
-                                  {familia}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
                         <Button
                           variant="outline"
                           size="sm"
@@ -493,8 +518,8 @@ export default function MiembrosPage() {
                         {miembrosFiltrados.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={7} className="text-center py-8">
-                              {searchTerm
-                                ? `No se encontraron miembros que coincidan con "${searchTerm}"`
+                              {debouncedSearchTerm
+                                ? `No se encontraron miembros que coincidan con "${debouncedSearchTerm}"`
                                 : "No hay miembros registrados"}
                             </TableCell>
                           </TableRow>

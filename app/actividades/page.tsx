@@ -92,6 +92,7 @@ interface Actividad {
   horaInicio?: string;
   horaFin?: string;
   ubicacion?: string;
+  googleMapsEmbed?: string;
   responsable?: string;
   estado: string;
   createdAt: string;
@@ -99,8 +100,6 @@ interface Actividad {
   tipoActividad: TipoActividad;
   historialVisitas: HistorialVisita[];
   banner?: string;
-  latitud?: number;
-  longitud?: number;
   ministerio?: {
     id: number;
     nombre: string;
@@ -346,10 +345,11 @@ export default function ActividadesPage() {
 
     actividades.forEach((actividad) => {
       const fecha = new Date(actividad.fecha);
-      const nombreMes = fecha.toLocaleDateString("es-ES", {
+      const mes = fecha.toLocaleDateString("es-ES", {
         month: "long",
-        year: "numeric",
       });
+      const año = fecha.getFullYear();
+      const nombreMes = `${mes.charAt(0).toUpperCase() + mes.slice(1)} ${año}`;
 
       if (!grupos[nombreMes]) {
         grupos[nombreMes] = [];
@@ -657,12 +657,12 @@ export default function ActividadesPage() {
                                 <MapPin className="h-4 w-4 text-muted-foreground" />
                                 <span className="text-sm text-muted-foreground">
                                   {actividad.ubicacion || "Sin ubicación"}
-                                  {actividad.latitud && actividad.longitud && (
+                                  {actividad.googleMapsEmbed && (
                                     <Badge
                                       variant="outline"
                                       className="ml-2 text-xs"
                                     >
-                                      GPS
+                                      Maps
                                     </Badge>
                                   )}
                                 </span>

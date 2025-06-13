@@ -1,5 +1,6 @@
 import { prisma } from "../../../../lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { getUserContext, requireAuth } from "../../../../lib/auth-utils";
 
 // Helper function para parsing seguro
 function parseString(value: unknown): string | null {
@@ -12,6 +13,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Obtener contexto del usuario autenticado
+    const userContext = await getUserContext(request);
+    const { iglesiaId } = requireAuth(userContext);
+
     const { id } = await params;
     const ministerioId = parseInt(id);
 
@@ -23,7 +28,10 @@ export async function GET(
     }
 
     const ministerio = await prisma.ministerio.findUnique({
-      where: { id: ministerioId },
+      where: {
+        id: ministerioId,
+        iglesiaId, // ✅ Filtrar por iglesia del usuario
+      },
       include: {
         miembros: {
           include: {
@@ -78,6 +86,14 @@ export async function GET(
     return NextResponse.json(ministerio);
   } catch (error) {
     console.error("Error al obtener ministerio:", error);
+
+    if (error instanceof Error && error.message === "Usuario no autenticado") {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Error al obtener el ministerio" },
       { status: 500 }

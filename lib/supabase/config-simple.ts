@@ -7,13 +7,6 @@ export function getSupabaseClientConfig() {
 
   const isConfigured = Boolean(url && anonKey);
 
-  // DEBUG: Log temporal para diagnosticar
-  console.log("🔍 DEBUG - Client Config:", {
-    url: url ? `${url.substring(0, 20)}...` : "MISSING",
-    anonKey: anonKey ? `${anonKey.substring(0, 20)}...` : "MISSING",
-    isConfigured,
-  });
-
   if (!isConfigured) {
     console.error("❌ Supabase Client Config Missing:", {
       NEXT_PUBLIC_SUPABASE_URL: url ? "OK" : "MISSING",
@@ -35,14 +28,6 @@ export function getSupabaseServerConfig() {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Sin NEXT_PUBLIC_
 
   const isConfigured = Boolean(url && anonKey && serviceKey);
-
-  // DEBUG: Log temporal para diagnosticar
-  console.log("🔍 DEBUG - Server Config:", {
-    url: url ? `${url.substring(0, 20)}...` : "MISSING",
-    anonKey: anonKey ? `${anonKey.substring(0, 20)}...` : "MISSING",
-    serviceKey: serviceKey ? `${serviceKey.substring(0, 20)}...` : "MISSING",
-    isConfigured,
-  });
 
   if (!isConfigured) {
     console.error("❌ Supabase Server Config Missing:", {

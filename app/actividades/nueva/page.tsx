@@ -50,7 +50,7 @@ import * as z from "zod";
 import { ModeToggle } from "../../../components/mode-toggle";
 import { CloudinaryUploader } from "../../../components/CloudinaryUploader";
 import MinisterioSelector from "../../../components/MinisterioSelector";
-import { LocationPicker } from "../../../components/LocationPicker";
+import { GoogleMapsEmbed } from "@/components/GoogleMapsEmbed";
 
 interface TipoActividad {
   id: number;
@@ -71,9 +71,9 @@ const formSchema = z.object({
   horaInicio: z.string().optional(),
   horaFin: z.string().optional(),
   ubicacion: z.string().optional(),
-  latitud: z.number().optional(),
-  longitud: z.number().optional(),
-  tipoActividadId: z.string().min(1, "El tipo de actividad es requerido"),
+  googleMapsEmbed: z.string().optional(),
+  responsable: z.string().optional(),
+  tipoActividadId: z.string().min(1, "Selecciona un tipo de actividad"),
   ministerioId: z.number().optional(),
   estado: z.string().min(1, "El estado es requerido"),
   banner: z.string().optional(),
@@ -100,8 +100,8 @@ export default function NuevaActividadPage() {
       horaInicio: "",
       horaFin: "",
       ubicacion: "",
-      latitud: undefined,
-      longitud: undefined,
+      googleMapsEmbed: "",
+      responsable: "",
       tipoActividadId: "",
       ministerioId: undefined,
       estado: "Programada",
@@ -112,25 +112,48 @@ export default function NuevaActividadPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        console.log("🔄 Iniciando carga de datos del formulario...");
+
         // Cargar tipos de actividad
+        console.log("📋 Cargando tipos de actividad...");
         const tiposResponse = await fetch("/api/tipos-actividad");
+        console.log(
+          "📋 Respuesta tipos de actividad:",
+          tiposResponse.status,
+          tiposResponse.statusText
+        );
+
         if (!tiposResponse.ok) {
+          const errorText = await tiposResponse.text();
+          console.error("❌ Error en respuesta tipos de actividad:", errorText);
           throw new Error("Error al obtener los tipos de actividad");
         }
         const tiposData = await tiposResponse.json();
+        console.log("✅ Tipos de actividad cargados:", tiposData);
         setTiposActividad(tiposData);
 
         // Cargar ministerios
+        console.log("⛪ Cargando ministerios...");
         const ministeriosResponse = await fetch("/api/ministerios");
+        console.log(
+          "⛪ Respuesta ministerios:",
+          ministeriosResponse.status,
+          ministeriosResponse.statusText
+        );
+
         if (!ministeriosResponse.ok) {
+          const errorText = await ministeriosResponse.text();
+          console.error("❌ Error en respuesta ministerios:", errorText);
           throw new Error("Error al obtener los ministerios");
         }
         const ministeriosData = await ministeriosResponse.json();
+        console.log("✅ Ministerios cargados:", ministeriosData);
         setMinisterios(ministeriosData);
       } catch (error) {
-        console.error("Error:", error);
+        console.error("💥 Error general:", error);
         setError("Error al cargar los datos del formulario");
       } finally {
+        console.log("🏁 Finalizando carga de datos");
         setLoading(false);
       }
     };
@@ -433,32 +456,32 @@ export default function NuevaActividadPage() {
                     />
                   </div>
 
-                  {/* Ubicación con Geolocalización */}
+                  {/* Ubicación con Google Maps Embed */}
                   <FormField
                     control={form.control}
                     name="ubicacion"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Ubicación y Geolocalización</FormLabel>
+                        <FormLabel>Ubicación y Google Maps</FormLabel>
                         <FormControl>
-                          <LocationPicker
+                          <GoogleMapsEmbed
                             onLocationChange={(location: {
                               direccion: string;
-                              latitud?: number;
-                              longitud?: number;
+                              googleMapsEmbed?: string;
                             }) => {
                               field.onChange(location.direccion);
-                              form.setValue("latitud", location.latitud);
-                              form.setValue("longitud", location.longitud);
+                              form.setValue(
+                                "googleMapsEmbed",
+                                location.googleMapsEmbed
+                              );
                             }}
                             direccion={field.value || ""}
-                            latitud={form.getValues("latitud")}
-                            longitud={form.getValues("longitud")}
+                            googleMapsEmbed={form.getValues("googleMapsEmbed")}
                           />
                         </FormControl>
                         <FormDescription>
-                          Opcional - Dirección física del evento con coordenadas
-                          GPS
+                          Opcional - Dirección física del evento con embed de
+                          Google Maps
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -537,13 +560,12 @@ export default function NuevaActividadPage() {
                   </p>
                 </div>
                 <div>
-                  <span className="font-medium">Geolocalización:</span>
+                  <span className="font-medium">Google Maps:</span>
                   <p className="text-muted-foreground">
-                    Puedes ingresar coordenadas GPS manualmente para facilitar
-                    la navegación a los asistentes. Se generarán enlaces
-                    directos a Google Maps y Waze. También puedes obtener
-                    coordenadas desde Google Maps haciendo clic derecho en el
-                    punto deseado.
+                    Puedes agregar un embed de Google Maps para mostrar la
+                    ubicación interactiva del evento. Ve a Google Maps, busca la
+                    ubicación, haz clic en &quot;Compartir&quot; →
+                    &quot;Insertar mapa&quot; y pega el código.
                   </p>
                 </div>
                 <div>

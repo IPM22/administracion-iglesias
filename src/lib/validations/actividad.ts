@@ -1,21 +1,15 @@
 import { z } from "zod";
 
 export const actividadSchema = z.object({
-  nombre: z.string().min(2, {
-    message: "El nombre debe tener al menos 2 caracteres.",
-  }),
+  nombre: z.string().min(1, "El nombre es requerido"),
   descripcion: z.string().optional(),
-  fecha: z.date({
-    required_error: "La fecha es requerida.",
-  }),
+  fecha: z.string().min(1, "La fecha es requerida"),
   horaInicio: z.string().optional(),
   horaFin: z.string().optional(),
   ubicacion: z.string().optional(),
-  latitud: z.number().optional(),
-  longitud: z.number().optional(),
-  tipoActividadId: z.number({
-    required_error: "El tipo de actividad es requerido.",
-  }),
+  googleMapsEmbed: z.string().optional(),
+  responsable: z.string().optional(),
+  tipoActividadId: z.number().min(1, "El tipo de actividad es requerido"),
   ministerioId: z.number().optional(),
   estado: z
     .enum(["Programada", "En curso", "Finalizada", "Cancelada"], {
@@ -25,4 +19,4 @@ export const actividadSchema = z.object({
   banner: z.string().optional(),
 });
 
-export type ActividadFormValues = z.infer<typeof actividadSchema>;
+export type ActividadFormData = z.infer<typeof actividadSchema>;

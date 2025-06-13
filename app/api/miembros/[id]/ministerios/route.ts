@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db";
 import { parseDateForAPI } from "@/lib/date-utils";
+import { getUserContext, requireAuth } from "../../../../../lib/auth-utils";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Obtener contexto del usuario autenticado
+    const userContext = await getUserContext(request);
+    const { iglesiaId } = requireAuth(userContext);
+
     const { id } = await params;
     const miembroId = parseInt(id);
 
@@ -28,9 +33,12 @@ export async function POST(
       );
     }
 
-    // Verificar que el miembro existe
+    // Verificar que el miembro existe y pertenece a la iglesia del usuario
     const miembro = await prisma.miembro.findUnique({
-      where: { id: miembroId },
+      where: {
+        id: miembroId,
+        iglesiaId,
+      },
     });
 
     if (!miembro) {
@@ -40,9 +48,12 @@ export async function POST(
       );
     }
 
-    // Verificar que el ministerio existe
+    // Verificar que el ministerio existe y pertenece a la iglesia del usuario
     const ministerio = await prisma.ministerio.findUnique({
-      where: { id: ministerioId },
+      where: {
+        id: ministerioId,
+        iglesiaId,
+      },
     });
 
     if (!ministerio) {
@@ -53,7 +64,7 @@ export async function POST(
     }
 
     // Verificar si ya existe una asignación activa
-    const asignacionExistente = await prisma.ministerioMiembro.findFirst({
+    const asignacionExistente = await prisma.miembroMinisterio.findFirst({
       where: {
         miembroId: miembroId,
         ministerioId: ministerioId,
@@ -69,7 +80,7 @@ export async function POST(
     }
 
     // Crear la asignación
-    const nuevaAsignacion = await prisma.ministerioMiembro.create({
+    const nuevaAsignacion = await prisma.miembroMinisterio.create({
       data: {
         miembroId: miembroId,
         ministerioId: ministerioId,
@@ -99,12 +110,18 @@ export async function POST(
     return NextResponse.json(nuevaAsignacion, { status: 201 });
   } catch (error) {
     console.error("Error al asignar ministerio:", error);
+
+    if (error instanceof Error && error.message === "Usuario no autenticado") {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -113,6 +130,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Obtener contexto del usuario autenticado
+    const userContext = await getUserContext(request);
+    const { iglesiaId } = requireAuth(userContext);
+
     const { id } = await params;
     const miembroId = parseInt(id);
 
@@ -123,8 +144,23 @@ export async function GET(
       );
     }
 
+    // Verificar que el miembro existe y pertenece a la iglesia del usuario
+    const miembro = await prisma.miembro.findUnique({
+      where: {
+        id: miembroId,
+        iglesiaId,
+      },
+    });
+
+    if (!miembro) {
+      return NextResponse.json(
+        { error: "Miembro no encontrado" },
+        { status: 404 }
+      );
+    }
+
     // Obtener los ministerios del miembro
-    const ministerios = await prisma.ministerioMiembro.findMany({
+    const ministerios = await prisma.miembroMinisterio.findMany({
       where: {
         miembroId: miembroId,
       },
@@ -145,11 +181,17 @@ export async function GET(
     return NextResponse.json(ministerios);
   } catch (error) {
     console.error("Error al obtener ministerios del miembro:", error);
+
+    if (error instanceof Error && error.message === "Usuario no autenticado") {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

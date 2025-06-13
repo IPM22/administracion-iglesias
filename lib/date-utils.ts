@@ -1,26 +1,58 @@
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+// Configurar plugins de dayjs
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 /**
- * Utilidades para manejo correcto de fechas
+ * Utilidades para manejo correcto de fechas usando Day.js
  * Evita problemas de zona horaria al convertir fechas para inputs y display
  */
 
 /**
  * Convierte una fecha a formato string para inputs type="date" (YYYY-MM-DD)
- * Evita problemas de zona horaria usando Date local
+ * Evita problemas de zona horaria usando dayjs
  */
 export function formatDateForInput(dateString?: string | null): string {
   if (!dateString) return "";
 
   try {
-    // Crear la fecha usando el string directamente para evitar problemas UTC
-    const date = new Date(dateString + "T00:00:00");
+    // Si es una cadena vacía o solo espacios, retornar vacío
+    if (typeof dateString === "string" && dateString.trim() === "") {
+      return "";
+    }
 
-    // Usar métodos locales para obtener año, mes y día
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
+    // Usar dayjs para parsear la fecha
+    const date = dayjs(dateString);
 
-    return `${year}-${month}-${day}`;
-  } catch {
+    // Verificar que la fecha es válida
+    if (!date.isValid()) {
+      console.warn(
+        "📅 formatDateForInput: Fecha inválida recibida:",
+        dateString
+      );
+      return "";
+    }
+
+    // Formatear como YYYY-MM-DD
+    const result = date.format("YYYY-MM-DD");
+
+    console.log("📅 formatDateForInput:", {
+      input: dateString,
+      output: result,
+      parsed: date.toISOString(),
+    });
+
+    return result;
+  } catch (error) {
+    console.warn(
+      "📅 formatDateForInput: Error al formatear fecha:",
+      error,
+      "Fecha original:",
+      dateString
+    );
     return "";
   }
 }
@@ -42,18 +74,12 @@ export function formatDate(
   if (!dateString) return "—";
 
   try {
-    let date: Date;
+    const date = dayjs(dateString);
 
-    if (typeof dateString === "string") {
-      // Agregar hora local para evitar conversión UTC
-      date = new Date(dateString + "T00:00:00");
-    } else {
-      date = new Date(dateString);
-    }
+    if (!date.isValid()) return "—";
 
-    if (isNaN(date.getTime())) return "—";
-
-    return date.toLocaleDateString("es-ES", options);
+    // Usar toDate() para convertir a Date nativo y usar toLocaleDateString
+    return date.toDate().toLocaleDateString("es-ES", options);
   } catch {
     return "—";
   }
@@ -70,26 +96,12 @@ export function calcularEdad(
   if (!fechaNacimiento) return null;
 
   try {
-    let nacimiento: Date;
+    const nacimiento = dayjs(fechaNacimiento);
 
-    if (typeof fechaNacimiento === "string") {
-      // Agregar hora local para evitar conversión UTC
-      nacimiento = new Date(fechaNacimiento + "T00:00:00");
-    } else {
-      nacimiento = new Date(fechaNacimiento);
-    }
+    if (!nacimiento.isValid()) return null;
 
-    if (isNaN(nacimiento.getTime())) return null;
-
-    const hoy = new Date();
-    let edad = hoy.getFullYear() - nacimiento.getFullYear();
-    const mes = hoy.getMonth() - nacimiento.getMonth();
-
-    if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
-      edad--;
-    }
-
-    return edad;
+    const hoy = dayjs();
+    return hoy.diff(nacimiento, "year");
   } catch {
     return null;
   }
@@ -106,26 +118,12 @@ export function calcularAniosTranscurridos(
   if (!fechaInicio) return null;
 
   try {
-    let inicio: Date;
+    const inicio = dayjs(fechaInicio);
 
-    if (typeof fechaInicio === "string") {
-      // Agregar hora local para evitar conversión UTC
-      inicio = new Date(fechaInicio + "T00:00:00");
-    } else {
-      inicio = new Date(fechaInicio);
-    }
+    if (!inicio.isValid()) return null;
 
-    if (isNaN(inicio.getTime())) return null;
-
-    const hoy = new Date();
-    let anos = hoy.getFullYear() - inicio.getFullYear();
-    const mes = hoy.getMonth() - inicio.getMonth();
-
-    if (mes < 0 || (mes === 0 && hoy.getDate() < inicio.getDate())) {
-      anos--;
-    }
-
-    return anos;
+    const hoy = dayjs();
+    return hoy.diff(inicio, "year");
   } catch {
     return null;
   }
@@ -137,16 +135,42 @@ export function calcularAniosTranscurridos(
  * @returns Fecha en formato ISO o undefined
  */
 export function parseDateForAPI(dateString?: string): Date | undefined {
-  if (!dateString || dateString.trim() === "") return undefined;
+  if (!dateString || dateString.trim() === "") {
+    console.log("📅 parseDateForAPI: Fecha vacía o nula, retornando undefined");
+    return undefined;
+  }
 
   try {
-    // Crear fecha usando el formato YYYY-MM-DD directamente
-    const date = new Date(dateString + "T00:00:00");
+    console.log("📅 parseDateForAPI: Procesando fecha:", dateString);
 
-    if (isNaN(date.getTime())) return undefined;
+    // Limpiar la fecha de cualquier espacio extra
+    const cleanDate = dateString.trim();
 
-    return date;
-  } catch {
+    // Usar dayjs para parsear la fecha
+    const date = dayjs(cleanDate);
+
+    if (!date.isValid()) {
+      console.warn("📅 parseDateForAPI: Fecha inválida:", cleanDate);
+      return undefined;
+    }
+
+    // Convertir a Date nativo para la API
+    const result = date.toDate();
+
+    console.log("📅 parseDateForAPI: Fecha procesada exitosamente:", {
+      input: cleanDate,
+      output: result.toISOString(),
+      local: result.toLocaleDateString(),
+    });
+
+    return result;
+  } catch (error) {
+    console.error(
+      "📅 parseDateForAPI: Error al procesar fecha:",
+      error,
+      "Input:",
+      dateString
+    );
     return undefined;
   }
 }

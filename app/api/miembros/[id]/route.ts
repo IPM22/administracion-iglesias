@@ -1,26 +1,17 @@
 import { prisma } from "../../../../lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { parseDateForAPI } from "@/lib/date-utils";
-
-// Interfaz para familiares consolidados
-interface FamiliarConsolidado {
-  id: string | number;
-  familiar: {
-    id: number;
-    nombres: string;
-    apellidos: string;
-    foto?: string | null;
-    estado?: string | null;
-  };
-  tipoRelacion: string;
-  fuente: "directa" | "inversa" | "familia";
-}
+import { getUserContext, requireAuth } from "../../../../lib/auth-utils";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Obtener contexto del usuario autenticado
+    const userContext = await getUserContext(request);
+    const { iglesiaId } = requireAuth(userContext);
+
     const { id } = await params;
     const miembroId = parseInt(id);
 
@@ -34,7 +25,24 @@ export async function GET(
     const miembro = await prisma.miembro.findUnique({
       where: {
         id: miembroId,
+        iglesiaId, // ✅ Verificar que el miembro pertenece a la iglesia del usuario
       },
+      include: {
+        familia: true,
+        visitaOriginal: true,
+      },
+    });
+
+    if (!miembro) {
+      return NextResponse.json(
+        { error: "Miembro no encontrado" },
+        { status: 404 }
+      );
+    }
+
+    // Obtener ministerios activos del miembro usando la relación correcta
+    const miembroConMinisterios = await prisma.miembro.findUnique({
+      where: { id: miembroId },
       include: {
         ministerios: {
           where: {
@@ -53,170 +61,74 @@ export async function GET(
             fechaInicio: "desc",
           },
         },
-        familiares: {
-          include: {
-            familiar: {
-              select: {
-                id: true,
-                nombres: true,
-                apellidos: true,
-                foto: true,
-                estado: true,
-              },
-            },
-          },
-          orderBy: [
-            { familiar: { apellidos: "asc" } },
-            { familiar: { nombres: "asc" } },
-          ],
-        },
-        familiarDe: {
-          include: {
-            miembro: {
-              select: {
-                id: true,
-                nombres: true,
-                apellidos: true,
-                foto: true,
-                estado: true,
-              },
-            },
-          },
-          orderBy: [
-            { miembro: { apellidos: "asc" } },
-            { miembro: { nombres: "asc" } },
-          ],
-        },
-        familiaEstructurada: {
-          include: {
-            miembros: {
-              where: {
-                id: {
-                  not: miembroId, // Excluir el miembro actual
-                },
-              },
-              select: {
-                id: true,
-                nombres: true,
-                apellidos: true,
-                foto: true,
-                estado: true,
-                parentescoFamiliar: true,
-              },
-              orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
-            },
-          },
-        },
-        visitaOriginal: true, // Para saber si era una visita convertida
       },
     });
 
-    if (!miembro) {
-      return NextResponse.json(
-        { error: "Miembro no encontrado" },
-        { status: 404 }
-      );
-    }
+    const ministerios = miembroConMinisterios?.ministerios || [];
 
-    // Obtener visitas invitadas por este miembro
-    const visitasInvitadas = await prisma.visita.findMany({
+    // Obtener familiares del miembro
+    const familiares = await prisma.familiar.findMany({
       where: {
-        historialVisitas: {
-          some: {
-            invitadoPorId: miembroId,
-          },
-        },
-        estado: {
-          not: "Convertida",
-        },
-      },
-      include: {
-        historialVisitas: {
-          where: {
-            invitadoPorId: miembroId,
-          },
-          select: {
-            id: true,
-          },
-        },
+        miembroId: miembroId,
       },
       orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
     });
 
-    // Procesar las visitas invitadas para incluir el total de visitas
-    const visitasConTotal = visitasInvitadas.map((visita) => ({
-      ...visita,
-      totalVisitas: visita.historialVisitas?.length || 0,
-      historialVisitas: undefined, // Removemos este campo para no enviarlo
-    }));
+    // Obtener visitas invitadas por este miembro
+    const visitasInvitadas = await prisma.visita.findMany({
+      where: {
+        miembroInvitaId: miembroId,
+        iglesiaId, // ✅ También filtrar visitas por iglesia
+      },
+      orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
+    });
 
-    // Consolidar familiares de todas las fuentes
-    const familiaresCombinados: FamiliarConsolidado[] = [];
-
-    // Familiares directos (donde este miembro es el principal)
-    if (miembro.familiares) {
-      miembro.familiares.forEach((rel) => {
-        familiaresCombinados.push({
-          id: rel.id,
-          familiar: rel.familiar,
-          tipoRelacion: rel.tipoRelacion,
-          fuente: "directa",
-        });
-      });
-    }
-
-    // Familiares inversos (donde este miembro es el familiar)
-    if (miembro.familiarDe) {
-      miembro.familiarDe.forEach((rel) => {
-        familiaresCombinados.push({
-          id: rel.id,
-          familiar: rel.miembro,
-          tipoRelacion: obtenerRelacionInversa(rel.tipoRelacion),
-          fuente: "inversa",
-        });
-      });
-    }
-
-    // Miembros de la misma familia estructurada
-    if (miembro.familiaEstructurada?.miembros) {
-      miembro.familiaEstructurada.miembros.forEach((familiar) => {
-        // Evitar duplicados
-        const yaExiste = familiaresCombinados.some(
-          (f) => f.familiar.id === familiar.id
-        );
-        if (!yaExiste) {
-          familiaresCombinados.push({
-            id: `familia-${familiar.id}`,
-            familiar: {
-              id: familiar.id,
-              nombres: familiar.nombres,
-              apellidos: familiar.apellidos,
-              foto: familiar.foto,
-              estado: familiar.estado,
-            },
-            tipoRelacion: familiar.parentescoFamiliar || "Familiar",
-            fuente: "familia",
-          });
-        }
-      });
-    }
-
+    // Formatear los datos para el frontend
     const miembroCompleto = {
       ...miembro,
-      familiares: familiaresCombinados,
-      familiarDe: undefined, // Remover para limpiar la respuesta
-      familiaEstructurada: miembro.familiaEstructurada
-        ? {
-            ...miembro.familiaEstructurada,
-            miembros: undefined, // Ya procesado en familiares
-          }
-        : undefined,
-      visitasInvitadas: visitasConTotal,
+      ministerios: ministerios.map((m) => ({
+        id: m.id,
+        ministerio: m.ministerio,
+        rol: m.rol || m.cargo, // ✅ Usar 'rol' primero, fallback a 'cargo'
+        fechaInicio: m.fechaInicio?.toISOString(),
+        fechaFin: m.fechaFin?.toISOString(),
+        esLider: m.esLider, // ✅ Usar el campo real
+      })),
+      familiares: familiares.map((f) => ({
+        id: f.id,
+        familiar: {
+          id: f.miembroRelacionadoId || 0,
+          nombres: f.nombres,
+          apellidos: f.apellidos,
+          foto: null,
+          estado: f.esMiembro ? "Activo" : "No Miembro",
+        },
+        tipoRelacion: f.relacion,
+        fuente: "directa",
+      })),
+      visitasInvitadas: visitasInvitadas.map((v) => ({
+        ...v,
+        totalVisitas: 1,
+        fechaPrimeraVisita: v.fechaPrimeraVisita?.toISOString(),
+      })),
+      notasAdicionales: miembro.notas,
     };
 
     return NextResponse.json(miembroCompleto);
   } catch (error) {
     console.error("Error al obtener miembro:", error);
+    console.error(
+      "Stack trace:",
+      error instanceof Error ? error.stack : "No disponible"
+    );
+
+    if (error instanceof Error && error.message === "Usuario no autenticado") {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Error al obtener el miembro" },
       { status: 500 }
@@ -224,42 +136,37 @@ export async function GET(
   }
 }
 
-// Función auxiliar para obtener la relación inversa
-function obtenerRelacionInversa(tipoRelacion: string): string {
-  const relaciones: { [key: string]: string } = {
-    "Esposo/a": "Esposo/a",
-    Cónyuge: "Cónyuge",
-    "Hijo/a": "Padre/Madre",
-    Padre: "Hijo/a",
-    Madre: "Hijo/a",
-    "Hermano/a": "Hermano/a",
-    "Abuelo/a": "Nieto/a",
-    "Nieto/a": "Abuelo/a",
-    "Tío/a": "Sobrino/a",
-    "Sobrino/a": "Tío/a",
-    "Primo/a": "Primo/a",
-    "Cuñado/a": "Cuñado/a",
-    Yerno: "Suegro",
-    Nuera: "Suegra",
-    Suegro: "Yerno",
-    Suegra: "Nuera",
-  };
-
-  return relaciones[tipoRelacion] || "Familiar";
-}
-
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+  const miembroId = parseInt(id);
+
   try {
-    const { id } = await params;
-    const miembroId = parseInt(id);
+    // Obtener contexto del usuario autenticado
+    const userContext = await getUserContext(request);
+    const { iglesiaId } = requireAuth(userContext);
 
     if (isNaN(miembroId)) {
       return NextResponse.json(
         { error: "ID de miembro inválido" },
         { status: 400 }
+      );
+    }
+
+    // Verificar que el miembro existe y pertenece a la iglesia del usuario
+    const miembroExistente = await prisma.miembro.findUnique({
+      where: {
+        id: miembroId,
+        iglesiaId,
+      },
+    });
+
+    if (!miembroExistente) {
+      return NextResponse.json(
+        { error: "Miembro no encontrado" },
+        { status: 404 }
       );
     }
 
@@ -275,21 +182,15 @@ export async function PUT(
       sexo,
       estadoCivil,
       ocupacion,
-      familia,
+      familiaId,
       fechaIngreso,
       fechaBautismo,
+      fechaConfirmacion,
       estado,
       foto,
       notasAdicionales,
+      parentescoFamiliar,
     } = body;
-
-    // Validar campos requeridos
-    if (!nombres || !apellidos) {
-      return NextResponse.json(
-        { error: "Los nombres y apellidos son requeridos" },
-        { status: 400 }
-      );
-    }
 
     // Función para manejar strings vacías
     const parseString = (value: string) => {
@@ -299,7 +200,7 @@ export async function PUT(
       return value.trim();
     };
 
-    // Función especial para el correo (debe ser null si está vacío debido a la restricción unique)
+    // Función especial para el correo
     const parseEmail = (email: string) => {
       if (!email || email.trim() === "") {
         return null;
@@ -307,50 +208,11 @@ export async function PUT(
       return email.trim();
     };
 
-    // Verificar si ya existe otro miembro con los mismos nombres y apellidos
-    const nombresLimpio = nombres.trim().toLowerCase();
-    const apellidosLimpio = apellidos.trim().toLowerCase();
-
-    const miembroExistente = await prisma.miembro.findFirst({
-      where: {
-        AND: [
-          {
-            nombres: {
-              equals: nombresLimpio,
-              mode: "insensitive",
-            },
-          },
-          {
-            apellidos: {
-              equals: apellidosLimpio,
-              mode: "insensitive",
-            },
-          },
-          {
-            id: {
-              not: miembroId,
-            },
-          },
-        ],
-      },
-    });
-
-    if (miembroExistente) {
-      return NextResponse.json(
-        {
-          error: `Ya existe otro miembro con el nombre ${nombres} ${apellidos}`,
-        },
-        { status: 409 }
-      );
-    }
-
-    const miembro = await prisma.miembro.update({
-      where: {
-        id: miembroId,
-      },
+    const miembroActualizado = await prisma.miembro.update({
+      where: { id: miembroId },
       data: {
-        nombres: nombres?.trim() || "",
-        apellidos: apellidos?.trim() || "",
+        nombres: parseString(nombres) || miembroExistente.nombres,
+        apellidos: parseString(apellidos) || miembroExistente.apellidos,
         correo: parseEmail(correo),
         telefono: parseString(telefono),
         celular: parseString(celular),
@@ -359,32 +221,28 @@ export async function PUT(
         sexo: parseString(sexo),
         estadoCivil: parseString(estadoCivil),
         ocupacion: parseString(ocupacion),
-        familia: parseString(familia),
+        familiaId: familiaId ? parseInt(familiaId) : null,
         fechaIngreso: parseDateForAPI(fechaIngreso),
         fechaBautismo: parseDateForAPI(fechaBautismo),
-        estado: parseString(estado) || "Activo",
+        fechaConfirmacion: parseDateForAPI(fechaConfirmacion),
+        estado: parseString(estado) || miembroExistente.estado,
         foto: parseString(foto),
-        notasAdicionales: parseString(notasAdicionales),
-      },
-      include: {
-        ministerios: {
-          where: {
-            estado: "Activo",
-          },
-          include: {
-            ministerio: {
-              select: {
-                nombre: true,
-              },
-            },
-          },
-        },
+        notas: parseString(notasAdicionales),
+        relacion: parseString(parentescoFamiliar),
       },
     });
 
-    return NextResponse.json(miembro);
+    return NextResponse.json(miembroActualizado);
   } catch (error) {
     console.error("Error al actualizar miembro:", error);
+
+    if (error instanceof Error && error.message === "Usuario no autenticado") {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Error al actualizar el miembro" },
       { status: 500 }
@@ -397,6 +255,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Obtener contexto del usuario autenticado
+    const userContext = await getUserContext(request);
+    const { iglesiaId } = requireAuth(userContext);
+
     const { id } = await params;
     const miembroId = parseInt(id);
 
@@ -407,33 +269,36 @@ export async function DELETE(
       );
     }
 
-    // Verificar si el miembro existe
-    const miembroExistente = await prisma.miembro.findUnique({
+    // Verificar que el miembro existe y pertenece a la iglesia del usuario
+    const miembro = await prisma.miembro.findUnique({
       where: {
         id: miembroId,
+        iglesiaId,
       },
     });
 
-    if (!miembroExistente) {
+    if (!miembro) {
       return NextResponse.json(
         { error: "Miembro no encontrado" },
         { status: 404 }
       );
     }
 
-    // Eliminar el miembro
     await prisma.miembro.delete({
-      where: {
-        id: miembroId,
-      },
+      where: { id: miembroId },
     });
 
-    return NextResponse.json(
-      { message: "Miembro eliminado correctamente" },
-      { status: 200 }
-    );
+    return NextResponse.json({ message: "Miembro eliminado correctamente" });
   } catch (error) {
     console.error("Error al eliminar miembro:", error);
+
+    if (error instanceof Error && error.message === "Usuario no autenticado") {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Error al eliminar el miembro" },
       { status: 500 }
@@ -446,6 +311,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Obtener contexto del usuario autenticado
+    const userContext = await getUserContext(request);
+    const { iglesiaId } = requireAuth(userContext);
+
     const { id } = await params;
     const miembroId = parseInt(id);
 
@@ -459,9 +328,12 @@ export async function PATCH(
     const body = await request.json();
     const { familiaId, parentescoFamiliar } = body;
 
-    // Verificar que el miembro existe
+    // Verificar que el miembro existe y pertenece a la iglesia del usuario
     const miembroExistente = await prisma.miembro.findUnique({
-      where: { id: miembroId },
+      where: {
+        id: miembroId,
+        iglesiaId,
+      },
     });
 
     if (!miembroExistente) {
@@ -474,7 +346,7 @@ export async function PATCH(
     // Actualizar solo los campos proporcionados
     const dataToUpdate: {
       familiaId?: number | null;
-      parentescoFamiliar?: string | null;
+      relacion?: string | null;
     } = {};
 
     if (familiaId !== undefined) {
@@ -482,7 +354,7 @@ export async function PATCH(
     }
 
     if (parentescoFamiliar !== undefined) {
-      dataToUpdate.parentescoFamiliar = parentescoFamiliar;
+      dataToUpdate.relacion = parentescoFamiliar;
     }
 
     const miembroActualizado = await prisma.miembro.update({
@@ -493,6 +365,14 @@ export async function PATCH(
     return NextResponse.json(miembroActualizado);
   } catch (error) {
     console.error("Error al actualizar miembro:", error);
+
+    if (error instanceof Error && error.message === "Usuario no autenticado") {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Error al actualizar el miembro" },
       { status: 500 }

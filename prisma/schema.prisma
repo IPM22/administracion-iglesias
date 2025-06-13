@@ -137,7 +137,7 @@ model Miembro {
   
   // Timestamps
   createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  updatedAt         DateTime? @updatedAt
   
   // Relaciones
   iglesia           Iglesia   @relation(fields: [iglesiaId], references: [id], onDelete: Cascade)
@@ -214,7 +214,7 @@ model Visita {
   
   // Timestamps
   createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  updatedAt             DateTime? @updatedAt
   
   // Relaciones
   iglesia               Iglesia   @relation(fields: [iglesiaId], references: [id], onDelete: Cascade)
@@ -256,7 +256,10 @@ model Actividad {
   horaInicio        String?
   horaFin           String?
   ubicacion         String?
+  googleMapsEmbed   String?
+  responsable       String?
   estado            String    @default("Programada")
+  banner            String?
   
   // Relaciones
   tipoActividadId   Int
@@ -303,9 +306,11 @@ model MiembroMinisterio {
   miembroId   Int
   ministerioId Int
   cargo       String?
+  rol         String?
   fechaInicio DateTime    @default(now())
   fechaFin    DateTime?
-  activo      Boolean     @default(true)
+  estado      String      @default("Activo")
+  esLider     Boolean     @default(false)
   
   // Timestamps
   createdAt   DateTime    @default(now())

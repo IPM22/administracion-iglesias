@@ -1,6 +1,6 @@
 import { prisma } from "../../../lib/db";
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getUserContext, requireAuth } from "../../../lib/auth-utils";
 
 // Helper function para parsing seguro
 function parseString(value: unknown): string | null {
@@ -8,48 +8,18 @@ function parseString(value: unknown): string | null {
   return String(value);
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Obtener el usuario autenticado
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "Usuario no autenticado" },
-        { status: 401 }
-      );
-    }
-
-    // Obtener la iglesia activa del usuario
-    const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
-      where: {
-        usuarioId: user.id,
-        estado: "ACTIVO",
-      },
-      include: {
-        iglesia: true,
-      },
-    });
-
-    if (!usuarioIglesia) {
-      return NextResponse.json(
-        { error: "No tienes acceso a ninguna iglesia activa" },
-        { status: 403 }
-      );
-    }
+    // Obtener contexto del usuario autenticado
+    const userContext = await getUserContext(request);
+    const { iglesiaId } = requireAuth(userContext);
 
     const ministerios = await prisma.ministerio.findMany({
-      where: {
-        iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
-      },
+      where: { iglesiaId }, // ✅ Filtrar por iglesia del usuario
       include: {
         miembros: {
           where: {
-            activo: true,
+            estado: "Activo",
           },
           include: {
             miembro: {
@@ -61,20 +31,15 @@ export async function GET() {
               },
             },
           },
-        },
-        actividades: {
-          select: {
-            id: true,
-            nombre: true,
-            fecha: true,
-            estado: true,
+          orderBy: {
+            fechaInicio: "desc",
           },
         },
         _count: {
           select: {
             miembros: {
               where: {
-                activo: true,
+                estado: "Activo",
               },
             },
             actividades: true,
@@ -89,6 +54,14 @@ export async function GET() {
     return NextResponse.json(ministerios);
   } catch (error) {
     console.error("Error al obtener ministerios:", error);
+
+    if (error instanceof Error && error.message === "Usuario no autenticado") {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Error al obtener los ministerios" },
       { status: 500 }
@@ -98,37 +71,9 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    // Obtener el usuario autenticado
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "Usuario no autenticado" },
-        { status: 401 }
-      );
-    }
-
-    // Obtener la iglesia activa del usuario
-    const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
-      where: {
-        usuarioId: user.id,
-        estado: "ACTIVO",
-      },
-      include: {
-        iglesia: true,
-      },
-    });
-
-    if (!usuarioIglesia) {
-      return NextResponse.json(
-        { error: "No tienes acceso a ninguna iglesia activa" },
-        { status: 403 }
-      );
-    }
+    // Obtener contexto del usuario autenticado
+    const userContext = await getUserContext(request);
+    const { iglesiaId } = requireAuth(userContext);
 
     const body = await request.json();
     const { nombre, descripcion } = body;
@@ -141,31 +86,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar que no existe un ministerio con el mismo nombre en la misma iglesia
+    // Verificar que no existe otro ministerio con el mismo nombre en esta iglesia
     const ministerioExistente = await prisma.ministerio.findFirst({
       where: {
         nombre: nombre.trim(),
-        iglesiaId: usuarioIglesia.iglesiaId,
+        iglesiaId,
       },
     });
 
     if (ministerioExistente) {
       return NextResponse.json(
-        { error: "Ya existe un ministerio con ese nombre en tu iglesia" },
+        { error: "Ya existe un ministerio con ese nombre" },
         { status: 409 }
       );
     }
 
     const nuevoMinisterio = await prisma.ministerio.create({
       data: {
-        iglesiaId: usuarioIglesia.iglesiaId, // AGREGAR IGLESIA ID
+        iglesiaId, // ✅ Asignar automáticamente la iglesia del usuario
         nombre: nombre.trim(),
         descripcion: parseString(descripcion),
       },
       include: {
         miembros: {
           where: {
-            activo: true,
+            estado: "Activo",
           },
           include: {
             miembro: {
@@ -177,12 +122,15 @@ export async function POST(request: NextRequest) {
               },
             },
           },
+          orderBy: {
+            fechaInicio: "desc",
+          },
         },
         _count: {
           select: {
             miembros: {
               where: {
-                activo: true,
+                estado: "Activo",
               },
             },
             actividades: true,
@@ -194,6 +142,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(nuevoMinisterio, { status: 201 });
   } catch (error) {
     console.error("Error al crear ministerio:", error);
+
+    if (error instanceof Error && error.message === "Usuario no autenticado") {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Error al crear el ministerio" },
       { status: 500 }

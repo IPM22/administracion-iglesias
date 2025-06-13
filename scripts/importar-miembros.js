@@ -222,7 +222,11 @@ function procesarTelefonos(telefonosTexto) {
 }
 
 // Función para insertar miembros en la base de datos
-async function insertarMiembros(miembros, urlBase = "http://localhost:3000") {
+async function insertarMiembros(
+  miembros,
+  urlBase = "http://localhost:3000",
+  authToken = null
+) {
   const resultados = {
     exitosos: 0,
     errores: 0,
@@ -230,6 +234,13 @@ async function insertarMiembros(miembros, urlBase = "http://localhost:3000") {
   };
 
   console.log(`Iniciando inserción de ${miembros.length} miembros...`);
+
+  // Validar que se proporcione el token de autenticación
+  if (!authToken) {
+    throw new Error(
+      "❌ Se requiere un token de autenticación para insertar miembros"
+    );
+  }
 
   for (let i = 0; i < miembros.length; i++) {
     const miembro = miembros[i];
@@ -239,6 +250,7 @@ async function insertarMiembros(miembros, urlBase = "http://localhost:3000") {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify(miembro),
       });
@@ -286,6 +298,16 @@ async function main() {
   if (!rutaArchivo) {
     console.log("Uso: node importar-miembros.js <ruta-al-archivo-csv>");
     console.log("Ejemplo: node importar-miembros.js ./miembros.csv");
+    console.log("\n📋 Para obtener tu token de autenticación:");
+    console.log("1. Inicia sesión en la aplicación web");
+    console.log("2. Abre las herramientas de desarrollador (F12)");
+    console.log("3. Ve a Application/Storage > Local Storage");
+    console.log(
+      "4. Busca la clave que contenga 'auth-token' o 'sb-' y copia su valor"
+    );
+    console.log(
+      "   O ve a Network y busca el header 'Authorization' en las peticiones"
+    );
     return;
   }
 
@@ -312,36 +334,73 @@ async function main() {
     if (miembro.direccion) console.log(`     Dirección: ${miembro.direccion}`);
   });
 
-  // Preguntar confirmación
-  console.log("\n¿Desea proceder con la inserción? (y/N)");
-
   const readline = require("readline");
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
   });
 
-  rl.question("", async (respuesta) => {
-    if (respuesta.toLowerCase() === "y" || respuesta.toLowerCase() === "yes") {
-      console.log("\n🚀 Iniciando inserción...");
+  // Solicitar token de autenticación
+  console.log("\n🔑 AUTENTICACIÓN REQUERIDA");
+  console.log(
+    "Para importar los miembros a tu iglesia activa, necesitas proporcionar tu token de autenticación."
+  );
+  console.log("\n📋 Para obtener tu token:");
+  console.log("1. Inicia sesión en la aplicación web");
+  console.log("2. Abre las herramientas de desarrollador (F12)");
+  console.log("3. Ve a la pestaña 'Application' o 'Storage'");
+  console.log("4. Busca en 'Local Storage' las claves que empiecen con 'sb-'");
+  console.log("5. Copia el 'access_token' del objeto JSON");
 
-      const resultados = await insertarMiembros(miembros);
-
-      console.log("\n📈 Resultados de la importación:");
-      console.log(`✅ Insertados exitosamente: ${resultados.exitosos}`);
-      console.log(`❌ Errores: ${resultados.errores}`);
-
-      if (resultados.detallesErrores.length > 0) {
-        console.log("\n📋 Detalles de errores:");
-        resultados.detallesErrores.forEach((error, index) => {
-          console.log(`  ${index + 1}. ${error.miembro}: ${error.error}`);
-        });
-      }
-    } else {
-      console.log("❌ Importación cancelada");
+  rl.question("\n🔐 Ingresa tu token de autenticación: ", (authToken) => {
+    if (!authToken || authToken.trim() === "") {
+      console.log("❌ Token requerido. Importación cancelada.");
+      rl.close();
+      return;
     }
 
-    rl.close();
+    // Preguntar confirmación para importar
+    console.log(
+      "\n¿Desea proceder con la importación a tu iglesia activa? (y/N)"
+    );
+
+    rl.question("", async (respuesta) => {
+      if (
+        respuesta.toLowerCase() === "y" ||
+        respuesta.toLowerCase() === "yes"
+      ) {
+        console.log("\n🚀 Iniciando inserción en tu iglesia activa...");
+
+        try {
+          const resultados = await insertarMiembros(
+            miembros,
+            "http://localhost:3000",
+            authToken.trim()
+          );
+
+          console.log("\n📈 Resultados de la importación:");
+          console.log(`✅ Insertados exitosamente: ${resultados.exitosos}`);
+          console.log(`❌ Errores: ${resultados.errores}`);
+
+          if (resultados.detallesErrores.length > 0) {
+            console.log("\n📋 Detalles de errores:");
+            resultados.detallesErrores.forEach((error, index) => {
+              console.log(`  ${index + 1}. ${error.miembro}: ${error.error}`);
+            });
+          }
+        } catch (error) {
+          console.error("\n❌ Error durante la importación:", error.message);
+          console.log("\n💡 Posibles soluciones:");
+          console.log("- Verifica que el token sea correcto");
+          console.log("- Asegúrate de tener una iglesia activa");
+          console.log("- Verifica que la aplicación web esté ejecutándose");
+        }
+      } else {
+        console.log("❌ Importación cancelada");
+      }
+
+      rl.close();
+    });
   });
 }
 

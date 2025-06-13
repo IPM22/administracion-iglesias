@@ -124,6 +124,9 @@ export async function POST(request: NextRequest) {
       horaInicio,
       horaFin,
       ubicacion,
+      googleMapsEmbed,
+      responsable,
+      banner,
       tipoActividadId,
       ministerioId,
       estado = "Programada",
@@ -185,9 +188,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Crear la actividad con los campos básicos
     const nuevaActividad = await prisma.actividad.create({
       data: {
-        iglesiaId: usuarioIglesia.iglesiaId, // AGREGAR IGLESIA ID
+        iglesiaId: usuarioIglesia.iglesiaId,
         nombre,
         descripcion: parseString(descripcion),
         fecha: new Date(fecha),
@@ -198,6 +202,21 @@ export async function POST(request: NextRequest) {
         ministerioId: ministerioId ? parseInt(ministerioId) : null,
         estado,
       },
+    });
+
+    // Actualización raw para los campos nuevos (banner, googleMapsEmbed, responsable)
+    await prisma.$executeRaw`
+      UPDATE "actividades" 
+      SET 
+        "banner" = ${parseString(banner)},
+        "googleMapsEmbed" = ${parseString(googleMapsEmbed)},
+        "responsable" = ${parseString(responsable)}
+      WHERE "id" = ${nuevaActividad.id}
+    `;
+
+    // Obtener la actividad final con todos los campos y relaciones
+    const actividadFinal = await prisma.actividad.findUnique({
+      where: { id: nuevaActividad.id },
       include: {
         tipoActividad: true,
         ministerio: {
@@ -207,21 +226,10 @@ export async function POST(request: NextRequest) {
             descripcion: true,
           },
         },
-        historialVisitas: {
-          include: {
-            visita: {
-              select: {
-                id: true,
-                nombres: true,
-                apellidos: true,
-              },
-            },
-          },
-        },
       },
     });
 
-    return NextResponse.json(nuevaActividad, { status: 201 });
+    return NextResponse.json(actividadFinal, { status: 201 });
   } catch (error) {
     console.error("Error al crear actividad:", error);
     return NextResponse.json(

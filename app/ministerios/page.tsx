@@ -74,8 +74,8 @@ interface Ministerio {
   id: number;
   nombre: string;
   descripcion?: string;
-  miembros: MinisterioMiembro[];
-  actividades: MinisterioActividad[];
+  miembros?: MinisterioMiembro[];
+  actividades?: MinisterioActividad[];
   _count: {
     miembros: number;
     actividades: number;
@@ -148,7 +148,12 @@ export default function MinisteriosPage() {
       ministerio.descripcion?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getLider = (miembros: MinisterioMiembro[]) => {
+  const getLider = (miembros: MinisterioMiembro[] | undefined) => {
+    // Validación defensiva: verificar que miembros existe y es un array
+    if (!miembros || !Array.isArray(miembros) || miembros.length === 0) {
+      return null;
+    }
+
     // Buscar líder por rol o tomar el primer miembro activo
     const lider =
       miembros.find(
@@ -405,7 +410,7 @@ export default function MinisteriosPage() {
                                 </div>
                               </div>
 
-                              {ministerio.miembros.length > 0 && (
+                              {ministerio.miembros?.length > 0 && (
                                 <div className="space-y-1">
                                   {ministerio.miembros
                                     .filter((m) => m.estado === "Activo")
