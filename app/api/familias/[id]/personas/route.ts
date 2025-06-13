@@ -71,11 +71,11 @@ export async function POST(
       }
 
       // Actualizar el miembro para asignarlo a la familia
-      const updateData: { familiaId: number; parentescoFamiliar?: string } = {
+      const updateData: { familiaId: number; relacion?: string } = {
         familiaId: familiaId,
       };
       if (parentescoFamiliar) {
-        updateData.parentescoFamiliar = parentescoFamiliar;
+        updateData.relacion = parentescoFamiliar;
       }
 
       await prisma.miembro.update({
@@ -108,11 +108,11 @@ export async function POST(
       }
 
       // Actualizar la visita para asignarla a la familia
-      const updateData: { familiaId: number; parentescoFamiliar?: string } = {
+      const updateData: { familiaId: number; familia?: string } = {
         familiaId: familiaId,
       };
       if (parentescoFamiliar) {
-        updateData.parentescoFamiliar = parentescoFamiliar;
+        updateData.familia = parentescoFamiliar;
       }
 
       await prisma.visita.update({

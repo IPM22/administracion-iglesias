@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { createClient } from "@/lib/supabase/server";
 
 const prisma = new PrismaClient();
 
@@ -19,9 +20,57 @@ export async function GET(
       );
     }
 
-    // Obtener miembros que no pertenecen a esta familia
+    // Obtener el usuario autenticado
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
+    // Obtener la iglesia activa del usuario
+    const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
+      where: {
+        usuarioId: user.id,
+        estado: "ACTIVO",
+      },
+      include: {
+        iglesia: true,
+      },
+    });
+
+    if (!usuarioIglesia) {
+      return NextResponse.json(
+        { error: "No tienes acceso a ninguna iglesia activa" },
+        { status: 403 }
+      );
+    }
+
+    // Verificar que la familia pertenece a la iglesia del usuario
+    const familia = await prisma.familia.findUnique({
+      where: {
+        id: familiaId,
+        iglesiaId: usuarioIglesia.iglesiaId,
+      },
+    });
+
+    if (!familia) {
+      return NextResponse.json(
+        { error: "Familia no encontrada" },
+        { status: 404 }
+      );
+    }
+
+    // Obtener miembros que no pertenecen a esta familia (de la misma iglesia)
     const miembrosDisponibles = await prisma.miembro.findMany({
       where: {
+        iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
         OR: [{ familiaId: null }, { familiaId: { not: familiaId } }],
       },
       select: {
@@ -38,9 +87,10 @@ export async function GET(
       orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
     });
 
-    // Obtener visitas que no pertenecen a esta familia y no han sido convertidas
+    // Obtener visitas que no pertenecen a esta familia y no han sido convertidas (de la misma iglesia)
     const visitasDisponibles = await prisma.visita.findMany({
       where: {
+        iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
         estado: { not: "Convertido" },
         OR: [{ familiaId: null }, { familiaId: { not: familiaId } }],
       },

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "../../../../lib/db";
+import { PrismaClient } from "@prisma/client";
 import { parseDateForAPI } from "@/lib/date-utils";
+import { createClient } from "@/lib/supabase/server";
+
+const prisma = new PrismaClient();
 
 // Helper function para manejar strings vacios
 function parseString(value: unknown): string | undefined {
@@ -25,14 +28,49 @@ export async function GET(
       );
     }
 
+    // Obtener el usuario autenticado
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
+    // Obtener la iglesia activa del usuario
+    const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
+      where: {
+        usuarioId: user.id,
+        estado: "ACTIVO",
+      },
+      include: {
+        iglesia: true,
+      },
+    });
+
+    if (!usuarioIglesia) {
+      return NextResponse.json(
+        { error: "No tienes acceso a ninguna iglesia activa" },
+        { status: 403 }
+      );
+    }
+
     const visita = await prisma.visita.findUnique({
-      where: { id: visitaId },
+      where: {
+        id: visitaId,
+        iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
+      },
       include: {
         historialVisitas: {
           include: {
             tipoActividad: true,
             actividad: true,
-            invitadoPor: {
+            miembro: {
               select: {
                 id: true,
                 nombres: true,
@@ -68,6 +106,8 @@ export async function GET(
       { error: "Error al obtener la visita" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
@@ -83,6 +123,53 @@ export async function PUT(
       return NextResponse.json(
         { error: "ID de visita inválido" },
         { status: 400 }
+      );
+    }
+
+    // Obtener el usuario autenticado
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
+    // Obtener la iglesia activa del usuario
+    const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
+      where: {
+        usuarioId: user.id,
+        estado: "ACTIVO",
+      },
+      include: {
+        iglesia: true,
+      },
+    });
+
+    if (!usuarioIglesia) {
+      return NextResponse.json(
+        { error: "No tienes acceso a ninguna iglesia activa" },
+        { status: 403 }
+      );
+    }
+
+    // Verificar que la visita existe y pertenece a la iglesia del usuario
+    const visitaExistente = await prisma.visita.findUnique({
+      where: {
+        id: visitaId,
+        iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
+      },
+    });
+
+    if (!visitaExistente) {
+      return NextResponse.json(
+        { error: "Visita no encontrada" },
+        { status: 404 }
       );
     }
 
@@ -129,7 +216,7 @@ export async function PUT(
         familia: parseString(familia),
         estado: parseString(estado),
         foto: parseString(foto),
-        notasAdicionales: parseString(notasAdicionales),
+        notas: parseString(notasAdicionales),
         fechaPrimeraVisita: parseDateForAPI(fechaPrimeraVisita as string),
       },
     });
@@ -166,6 +253,8 @@ export async function PUT(
       { error: "Error al actualizar la visita" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
@@ -184,11 +273,66 @@ export async function DELETE(
       );
     }
 
+    // Obtener el usuario autenticado
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
+    // Obtener la iglesia activa del usuario
+    const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
+      where: {
+        usuarioId: user.id,
+        estado: "ACTIVO",
+      },
+      include: {
+        iglesia: true,
+      },
+    });
+
+    if (!usuarioIglesia) {
+      return NextResponse.json(
+        { error: "No tienes acceso a ninguna iglesia activa" },
+        { status: 403 }
+      );
+    }
+
+    // Verificar que la visita existe y pertenece a la iglesia del usuario
+    const visitaExistente = await prisma.visita.findUnique({
+      where: {
+        id: visitaId,
+        iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
+      },
+    });
+
+    if (!visitaExistente) {
+      return NextResponse.json(
+        { error: "Visita no encontrada" },
+        { status: 404 }
+      );
+    }
+
+    // Eliminar primero el historial de visitas relacionado
+    await prisma.historialVisita.deleteMany({
+      where: { visitaId: visitaId },
+    });
+
+    // Luego eliminar la visita
     await prisma.visita.delete({
       where: { id: visitaId },
     });
 
-    return NextResponse.json({ message: "Visita eliminada correctamente" });
+    return NextResponse.json({
+      message: "Visita eliminada correctamente",
+    });
   } catch (error: unknown) {
     console.error("Error al eliminar visita:", error);
 
@@ -208,6 +352,8 @@ export async function DELETE(
       { error: "Error al eliminar la visita" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
@@ -226,12 +372,44 @@ export async function PATCH(
       );
     }
 
-    const body = await request.json();
-    const { familiaId, parentescoFamiliar } = body;
+    // Obtener el usuario autenticado
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-    // Verificar que la visita existe
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
+    // Obtener la iglesia activa del usuario
+    const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
+      where: {
+        usuarioId: user.id,
+        estado: "ACTIVO",
+      },
+      include: {
+        iglesia: true,
+      },
+    });
+
+    if (!usuarioIglesia) {
+      return NextResponse.json(
+        { error: "No tienes acceso a ninguna iglesia activa" },
+        { status: 403 }
+      );
+    }
+
+    // Verificar que la visita existe y pertenece a la iglesia del usuario
     const visitaExistente = await prisma.visita.findUnique({
-      where: { id: visitaId },
+      where: {
+        id: visitaId,
+        iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
+      },
     });
 
     if (!visitaExistente) {
@@ -241,31 +419,73 @@ export async function PATCH(
       );
     }
 
-    // Actualizar solo los campos proporcionados
-    const dataToUpdate: {
-      familiaId?: number | null;
-      parentescoFamiliar?: string | null;
-    } = {};
+    const body = await request.json();
+    const { action, ...data } = body;
 
-    if (familiaId !== undefined) {
-      dataToUpdate.familiaId = familiaId;
+    switch (action) {
+      case "convertir":
+        // Crear miembro a partir de la visita
+        const nuevoMiembro = await prisma.miembro.create({
+          data: {
+            nombres: visitaExistente.nombres,
+            apellidos: visitaExistente.apellidos,
+            correo: visitaExistente.correo,
+            telefono: visitaExistente.telefono,
+            celular: visitaExistente.celular,
+            direccion: visitaExistente.direccion,
+            fechaNacimiento: visitaExistente.fechaNacimiento,
+            sexo: visitaExistente.sexo,
+            estadoCivil: visitaExistente.estadoCivil,
+            ocupacion: visitaExistente.ocupacion,
+            foto: visitaExistente.foto,
+            fechaBautismo: data.fechaBautismo
+              ? parseDateForAPI(data.fechaBautismo)
+              : null,
+            iglesiaId: usuarioIglesia.iglesiaId,
+          },
+        });
+
+        // Actualizar la visita para marcarla como convertida
+        const visitaConvertida = await prisma.visita.update({
+          where: { id: visitaId },
+          data: {
+            estado: "Convertido",
+            miembroConvertidoId: nuevoMiembro.id,
+          },
+        });
+
+        return NextResponse.json({
+          visita: visitaConvertida,
+          miembro: nuevoMiembro,
+          message: "Visita convertida a miembro exitosamente",
+        });
+
+      default:
+        return NextResponse.json(
+          { error: "Acción no válida" },
+          { status: 400 }
+        );
+    }
+  } catch (error: unknown) {
+    console.error("Error en operación PATCH:", error);
+
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "P2002"
+    ) {
+      return NextResponse.json(
+        { error: "Ya existe un miembro con ese correo electrónico" },
+        { status: 400 }
+      );
     }
 
-    if (parentescoFamiliar !== undefined) {
-      dataToUpdate.parentescoFamiliar = parentescoFamiliar;
-    }
-
-    const visitaActualizada = await prisma.visita.update({
-      where: { id: visitaId },
-      data: dataToUpdate,
-    });
-
-    return NextResponse.json(visitaActualizada);
-  } catch (error) {
-    console.error("Error al actualizar visita:", error);
     return NextResponse.json(
-      { error: "Error al actualizar la visita" },
+      { error: "Error en la operación" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }

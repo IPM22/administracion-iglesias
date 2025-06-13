@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { createClient } from "@/lib/supabase/server";
 
 const prisma = new PrismaClient();
 
@@ -33,6 +34,53 @@ export async function GET(
       );
     }
 
+    // Obtener el usuario autenticado
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
+    // Obtener la iglesia activa del usuario
+    const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
+      where: {
+        usuarioId: user.id,
+        estado: "ACTIVO",
+      },
+      include: {
+        iglesia: true,
+      },
+    });
+
+    if (!usuarioIglesia) {
+      return NextResponse.json(
+        { error: "No tienes acceso a ninguna iglesia activa" },
+        { status: 403 }
+      );
+    }
+
+    // Verificar que la visita existe y pertenece a la iglesia del usuario
+    const visitaExiste = await prisma.visita.findUnique({
+      where: {
+        id: visitaId,
+        iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
+      },
+    });
+
+    if (!visitaExiste) {
+      return NextResponse.json(
+        { error: "Visita no encontrada" },
+        { status: 404 }
+      );
+    }
+
     const historial = await prisma.historialVisita.findMany({
       where: { visitaId: visitaId },
       include: {
@@ -48,7 +96,7 @@ export async function GET(
             },
           },
         },
-        invitadoPor: {
+        miembro: {
           select: {
             id: true,
             nombres: true,
@@ -86,6 +134,38 @@ export async function POST(
       );
     }
 
+    // Obtener el usuario autenticado
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
+    // Obtener la iglesia activa del usuario
+    const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
+      where: {
+        usuarioId: user.id,
+        estado: "ACTIVO",
+      },
+      include: {
+        iglesia: true,
+      },
+    });
+
+    if (!usuarioIglesia) {
+      return NextResponse.json(
+        { error: "No tienes acceso a ninguna iglesia activa" },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const {
       fecha,
@@ -113,9 +193,12 @@ export async function POST(
       );
     }
 
-    // Verificar que la visita existe
+    // Verificar que la visita existe y pertenece a la iglesia del usuario
     const visitaExiste = await prisma.visita.findUnique({
-      where: { id: visitaId },
+      where: {
+        id: visitaId,
+        iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
+      },
     });
 
     if (!visitaExiste) {
@@ -131,8 +214,8 @@ export async function POST(
         fecha: new Date(fecha),
         tipoActividadId: parseNumber(tipoActividadId),
         actividadId: parseNumber(actividadId),
-        invitadoPorId: parseNumber(invitadoPorId),
-        observaciones: parseString(observaciones),
+        miembroId: parseNumber(invitadoPorId),
+        notas: parseString(observaciones),
       },
       include: {
         tipoActividad: true,
@@ -147,7 +230,7 @@ export async function POST(
             },
           },
         },
-        invitadoPor: {
+        miembro: {
           select: {
             id: true,
             nombres: true,
@@ -182,6 +265,38 @@ export async function DELETE(
       );
     }
 
+    // Obtener el usuario autenticado
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
+    // Obtener la iglesia activa del usuario
+    const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
+      where: {
+        usuarioId: user.id,
+        estado: "ACTIVO",
+      },
+      include: {
+        iglesia: true,
+      },
+    });
+
+    if (!usuarioIglesia) {
+      return NextResponse.json(
+        { error: "No tienes acceso a ninguna iglesia activa" },
+        { status: 403 }
+      );
+    }
+
     // Obtener el ID del registro de historial desde la query string
     const url = new URL(request.url);
     const historialId = url.searchParams.get("historialId");
@@ -198,6 +313,21 @@ export async function DELETE(
       return NextResponse.json(
         { error: "ID de registro de historial inválido" },
         { status: 400 }
+      );
+    }
+
+    // Verificar que la visita existe y pertenece a la iglesia del usuario
+    const visitaExiste = await prisma.visita.findUnique({
+      where: {
+        id: visitaId,
+        iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
+      },
+    });
+
+    if (!visitaExiste) {
+      return NextResponse.json(
+        { error: "Visita no encontrada" },
+        { status: 404 }
       );
     }
 
