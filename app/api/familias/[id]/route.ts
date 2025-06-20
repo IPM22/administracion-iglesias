@@ -191,6 +191,8 @@ export async function GET(
       visitasActivas,
       personasActivas,
       edadPromedio,
+      vinculosOrigen: familia.vinculos || [],
+      vinculosRelacionados: familia.vinculosRelacionados || [],
     };
 
     return NextResponse.json(familiaConEstadisticas);

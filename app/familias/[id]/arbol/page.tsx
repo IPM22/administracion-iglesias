@@ -371,27 +371,33 @@ export default function ArbolFamiliarPage({
         // Si está en vista extendida, cargar datos de familias relacionadas
         if (
           mostrarFamiliasExpandidas &&
-          (familiaData.vinculosOrigen.length > 0 ||
-            familiaData.vinculosRelacionados.length > 0)
+          ((familiaData.vinculosOrigen &&
+            familiaData.vinculosOrigen.length > 0) ||
+            (familiaData.vinculosRelacionados &&
+              familiaData.vinculosRelacionados.length > 0))
         ) {
           console.log("Cargando datos de familias relacionadas...");
 
           // Obtener IDs únicos de familias relacionadas
           const familiasRelacionadasIds = new Set<number>();
 
-          familiaData.vinculosOrigen.forEach((vinculo: VinculoFamiliar) => {
-            if (vinculo.familiaRelacionada.id !== familiaData.id) {
-              familiasRelacionadasIds.add(vinculo.familiaRelacionada.id);
-            }
-          });
-
-          familiaData.vinculosRelacionados.forEach(
-            (vinculo: VinculoFamiliar) => {
-              if (vinculo.familiaOrigen.id !== familiaData.id) {
-                familiasRelacionadasIds.add(vinculo.familiaOrigen.id);
+          if (familiaData.vinculosOrigen) {
+            familiaData.vinculosOrigen.forEach((vinculo: VinculoFamiliar) => {
+              if (vinculo.familiaRelacionada.id !== familiaData.id) {
+                familiasRelacionadasIds.add(vinculo.familiaRelacionada.id);
               }
-            }
-          );
+            });
+          }
+
+          if (familiaData.vinculosRelacionados) {
+            familiaData.vinculosRelacionados.forEach(
+              (vinculo: VinculoFamiliar) => {
+                if (vinculo.familiaOrigen.id !== familiaData.id) {
+                  familiasRelacionadasIds.add(vinculo.familiaOrigen.id);
+                }
+              }
+            );
+          }
 
           // Cargar datos completos de familias relacionadas
           const familiasRelacionadasPromises = Array.from(
@@ -903,13 +909,15 @@ export default function ArbolFamiliarPage({
 
       if (
         mostrarFamiliasExpandidas &&
-        (familiaData.vinculosOrigen.length > 0 ||
-          familiaData.vinculosRelacionados.length > 0)
+        ((familiaData.vinculosOrigen &&
+          familiaData.vinculosOrigen.length > 0) ||
+          (familiaData.vinculosRelacionados &&
+            familiaData.vinculosRelacionados.length > 0))
       ) {
         // Combinar ambos tipos de vínculos
         const todosVinculos = [
-          ...familiaData.vinculosOrigen,
-          ...familiaData.vinculosRelacionados,
+          ...(familiaData.vinculosOrigen || []),
+          ...(familiaData.vinculosRelacionados || []),
         ];
         console.log(`Creando ${todosVinculos.length} vínculos familiares...`);
 
@@ -1216,8 +1224,12 @@ export default function ArbolFamiliarPage({
       } else {
         console.log("No se muestran vínculos:", {
           mostrarFamiliasExpandidas,
-          vinculosOrigenCount: familiaData.vinculosOrigen.length,
-          vinculosRelacionadosCount: familiaData.vinculosRelacionados.length,
+          vinculosOrigenCount: familiaData.vinculosOrigen
+            ? familiaData.vinculosOrigen.length
+            : 0,
+          vinculosRelacionadosCount: familiaData.vinculosRelacionados
+            ? familiaData.vinculosRelacionados.length
+            : 0,
         });
       }
 

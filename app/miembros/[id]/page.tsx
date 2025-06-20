@@ -124,7 +124,20 @@ interface MiembroDetalle {
   sexo?: string;
   estadoCivil?: string;
   ocupacion?: string;
-  familia?: string;
+  familia?:
+    | string
+    | {
+        id: number;
+        apellido: string;
+        nombre?: string;
+        direccion?: string;
+        telefono?: string;
+        correo?: string;
+        notas?: string;
+        estado?: string;
+        createdAt?: string;
+        updatedAt?: string;
+      };
   fechaIngreso?: string;
   fechaBautismo?: string;
   estado?: string;
@@ -192,6 +205,20 @@ export default function MiembroDetallePage({
 
         const data = await response.json();
         console.log("✅ Detalles del miembro cargados correctamente");
+        console.log("🔍 DEBUG - Datos completos del miembro:", data);
+        console.log("🔍 DEBUG - Tipo de familiares:", typeof data.familiares);
+        console.log("🔍 DEBUG - Familiares array:", data.familiares);
+        if (data.familiares && data.familiares.length > 0) {
+          console.log("🔍 DEBUG - Primer familiar:", data.familiares[0]);
+          console.log(
+            "🔍 DEBUG - Tipo del primer familiar:",
+            typeof data.familiares[0]
+          );
+          console.log(
+            "🔍 DEBUG - Keys del primer familiar:",
+            Object.keys(data.familiares[0])
+          );
+        }
         setMiembro(data);
       } catch (error) {
         console.error("Error al cargar miembro:", error);
@@ -379,21 +406,6 @@ export default function MiembroDetallePage({
                       </label>
                       <p className="text-lg font-medium">{miembro.apellidos}</p>
                     </div>
-                    {miembro.fechaNacimiento && (
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">
-                          Fecha de Nacimiento
-                        </label>
-                        <p>
-                          {formatDate(miembro.fechaNacimiento)}
-                          {calcularEdad(miembro.fechaNacimiento) && (
-                            <span className="text-muted-foreground ml-2">
-                              ({calcularEdad(miembro.fechaNacimiento)} años)
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    )}
                     {miembro.sexo && (
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">
@@ -639,61 +651,89 @@ export default function MiembroDetallePage({
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {miembro.familiares?.slice(0, 4).map((familiarRel) => (
-                        <div
-                          key={familiarRel.id}
-                          className="flex items-center justify-between p-4 bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-950/20 dark:to-rose-950/20 rounded-lg hover:shadow-md transition-all duration-200 cursor-pointer border"
-                          onClick={() =>
-                            router.push(`/miembros/${familiarRel.familiar.id}`)
+                      {miembro.familiares
+                        ?.slice(0, 4)
+                        .map((familiarRel) => {
+                          // Validar que familiar.familiar existe y tiene las propiedades correctas
+                          if (!familiarRel.familiar) {
+                            console.error(
+                              "❌ ERROR: familiarRel.familiar es null/undefined"
+                            );
+                            return null;
                           }
-                        >
-                          <div className="flex items-center gap-3">
-                            <MiembroAvatar
-                              foto={familiarRel.familiar.foto}
-                              nombre={`${familiarRel.familiar.nombres} ${familiarRel.familiar.apellidos}`}
-                              size="sm"
-                            />
-                            <div>
-                              <p className="font-medium text-gray-900 dark:text-gray-100">
-                                {familiarRel.familiar.nombres}{" "}
-                                {familiarRel.familiar.apellidos}
-                              </p>
+
+                          if (
+                            typeof familiarRel.familiar === "object" &&
+                            (!familiarRel.familiar.nombres ||
+                              !familiarRel.familiar.apellidos)
+                          ) {
+                            console.error(
+                              "❌ ERROR: familiarRel.familiar no tiene nombres/apellidos correctos:",
+                              familiarRel.familiar
+                            );
+                            return null;
+                          }
+
+                          return (
+                            <div
+                              key={familiarRel.id}
+                              className="flex items-center justify-between p-4 bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-950/20 dark:to-rose-950/20 rounded-lg hover:shadow-md transition-all duration-200 cursor-pointer border"
+                              onClick={() =>
+                                router.push(
+                                  `/miembros/${familiarRel.familiar.id}`
+                                )
+                              }
+                            >
+                              <div className="flex items-center gap-3">
+                                <MiembroAvatar
+                                  foto={familiarRel.familiar.foto}
+                                  nombre={`${familiarRel.familiar.nombres} ${familiarRel.familiar.apellidos}`}
+                                  size="sm"
+                                />
+                                <div>
+                                  <p className="font-medium text-gray-900 dark:text-gray-100">
+                                    {familiarRel.familiar.nombres}{" "}
+                                    {familiarRel.familiar.apellidos}
+                                  </p>
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getRelacionColor(
+                                        familiarRel.tipoRelacion
+                                      )}`}
+                                    >
+                                      {familiarRel.tipoRelacion}
+                                    </span>
+                                    {familiarRel.familiar.estado && (
+                                      <Badge
+                                        variant={
+                                          familiarRel.familiar.estado ===
+                                          "Activo"
+                                            ? "default"
+                                            : "outline"
+                                        }
+                                        className="text-xs"
+                                      >
+                                        {familiarRel.familiar.estado}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
                               <div className="flex items-center gap-2">
-                                <span
-                                  className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getRelacionColor(
-                                    familiarRel.tipoRelacion
-                                  )}`}
-                                >
-                                  {familiarRel.tipoRelacion}
-                                </span>
-                                {familiarRel.familiar.estado && (
-                                  <Badge
-                                    variant={
-                                      familiarRel.familiar.estado === "Activo"
-                                        ? "default"
-                                        : "outline"
-                                    }
-                                    className="text-xs"
-                                  >
-                                    {familiarRel.familiar.estado}
-                                  </Badge>
+                                {familiarRel.fuente && (
+                                  <span className="text-xs text-muted-foreground px-2 py-1 bg-white/50 rounded">
+                                    {familiarRel.fuente === "directa"
+                                      ? "Directo"
+                                      : familiarRel.fuente === "inversa"
+                                      ? "Referencia"
+                                      : "Familia"}
+                                  </span>
                                 )}
                               </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {familiarRel.fuente && (
-                              <span className="text-xs text-muted-foreground px-2 py-1 bg-white/50 rounded">
-                                {familiarRel.fuente === "directa"
-                                  ? "Directo"
-                                  : familiarRel.fuente === "inversa"
-                                  ? "Referencia"
-                                  : "Familia"}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                          );
+                        })
+                        .filter(Boolean)}
                       {miembro.familiares && miembro.familiares.length > 4 && (
                         <div className="text-center pt-2">
                           <Button
@@ -838,7 +878,12 @@ export default function MiembroDetallePage({
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="font-medium">{miembro.familia}</p>
+                    <p className="font-medium">
+                      {typeof miembro.familia === "string"
+                        ? miembro.familia
+                        : miembro.familia.nombre ||
+                          `Familia ${miembro.familia.apellido}`}
+                    </p>
                   </CardContent>
                 </Card>
               )}
@@ -852,9 +897,30 @@ export default function MiembroDetallePage({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  {miembro.fechaNacimiento && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Nacimiento:</span>
+                      <div className="text-right">
+                        <span className="font-medium">
+                          {formatDate(miembro.fechaNacimiento)}
+                        </span>
+                        {calcularEdad(miembro.fechaNacimiento) && (
+                          <p className="text-xs text-muted-foreground">
+                            {calcularEdad(miembro.fechaNacimiento)} años
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   {miembro.fechaIngreso && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Ingreso:</span>
+                      <span className="text-muted-foreground">
+                        {miembro.fechaBautismo &&
+                        formatDate(miembro.fechaIngreso) ===
+                          formatDate(miembro.fechaBautismo)
+                          ? "Bautismo:"
+                          : "Ingreso:"}
+                      </span>
                       <div className="text-right">
                         <span className="font-medium">
                           {formatDate(miembro.fechaIngreso)}
@@ -869,20 +935,44 @@ export default function MiembroDetallePage({
                             ) !== 1
                               ? "s"
                               : ""}{" "}
-                            en la iglesia
+                            {miembro.fechaBautismo &&
+                            formatDate(miembro.fechaIngreso) ===
+                              formatDate(miembro.fechaBautismo)
+                              ? "desde el bautismo"
+                              : "en la iglesia"}
                           </p>
                         )}
                       </div>
                     </div>
                   )}
-                  {miembro.fechaBautismo && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Bautismo:</span>
-                      <span className="font-medium">
-                        {formatDate(miembro.fechaBautismo)}
-                      </span>
-                    </div>
-                  )}
+                  {miembro.fechaBautismo &&
+                    (!miembro.fechaIngreso ||
+                      formatDate(miembro.fechaIngreso) !==
+                        formatDate(miembro.fechaBautismo)) && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Bautismo:</span>
+                        <div className="text-right">
+                          <span className="font-medium">
+                            {formatDate(miembro.fechaBautismo)}
+                          </span>
+                          {calcularAniosTranscurridos(miembro.fechaBautismo) !==
+                            null && (
+                            <p className="text-xs text-muted-foreground">
+                              {calcularAniosTranscurridos(
+                                miembro.fechaBautismo
+                              )}{" "}
+                              año
+                              {calcularAniosTranscurridos(
+                                miembro.fechaBautismo
+                              ) !== 1
+                                ? "s"
+                                : ""}{" "}
+                              desde el bautismo
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Registrado:</span>
                     <span className="font-medium">

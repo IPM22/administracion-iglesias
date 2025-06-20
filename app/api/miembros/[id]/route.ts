@@ -71,8 +71,26 @@ export async function GET(
       where: {
         miembroId: miembroId,
       },
+      select: {
+        id: true,
+        nombres: true,
+        apellidos: true,
+        relacion: true,
+        esMiembro: true,
+        miembroRelacionadoId: true,
+      },
       orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
     });
+
+    console.log("🔍 DEBUG API - Familiares raw de Prisma:", familiares);
+    console.log("🔍 DEBUG API - Número de familiares:", familiares.length);
+    if (familiares.length > 0) {
+      console.log("🔍 DEBUG API - Primer familiar raw:", familiares[0]);
+      console.log(
+        "🔍 DEBUG API - Keys del primer familiar:",
+        Object.keys(familiares[0])
+      );
+    }
 
     // Obtener visitas invitadas por este miembro
     const visitasInvitadas = await prisma.visita.findMany({
@@ -95,24 +113,43 @@ export async function GET(
         esLider: m.esLider, // ✅ Usar el campo real
       })),
       familiares: familiares.map((f) => ({
-        id: f.id,
+        id: f.id.toString(), // ✅ Asegurar que ID es string
         familiar: {
           id: f.miembroRelacionadoId || 0,
-          nombres: f.nombres,
-          apellidos: f.apellidos,
-          foto: null,
+          nombres: f.nombres || "", // ✅ Asegurar que no sea null
+          apellidos: f.apellidos || "", // ✅ Asegurar que no sea null
+          foto: null, // ✅ Familiar no tiene foto, siempre null
           estado: f.esMiembro ? "Activo" : "No Miembro",
         },
-        tipoRelacion: f.relacion,
+        tipoRelacion: f.relacion || "", // ✅ Asegurar que no sea null
         fuente: "directa",
       })),
       visitasInvitadas: visitasInvitadas.map((v) => ({
-        ...v,
+        id: v.id,
+        nombres: v.nombres || "", // ✅ Asegurar que no sea null
+        apellidos: v.apellidos || "", // ✅ Asegurar que no sea null
+        foto: v.foto || null,
         totalVisitas: 1,
         fechaPrimeraVisita: v.fechaPrimeraVisita?.toISOString(),
+        estado: v.estado || "Activa",
       })),
       notasAdicionales: miembro.notas,
     };
+
+    console.log(
+      "🔍 DEBUG API - Familiares mapeados:",
+      miembroCompleto.familiares
+    );
+    if (miembroCompleto.familiares.length > 0) {
+      console.log(
+        "🔍 DEBUG API - Primer familiar mapeado:",
+        miembroCompleto.familiares[0]
+      );
+      console.log(
+        "🔍 DEBUG API - Estructura familiar.familiar:",
+        miembroCompleto.familiares[0].familiar
+      );
+    }
 
     return NextResponse.json(miembroCompleto);
   } catch (error) {
