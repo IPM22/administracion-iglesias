@@ -63,7 +63,7 @@ export async function GET(
         iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
       },
       include: {
-        miembros: {
+        personas: {
           select: {
             id: true,
             nombres: true,
@@ -76,30 +76,15 @@ export async function GET(
             estado: true,
             foto: true,
             fechaIngreso: true,
-            relacion: true,
-          },
-          orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
-        },
-        visitas: {
-          select: {
-            id: true,
-            nombres: true,
-            apellidos: true,
-            correo: true,
-            telefono: true,
-            celular: true,
-            fechaNacimiento: true,
-            sexo: true,
-            estado: true,
-            foto: true,
+            relacionFamiliar: true,
+            rol: true,
             fechaPrimeraVisita: true,
-            familia: true,
           },
           orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
         },
         _count: {
           select: {
-            miembros: true,
+            personas: true,
           },
         },
         vinculos: {
@@ -137,27 +122,30 @@ export async function GET(
     }
 
     // Calcular estadísticas
-    const miembrosActivos = familia.miembros.filter(
-      (m) => m.estado === "Activo"
-    ).length;
-
-    const visitasActivas = familia.visitas.filter(
-      (v) => v.estado === "Activa"
-    ).length;
-
-    const todasPersonas = [...familia.miembros, ...familia.visitas];
+    const todasPersonas = familia.personas;
     const totalPersonas = todasPersonas.length;
-    const personasActivas = miembrosActivos + visitasActivas;
 
-    // Encontrar el jefe de familia basado en la relación
+    // Contar por rol
+    const miembros = todasPersonas.filter((p) => p.rol === "MIEMBRO");
+    const visitas = todasPersonas.filter(
+      (p) => p.rol === "VISITA" || p.rol === "INVITADO"
+    );
+    const ninos = todasPersonas.filter((p) => p.rol === "NINO");
+
+    // Contar por estado
+    const personasActivas = todasPersonas.filter(
+      (p) => p.estado === "ACTIVA"
+    ).length;
+
+    // Encontrar el jefe de familia basado en la relación (cualquier persona puede ser jefe)
     const jefeFamilia =
-      familia.miembros.find(
-        (m) =>
-          m.relacion === "Cabeza de Familia" ||
-          m.relacion === "Jefe de Familia" ||
-          m.relacion === "Padre" ||
-          m.relacion === "Madre"
-      ) || familia.miembros[0]; // Si no hay jefe explícito, tomar el primero
+      todasPersonas.find(
+        (p) =>
+          p.relacionFamiliar === "Cabeza de Familia" ||
+          p.relacionFamiliar === "Jefe de Familia" ||
+          p.relacionFamiliar === "Padre" ||
+          p.relacionFamiliar === "Madre"
+      ) || todasPersonas[0]; // Si no hay jefe explícito, tomar el primero
 
     const edadPromedio =
       todasPersonas.length > 0
@@ -182,15 +170,18 @@ export async function GET(
             fechaNacimiento: jefeFamilia.fechaNacimiento,
             correo: jefeFamilia.correo,
             telefono: jefeFamilia.telefono,
+            rol: jefeFamilia.rol,
           }
         : null,
-      totalMiembros: familia.miembros.length,
-      totalVisitas: familia.visitas.length,
+      // Estadísticas generales
       totalPersonas,
-      miembrosActivos,
-      visitasActivas,
       personasActivas,
       edadPromedio,
+      // Estadísticas por rol (para compatibilidad con frontend existente)
+      totalMiembros: miembros.length,
+      totalVisitas: visitas.length,
+      totalNinos: ninos.length,
+      // Vínculos
       vinculosOrigen: familia.vinculos || [],
       vinculosRelacionados: familia.vinculosRelacionados || [],
     };
@@ -294,7 +285,7 @@ export async function PUT(
         notas: parseString(notas),
       },
       include: {
-        miembros: {
+        personas: {
           select: {
             id: true,
             nombres: true,
@@ -305,7 +296,7 @@ export async function PUT(
         },
         _count: {
           select: {
-            miembros: true,
+            personas: true,
           },
         },
       },
@@ -340,7 +331,7 @@ export async function DELETE(
     const familiaExistente = await prisma.familia.findUnique({
       where: { id: familiaId },
       include: {
-        miembros: true,
+        personas: true,
       },
     });
 
@@ -352,7 +343,7 @@ export async function DELETE(
     }
 
     // Verificar si la familia tiene miembros asociados
-    if (familiaExistente.miembros.length > 0) {
+    if (familiaExistente.personas.length > 0) {
       return NextResponse.json(
         {
           error:

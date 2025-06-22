@@ -685,19 +685,28 @@ function ComunidadNuevaContent() {
     setSaving(true);
     setError(null);
     try {
+      // Determinar endpoint según el tipo
       const endpoint =
         tipo === "visita"
           ? "/api/visitas"
           : tipo === "nino"
-          ? "/api/ninos"
+          ? "/api/ninos" // Usar API específica para niños
           : "/api/miembros";
+
+      // Preparar datos con tipo y rol correctos según el parámetro de la URL
+      const dataToSend = {
+        ...values,
+        tipo: tipo, // Pasar el tipo de la URL
+        rol:
+          tipo === "visita" ? "visita" : tipo === "nino" ? "nino" : "miembro", // Determinar rol
+      };
 
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(values),
+        body: JSON.stringify(dataToSend),
       });
 
       if (!response.ok) {

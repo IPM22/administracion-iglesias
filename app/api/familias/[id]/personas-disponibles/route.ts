@@ -67,8 +67,8 @@ export async function GET(
       );
     }
 
-    // Obtener miembros que no pertenecen a esta familia (de la misma iglesia)
-    const miembrosDisponibles = await prisma.miembro.findMany({
+    // Obtener personas que no pertenecen a esta familia (de la misma iglesia)
+    const personasDisponibles = await prisma.persona.findMany({
       where: {
         iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
         OR: [{ familiaId: null }, { familiaId: { not: familiaId } }],
@@ -83,67 +83,35 @@ export async function GET(
         foto: true,
         estado: true,
         fechaBautismo: true,
-      },
-      orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
-    });
-
-    // Obtener visitas que no pertenecen a esta familia y no han sido convertidas (de la misma iglesia)
-    const visitasDisponibles = await prisma.visita.findMany({
-      where: {
-        iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
-        estado: { not: "Convertido" },
-        OR: [{ familiaId: null }, { familiaId: { not: familiaId } }],
-      },
-      select: {
-        id: true,
-        nombres: true,
-        apellidos: true,
-        correo: true,
-        telefono: true,
-        celular: true,
-        foto: true,
-        estado: true,
         fechaPrimeraVisita: true,
+        rol: true,
       },
       orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
     });
 
-    // Combinar y formatear las personas disponibles
-    const personasDisponibles = [
-      ...miembrosDisponibles.map((miembro) => ({
-        id: miembro.id,
-        nombres: miembro.nombres,
-        apellidos: miembro.apellidos,
-        correo: miembro.correo,
-        telefono: miembro.telefono,
-        celular: miembro.celular,
-        foto: miembro.foto,
-        estado: miembro.estado || "Activo",
-        tipo: "miembro" as const,
-        fechaBautismo: miembro.fechaBautismo,
-      })),
-      ...visitasDisponibles.map((visita) => ({
-        id: visita.id,
-        nombres: visita.nombres,
-        apellidos: visita.apellidos,
-        correo: visita.correo,
-        telefono: visita.telefono,
-        celular: visita.celular,
-        foto: visita.foto,
-        estado: visita.estado || "Nuevo",
-        tipo: "visita" as const,
-        fechaBautismo: null,
-      })),
-    ];
+    // Formatear las personas disponibles según su rol
+    const personasFormateadas = personasDisponibles.map((persona) => ({
+      id: persona.id,
+      nombres: persona.nombres,
+      apellidos: persona.apellidos,
+      correo: persona.correo,
+      telefono: persona.telefono,
+      celular: persona.celular,
+      foto: persona.foto,
+      estado: persona.estado || "ACTIVA",
+      tipo: persona.rol === "MIEMBRO" ? "miembro" : "visita",
+      fechaBautismo: persona.fechaBautismo,
+      fechaPrimeraVisita: persona.fechaPrimeraVisita,
+    }));
 
     // Ordenar por apellido y nombre
-    personasDisponibles.sort((a, b) => {
+    personasFormateadas.sort((a, b) => {
       const apellidoCompare = a.apellidos.localeCompare(b.apellidos);
       if (apellidoCompare !== 0) return apellidoCompare;
       return a.nombres.localeCompare(b.nombres);
     });
 
-    return NextResponse.json(personasDisponibles);
+    return NextResponse.json(personasFormateadas);
   } catch (error) {
     console.error("Error al obtener personas disponibles:", error);
     return NextResponse.json(

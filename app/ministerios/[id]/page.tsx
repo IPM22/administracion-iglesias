@@ -50,9 +50,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-interface MinisterioMiembro {
+interface MinisterioPersona {
   id: number;
-  miembro: {
+  persona: {
     id: number;
     nombres: string;
     apellidos: string;
@@ -82,10 +82,10 @@ interface MinisterioDetalle {
   descripcion?: string;
   createdAt: string;
   updatedAt: string;
-  miembros: MinisterioMiembro[];
+  personas: MinisterioPersona[];
   actividades: MinisterioActividad[];
   _count: {
-    miembros: number;
+    personas: number;
     actividades: number;
   };
 }
@@ -165,7 +165,7 @@ export default function MinisterioDetallePage({
   };
 
   const getLider = () => {
-    return ministerio?.miembros.find((m) => m.estado === "Activo" && m.esLider);
+    return ministerio?.personas.find((p) => p.estado === "Activo" && p.esLider);
   };
 
   const cambiarLider = async (nuevoLiderId: number) => {
@@ -337,7 +337,7 @@ export default function MinisterioDetallePage({
                       )}
                     </div>
                     <Badge variant="secondary">
-                      {ministerio._count.miembros} miembros
+                      {ministerio._count.personas} miembros
                     </Badge>
                   </div>
                 </CardHeader>
@@ -361,7 +361,7 @@ export default function MinisterioDetallePage({
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2">
                       <Users className="h-5 w-5" />
-                      Miembros ({ministerio._count.miembros})
+                      Miembros ({ministerio._count.personas})
                     </CardTitle>
                     <Button
                       size="sm"
@@ -373,7 +373,7 @@ export default function MinisterioDetallePage({
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {ministerio.miembros.length === 0 ? (
+                  {ministerio.personas.length === 0 ? (
                     <div className="text-center py-8">
                       <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <p className="text-muted-foreground mb-4">
@@ -391,36 +391,36 @@ export default function MinisterioDetallePage({
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {ministerio.miembros.slice(0, 5).map((miembro) => (
+                      {ministerio.personas.slice(0, 5).map((persona) => (
                         <div
-                          key={miembro.id}
+                          key={persona.id}
                           className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                         >
                           <div className="flex items-center gap-3">
                             <Avatar className="h-10 w-10">
                               <AvatarImage
-                                src={miembro.miembro.foto || "/placeholder.svg"}
+                                src={persona.persona.foto || "/placeholder.svg"}
                               />
                               <AvatarFallback>
-                                {`${miembro.miembro.nombres[0]}${miembro.miembro.apellidos[0]}`}
+                                {`${persona.persona.nombres[0]}${persona.persona.apellidos[0]}`}
                               </AvatarFallback>
                             </Avatar>
                             <div>
                               <p className="font-medium">
-                                {miembro.miembro.nombres}{" "}
-                                {miembro.miembro.apellidos}
+                                {persona.persona.nombres}{" "}
+                                {persona.persona.apellidos}
                               </p>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <span>{miembro.rol || "Miembro"}</span>
+                                <span>{persona.rol || "Miembro"}</span>
                                 <span>•</span>
                                 <span>
-                                  Desde {formatDate(miembro.fechaInicio)}
+                                  Desde {formatDate(persona.fechaInicio)}
                                 </span>
                               </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            {getEstadoBadge(miembro.estado)}
+                            {getEstadoBadge(persona.estado)}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="sm">
@@ -431,7 +431,7 @@ export default function MinisterioDetallePage({
                                 <DropdownMenuItem
                                   onClick={() =>
                                     router.push(
-                                      `/miembros/${miembro.miembro.id}`
+                                      `/miembros/${persona.persona.id}`
                                     )
                                   }
                                 >
@@ -447,7 +447,7 @@ export default function MinisterioDetallePage({
                           </div>
                         </div>
                       ))}
-                      {ministerio.miembros.length > 5 && (
+                      {ministerio.personas.length > 5 && (
                         <div className="text-center">
                           <Button
                             variant="ghost"
@@ -456,7 +456,7 @@ export default function MinisterioDetallePage({
                               router.push(`/ministerios/${id}/miembros`)
                             }
                           >
-                            Ver todos los miembros ({ministerio.miembros.length}
+                            Ver todos los miembros ({ministerio.personas.length}
                             )
                           </Button>
                         </div>
@@ -551,15 +551,15 @@ export default function MinisterioDetallePage({
                       <div className="flex items-center gap-3">
                         <Avatar className="h-12 w-12">
                           <AvatarImage
-                            src={lider.miembro.foto || "/placeholder.svg"}
+                            src={lider.persona.foto || "/placeholder.svg"}
                           />
                           <AvatarFallback>
-                            {`${lider.miembro.nombres[0]}${lider.miembro.apellidos[0]}`}
+                            {`${lider.persona.nombres[0]}${lider.persona.apellidos[0]}`}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <p className="font-medium">
-                            {lider.miembro.nombres} {lider.miembro.apellidos}
+                            {lider.persona.nombres} {lider.persona.apellidos}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             {lider.rol || "Líder"}
@@ -569,7 +569,7 @@ export default function MinisterioDetallePage({
                             size="sm"
                             className="p-0 h-auto text-xs"
                             onClick={() =>
-                              router.push(`/miembros/${lider.miembro.id}`)
+                              router.push(`/miembros/${lider.persona.id}`)
                             }
                           >
                             Ver perfil
@@ -627,50 +627,50 @@ export default function MinisterioDetallePage({
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
-                      {ministerio.miembros
-                        .filter((m) => m.estado === "Activo")
-                        .map((miembro) => (
+                      {ministerio.personas
+                        .filter((p) => p.estado === "Activo")
+                        .map((persona) => (
                           <div
-                            key={miembro.id}
+                            key={persona.id}
                             className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                           >
                             <div className="flex items-center gap-3">
                               <Avatar className="h-10 w-10">
                                 <AvatarImage
                                   src={
-                                    miembro.miembro.foto || "/placeholder.svg"
+                                    persona.persona.foto || "/placeholder.svg"
                                   }
                                 />
                                 <AvatarFallback>
-                                  {`${miembro.miembro.nombres[0]}${miembro.miembro.apellidos[0]}`}
+                                  {`${persona.persona.nombres[0]}${persona.persona.apellidos[0]}`}
                                 </AvatarFallback>
                               </Avatar>
                               <div>
                                 <p className="font-medium">
-                                  {miembro.miembro.nombres}{" "}
-                                  {miembro.miembro.apellidos}
+                                  {persona.persona.nombres}{" "}
+                                  {persona.persona.apellidos}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
-                                  {miembro.rol || "Miembro"}
+                                  {persona.rol || "Miembro"}
                                 </p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              {miembro.esLider && (
+                              {persona.esLider && (
                                 <Badge variant="default">Líder actual</Badge>
                               )}
                               <Button
                                 size="sm"
-                                onClick={() => cambiarLider(miembro.miembro.id)}
-                                disabled={miembro.esLider}
+                                onClick={() => cambiarLider(persona.persona.id)}
+                                disabled={persona.esLider}
                               >
-                                {miembro.esLider ? "Es líder" : "Hacer líder"}
+                                {persona.esLider ? "Es líder" : "Hacer líder"}
                               </Button>
                             </div>
                           </div>
                         ))}
 
-                      {ministerio.miembros.filter((m) => m.estado === "Activo")
+                      {ministerio.personas.filter((p) => p.estado === "Activo")
                         .length === 0 && (
                         <div className="text-center py-4">
                           <p className="text-muted-foreground">
@@ -703,7 +703,7 @@ export default function MinisterioDetallePage({
                     </span>
                     <span className="font-medium">
                       {
-                        ministerio.miembros.filter((m) => m.estado === "Activo")
+                        ministerio.personas.filter((p) => p.estado === "Activo")
                           .length
                       }
                     </span>
@@ -761,6 +761,14 @@ export default function MinisterioDetallePage({
                   >
                     <Edit className="mr-2 h-4 w-4" />
                     Editar información
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => router.push(`/ministerios/${id}/personas`)}
+                  >
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Agregar persona
                   </Button>
                 </CardContent>
               </Card>

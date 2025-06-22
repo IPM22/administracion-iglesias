@@ -50,9 +50,9 @@ import {
 import { useRouter } from "next/navigation";
 import { ModeToggle } from "../../components/mode-toggle";
 
-interface MinisterioMiembro {
+interface MinisterioPersona {
   id: number;
-  miembro: {
+  persona: {
     id: number;
     nombres: string;
     apellidos: string;
@@ -74,10 +74,10 @@ interface Ministerio {
   id: number;
   nombre: string;
   descripcion?: string;
-  miembros?: MinisterioMiembro[];
+  personas?: MinisterioPersona[];
   actividades?: MinisterioActividad[];
   _count: {
-    miembros: number;
+    personas: number;
     actividades: number;
   };
 }
@@ -148,25 +148,25 @@ export default function MinisteriosPage() {
       ministerio.descripcion?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getLider = (miembros: MinisterioMiembro[] | undefined) => {
-    // Validación defensiva: verificar que miembros existe y es un array
-    if (!miembros || !Array.isArray(miembros) || miembros.length === 0) {
+  const getLider = (personas: MinisterioPersona[] | undefined) => {
+    // Validación defensiva: verificar que personas existe y es un array
+    if (!personas || !Array.isArray(personas) || personas.length === 0) {
       return null;
     }
 
-    // Buscar líder por rol o tomar el primer miembro activo
+    // Buscar líder por rol o tomar la primera persona activa
     const lider =
-      miembros.find(
-        (m) =>
-          m.estado === "Activo" &&
-          (m.rol?.toLowerCase().includes("líder") ||
-            m.rol?.toLowerCase().includes("pastor"))
-      ) || miembros.find((m) => m.estado === "Activo");
+      personas.find(
+        (p) =>
+          p.estado === "Activo" &&
+          (p.rol?.toLowerCase().includes("líder") ||
+            p.rol?.toLowerCase().includes("pastor"))
+      ) || personas.find((p) => p.estado === "Activo");
 
     return lider
       ? {
-          nombre: `${lider.miembro.nombres} ${lider.miembro.apellidos}`,
-          avatar: lider.miembro.foto,
+          nombre: `${lider.persona.nombres} ${lider.persona.apellidos}`,
+          avatar: lider.persona.foto,
           rol: lider.rol || "Miembro",
         }
       : null;
@@ -298,7 +298,7 @@ export default function MinisteriosPage() {
               ) : (
                 <div className="grid gap-6 md:grid-cols-2">
                   {ministeriosFiltrados.map((ministerio) => {
-                    const lider = getLider(ministerio.miembros);
+                    const lider = getLider(ministerio.personas);
 
                     return (
                       <Card key={ministerio.id}>
@@ -330,12 +330,12 @@ export default function MinisteriosPage() {
                                 <DropdownMenuItem
                                   onClick={() =>
                                     router.push(
-                                      `/ministerios/${ministerio.id}/miembros`
+                                      `/ministerios/${ministerio.id}/personas`
                                     )
                                   }
                                 >
                                   <UserPlus className="mr-2 h-4 w-4" />
-                                  Gestionar Miembros
+                                  Gestionar Personas
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() =>
@@ -400,43 +400,44 @@ export default function MinisteriosPage() {
                             <div className="space-y-2">
                               <div className="flex items-center justify-between">
                                 <p className="text-sm font-medium">
-                                  Miembros Activos
+                                  Personas Activas
                                 </p>
                                 <div className="flex items-center space-x-1">
                                   <Users className="h-4 w-4 text-muted-foreground" />
                                   <span className="text-sm font-medium">
-                                    {ministerio._count.miembros}
+                                    {ministerio._count.personas}
                                   </span>
                                 </div>
                               </div>
 
-                              {ministerio.miembros?.length > 0 && (
-                                <div className="space-y-1">
-                                  {ministerio.miembros
-                                    .filter((m) => m.estado === "Activo")
-                                    .slice(0, 3)
-                                    .map((miembro) => (
-                                      <div
-                                        key={miembro.id}
-                                        className="flex items-center justify-between text-sm"
-                                      >
-                                        <span>{`${miembro.miembro.nombres} ${miembro.miembro.apellidos}`}</span>
-                                        <Badge
-                                          variant="outline"
-                                          className="text-xs"
+                              {ministerio.personas &&
+                                ministerio.personas.length > 0 && (
+                                  <div className="space-y-1">
+                                    {ministerio.personas
+                                      .filter((p) => p.estado === "Activo")
+                                      .slice(0, 3)
+                                      .map((persona) => (
+                                        <div
+                                          key={persona.id}
+                                          className="flex items-center justify-between text-sm"
                                         >
-                                          {miembro.rol || "Miembro"}
-                                        </Badge>
-                                      </div>
-                                    ))}
-                                  {ministerio._count.miembros > 3 && (
-                                    <p className="text-xs text-muted-foreground">
-                                      +{ministerio._count.miembros - 3} miembros
-                                      más
-                                    </p>
-                                  )}
-                                </div>
-                              )}
+                                          <span>{`${persona.persona.nombres} ${persona.persona.apellidos}`}</span>
+                                          <Badge
+                                            variant="outline"
+                                            className="text-xs"
+                                          >
+                                            {persona.rol || "Miembro"}
+                                          </Badge>
+                                        </div>
+                                      ))}
+                                    {ministerio._count.personas > 3 && (
+                                      <p className="text-xs text-muted-foreground">
+                                        +{ministerio._count.personas - 3}{" "}
+                                        personas más
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
                             </div>
 
                             <div className="pt-2 border-t">

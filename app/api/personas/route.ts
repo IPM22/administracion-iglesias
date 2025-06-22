@@ -8,10 +8,12 @@ import {
   aplicarReglasAutomaticas,
   calcularTipoPersonaAutomatico,
 } from "@/src/lib/services/persona-automation";
+import { getUserContext, requireAuth } from "../../../lib/auth-utils";
 
 const prisma = new PrismaClient();
 
 interface WhereClause {
+  iglesiaId?: number;
   tipo?: string | { in: string[] };
   rol?: string;
   estado?: string;
@@ -35,6 +37,10 @@ interface WhereClause {
 // GET /api/personas - Obtener personas con filtros
 export async function GET(request: NextRequest) {
   try {
+    // Obtener contexto del usuario autenticado
+    const userContext = await getUserContext(request);
+    const { iglesiaId } = requireAuth(userContext);
+
     const { searchParams } = new URL(request.url);
 
     // Parsear filtros
@@ -66,7 +72,9 @@ export async function GET(request: NextRequest) {
     const filtrosValidados = filtrosPersonaSchema.parse(filtros);
 
     // Construir where clause
-    const where: Prisma.PersonaWhereInput = {};
+    const where: Prisma.PersonaWhereInput = {
+      iglesiaId, // ✅ FILTRO POR IGLESIA AGREGADO
+    };
 
     if (filtrosValidados.tipo) {
       // Manejar múltiples tipos separados por coma
@@ -143,6 +151,13 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "50");
     const skip = (page - 1) * limit;
 
+    console.log(
+      "🏛️ Filtrando personas para iglesia ID:",
+      iglesiaId,
+      "con filtros:",
+      filtrosValidados
+    );
+
     // Obtener personas
     const [personas, total] = await Promise.all([
       prisma.persona.findMany({
@@ -178,6 +193,14 @@ export async function GET(request: NextRequest) {
       prisma.persona.count({ where }),
     ]);
 
+    console.log(
+      `✅ Se encontraron ${
+        personas.length
+      } personas para esta iglesia con rol: ${
+        filtrosValidados.rol || "cualquiera"
+      }`
+    );
+
     return NextResponse.json({
       personas,
       pagination: {
@@ -189,6 +212,14 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error obteniendo personas:", error);
+
+    if (error instanceof Error && error.message === "Usuario no autenticado") {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }
@@ -199,6 +230,10 @@ export async function GET(request: NextRequest) {
 // POST /api/personas - Crear nueva persona
 export async function POST(request: NextRequest) {
   try {
+    // Obtener contexto del usuario autenticado
+    const userContext = await getUserContext(request);
+    const { iglesiaId } = requireAuth(userContext);
+
     const body = await request.json();
 
     // Validar datos de entrada
@@ -226,45 +261,66 @@ export async function POST(request: NextRequest) {
           ? new Date(datosValidados.fechaIngreso)
           : null
       );
-      rolFinal = rolFinal || reglas.rol;
-      estadoFinal = estadoFinal || reglas.estado;
+
+      if (!rolFinal) rolFinal = reglas.rol;
+      if (!estadoFinal) estadoFinal = reglas.estado;
     }
 
     // Crear persona
-    const persona = await prisma.persona.create({
+    const nuevaPersona = await prisma.persona.create({
       data: {
-        ...datosValidados,
+        iglesiaId, // ✅ ASIGNAR IGLESIA AUTOMÁTICAMENTE
+        nombres: datosValidados.nombres,
+        apellidos: datosValidados.apellidos,
+        correo: datosValidados.correo,
+        telefono: datosValidados.telefono,
+        celular: datosValidados.celular,
+        direccion: datosValidados.direccion,
+        fechaNacimiento: datosValidados.fechaNacimiento
+          ? new Date(datosValidados.fechaNacimiento)
+          : null,
+        sexo: datosValidados.sexo,
+        estadoCivil: datosValidados.estadoCivil,
+        ocupacion: datosValidados.ocupacion,
+        foto: datosValidados.foto,
+        notas: datosValidados.notas,
         tipo: tipoFinal as any,
         rol: rolFinal as any,
         estado: estadoFinal as any,
+        fechaIngreso: datosValidados.fechaIngreso
+          ? new Date(datosValidados.fechaIngreso)
+          : null,
+        fechaBautismo: datosValidados.fechaBautismo
+          ? new Date(datosValidados.fechaBautismo)
+          : null,
+        fechaConfirmacion: datosValidados.fechaConfirmacion
+          ? new Date(datosValidados.fechaConfirmacion)
+          : null,
+        familiaId: datosValidados.familiaId,
+        relacionFamiliar: datosValidados.relacionFamiliar,
+        fechaPrimeraVisita: datosValidados.fechaPrimeraVisita
+          ? new Date(datosValidados.fechaPrimeraVisita)
+          : null,
+        comoConocioIglesia: datosValidados.comoConocioIglesia,
+        motivoVisita: datosValidados.motivoVisita,
+        intereses: datosValidados.intereses,
+        personaInvitaId: datosValidados.personaInvitaId,
       },
       include: {
-        familia: {
-          select: {
-            id: true,
-            apellido: true,
-            nombre: true,
-          },
-        },
-        ministerios: {
-          include: {
-            ministerio: {
-              select: {
-                nombre: true,
-                colorHex: true,
-              },
-            },
-          },
-        },
+        familia: true,
+        personaInvita: true,
       },
     });
 
-    return NextResponse.json({ persona }, { status: 201 });
+    return NextResponse.json(nuevaPersona, { status: 201 });
   } catch (error) {
     console.error("Error creando persona:", error);
 
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error instanceof Error && error.message === "Usuario no autenticado") {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
     }
 
     return NextResponse.json(

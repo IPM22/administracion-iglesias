@@ -28,16 +28,16 @@ export async function GET(
       );
     }
 
-    // Verificar que el ministerio existe y obtener sus miembros
+    // Verificar que el ministerio existe y obtener sus personas
     const ministerio = await prisma.ministerio.findUnique({
       where: {
         id: ministerioId,
         iglesiaId, // ✅ Filtrar por iglesia del usuario
       },
       include: {
-        miembros: {
+        personas: {
           include: {
-            miembro: {
+            persona: {
               select: {
                 id: true,
                 nombres: true,
@@ -52,8 +52,8 @@ export async function GET(
           },
           orderBy: [
             { estado: "desc" }, // Activos primero
-            { miembro: { apellidos: "asc" } }, // Luego por apellidos
-            { miembro: { nombres: "asc" } }, // Finalmente por nombres
+            { persona: { apellidos: "asc" } }, // Luego por apellidos
+            { persona: { nombres: "asc" } }, // Finalmente por nombres
           ],
         },
       },
@@ -66,9 +66,9 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(ministerio.miembros);
+    return NextResponse.json(ministerio.personas);
   } catch (error) {
-    console.error("Error al obtener miembros del ministerio:", error);
+    console.error("Error al obtener personas del ministerio:", error);
 
     if (error instanceof Error && error.message === "Usuario no autenticado") {
       return NextResponse.json(
@@ -78,7 +78,7 @@ export async function GET(
     }
 
     return NextResponse.json(
-      { error: "Error al obtener los miembros del ministerio" },
+      { error: "Error al obtener las personas del ministerio" },
       { status: 500 }
     );
   }
@@ -105,7 +105,7 @@ export async function POST(
 
     const body = await request.json();
     const {
-      miembroId,
+      personaId,
       rol,
       fechaInicio,
       estado = "Activo",
@@ -113,9 +113,9 @@ export async function POST(
     } = body;
 
     // Validaciones básicas
-    if (!miembroId) {
+    if (!personaId) {
       return NextResponse.json(
-        { error: "El ID del miembro es requerido" },
+        { error: "El ID de la persona es requerido" },
         { status: 400 }
       );
     }
@@ -135,62 +135,69 @@ export async function POST(
       );
     }
 
-    // Verificar que el miembro existe y pertenece a la iglesia del usuario
-    const miembro = await prisma.miembro.findUnique({
+    // Verificar que la persona existe y pertenece a la iglesia del usuario
+    const persona = await prisma.persona.findUnique({
       where: {
-        id: parseInt(miembroId),
+        id: parseInt(personaId),
         iglesiaId,
+        rol: "MIEMBRO",
       },
     });
 
-    if (!miembro) {
+    if (!persona) {
       return NextResponse.json(
-        { error: "Miembro no encontrado" },
+        { error: "Persona con rol de miembro no encontrada" },
         { status: 404 }
       );
     }
 
-    // Usar SQL raw con los nombres correctos de columnas (snake_case)
-    await prisma.$executeRaw`
-      INSERT INTO miembro_ministerios ("miembroId", "ministerioId", rol, "esLider", "fechaInicio", estado, "createdAt", "updatedAt")
-      VALUES (${parseInt(miembroId)}, ${ministerioId}, ${parseString(
-      rol
-    )}, ${esLider}, ${
-      parseDateForAPI(fechaInicio) || new Date()
-    }, ${estado}, NOW(), NOW())
-    `;
+    // Verificar si ya existe una relación activa
+    const relacionExistente = await prisma.personaMinisterio.findFirst({
+      where: {
+        personaId: parseInt(personaId),
+        ministerioId,
+        estado: "Activo",
+      },
+    });
 
-    // Obtener el registro creado usando la relación
-    const ministerioActualizado = await prisma.ministerio.findUnique({
-      where: { id: ministerioId },
+    if (relacionExistente) {
+      return NextResponse.json(
+        { error: "La persona ya está asignada a este ministerio" },
+        { status: 409 }
+      );
+    }
+
+    // Crear la nueva relación persona-ministerio
+    const nuevaRelacion = await prisma.personaMinisterio.create({
+      data: {
+        personaId: parseInt(personaId),
+        ministerioId,
+        rol: parseString(rol),
+        esLider,
+        fechaInicio: parseDateForAPI(fechaInicio) || new Date(),
+        estado,
+      },
       include: {
-        miembros: {
-          where: {
-            miembroId: parseInt(miembroId),
-          },
-          include: {
-            miembro: {
-              select: {
-                id: true,
-                nombres: true,
-                apellidos: true,
-                foto: true,
-                correo: true,
-                telefono: true,
-                celular: true,
-                estado: true,
-              },
-            },
+        persona: {
+          select: {
+            id: true,
+            nombres: true,
+            apellidos: true,
+            foto: true,
+            correo: true,
+            telefono: true,
+            celular: true,
+            estado: true,
           },
         },
       },
     });
 
-    return NextResponse.json(ministerioActualizado?.miembros[0], {
+    return NextResponse.json(nuevaRelacion, {
       status: 201,
     });
   } catch (error) {
-    console.error("Error al agregar miembro al ministerio:", error);
+    console.error("Error al agregar persona al ministerio:", error);
 
     if (error instanceof Error && error.message === "Usuario no autenticado") {
       return NextResponse.json(
@@ -200,7 +207,7 @@ export async function POST(
     }
 
     return NextResponse.json(
-      { error: "Error al agregar el miembro al ministerio" },
+      { error: "Error al agregar la persona al ministerio" },
       { status: 500 }
     );
   }

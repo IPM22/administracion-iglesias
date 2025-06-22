@@ -121,6 +121,7 @@ enum RolPersona {
   MIEMBRO
   VISITA
   INVITADO
+  NINO
 }
 
 enum EstadoPersona {

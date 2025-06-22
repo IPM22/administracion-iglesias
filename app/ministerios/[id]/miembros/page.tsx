@@ -77,8 +77,8 @@ import {
 import { ModeToggle } from "../../../../components/mode-toggle";
 import MiembroSelector from "../../../../components/MiembroSelector";
 
-const miembroFormSchema = z.object({
-  miembroId: z.number().min(1, "Selecciona un miembro"),
+const personaFormSchema = z.object({
+  personaId: z.number().min(1, "Selecciona una persona"),
   rol: z.string().optional(),
   fechaInicio: z.string().optional(),
   esLider: z.boolean(),
@@ -90,10 +90,10 @@ const editarRolSchema = z.object({
   esLider: z.boolean(),
 });
 
-type MiembroFormValues = z.infer<typeof miembroFormSchema>;
+type PersonaFormValues = z.infer<typeof personaFormSchema>;
 type EditarRolValues = z.infer<typeof editarRolSchema>;
 
-interface Miembro {
+interface Persona {
   id: number;
   nombres: string;
   apellidos: string;
@@ -102,11 +102,14 @@ interface Miembro {
   telefono?: string;
   celular?: string;
   estado: string;
+  tipo: string;
+  rol: string;
+  fechaBautismo?: string;
 }
 
-interface MinisterioMiembro {
+interface MinisterioPersona {
   id: number;
-  miembro: Miembro;
+  persona: Persona;
   rol?: string;
   esLider: boolean;
   fechaInicio: string;
@@ -120,7 +123,7 @@ interface MinisterioBasico {
   descripcion?: string;
 }
 
-export default function GestionMiembrosMinisterioPage({
+export default function GestionPersonasMinisterioPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -128,26 +131,26 @@ export default function GestionMiembrosMinisterioPage({
   const router = useRouter();
   const { id } = use(params);
   const [ministerio, setMinisterio] = useState<MinisterioBasico | null>(null);
-  const [miembrosMinisterio, setMiembrosMinisterio] = useState<
-    MinisterioMiembro[]
+  const [personasMinisterio, setPersonasMinisterio] = useState<
+    MinisterioPersona[]
   >([]);
-  const [todosLosMiembros, setTodosLosMiembros] = useState<Miembro[]>([]);
+  const [todasLasPersonas, setTodasLasPersonas] = useState<Persona[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [dialogAgregar, setDialogAgregar] = useState(false);
   const [dialogEditar, setDialogEditar] = useState(false);
-  const [miembroSeleccionado, setMiembroSeleccionado] =
-    useState<MinisterioMiembro | null>(null);
-  const [miembroParaAgregar, setMiembroParaAgregar] = useState<Miembro | null>(
+  const [personaSeleccionada, setPersonaSeleccionada] =
+    useState<MinisterioPersona | null>(null);
+  const [personaParaAgregar, setPersonaParaAgregar] = useState<Persona | null>(
     null
   );
 
-  const formAgregar = useForm<MiembroFormValues>({
-    resolver: zodResolver(miembroFormSchema),
+  const formAgregar = useForm<PersonaFormValues>({
+    resolver: zodResolver(personaFormSchema),
     defaultValues: {
-      miembroId: 0,
+      personaId: 0,
       rol: "",
       fechaInicio: new Date().toISOString().split("T")[0],
       esLider: false,
@@ -180,19 +183,19 @@ export default function GestionMiembrosMinisterioPage({
       const ministerioData = await ministerioResponse.json();
       setMinisterio(ministerioData);
 
-      // Obtener miembros del ministerio
-      const miembrosResponse = await fetch(`/api/ministerios/${id}/miembros`);
-      if (!miembrosResponse.ok)
-        throw new Error("Error al cargar miembros del ministerio");
-      const miembrosData = await miembrosResponse.json();
-      setMiembrosMinisterio(miembrosData);
+      // Obtener personas del ministerio
+      const personasResponse = await fetch(`/api/ministerios/${id}/miembros`);
+      if (!personasResponse.ok)
+        throw new Error("Error al cargar personas del ministerio");
+      const personasData = await personasResponse.json();
+      setPersonasMinisterio(personasData);
 
-      // Obtener todos los miembros para el selector
-      const todosResponse = await fetch("/api/miembros");
-      if (!todosResponse.ok)
-        throw new Error("Error al cargar la lista de miembros");
-      const todosData = await todosResponse.json();
-      setTodosLosMiembros(todosData);
+      // Obtener todas las personas con rol de miembro para el selector
+      const todasResponse = await fetch("/api/miembros");
+      if (!todasResponse.ok)
+        throw new Error("Error al cargar la lista de personas");
+      const todasData = await todasResponse.json();
+      setTodasLasPersonas(todasData);
     } catch (error) {
       console.error("Error:", error);
       setError("Error al cargar los datos");
@@ -220,7 +223,7 @@ export default function GestionMiembrosMinisterioPage({
     }
   };
 
-  const onSubmitAgregar = async (data: MiembroFormValues) => {
+  const onSubmitAgregar = async (data: PersonaFormValues) => {
     try {
       setIsSubmitting(true);
 
@@ -230,7 +233,7 @@ export default function GestionMiembrosMinisterioPage({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          miembroId: data.miembroId,
+          personaId: data.personaId,
           rol: data.rol || null,
           fechaInicio: data.fechaInicio || null,
           estado: "Activo",
@@ -241,13 +244,13 @@ export default function GestionMiembrosMinisterioPage({
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Error al agregar el miembro");
+        throw new Error(result.error || "Error al agregar la persona");
       }
 
       // Actualizar la lista
-      setMiembrosMinisterio((prev) => [...prev, result]);
+      setPersonasMinisterio((prev) => [...prev, result]);
       setDialogAgregar(false);
-      setMiembroParaAgregar(null);
+      setPersonaParaAgregar(null);
       formAgregar.reset();
     } catch (error) {
       console.error("Error:", error);
@@ -262,23 +265,23 @@ export default function GestionMiembrosMinisterioPage({
     }
   };
 
-  // Actualizar el form cuando se selecciona un miembro
+  // Actualizar el form cuando se selecciona una persona
   useEffect(() => {
-    if (miembroParaAgregar) {
-      formAgregar.setValue("miembroId", miembroParaAgregar.id);
+    if (personaParaAgregar) {
+      formAgregar.setValue("personaId", personaParaAgregar.id);
     } else {
-      formAgregar.setValue("miembroId", 0);
+      formAgregar.setValue("personaId", 0);
     }
-  }, [miembroParaAgregar, formAgregar]);
+  }, [personaParaAgregar, formAgregar]);
 
   const onSubmitEditar = async (data: EditarRolValues) => {
-    if (!miembroSeleccionado) return;
+    if (!personaSeleccionada) return;
 
     try {
       setIsSubmitting(true);
 
       const response = await fetch(
-        `/api/ministerios/${id}/miembros/${miembroSeleccionado.miembro.id}`,
+        `/api/ministerios/${id}/miembros/${personaSeleccionada.persona.id}`,
         {
           method: "PUT",
           headers: {
@@ -291,15 +294,15 @@ export default function GestionMiembrosMinisterioPage({
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Error al actualizar el miembro");
+        throw new Error(result.error || "Error al actualizar la persona");
       }
 
       // Actualizar la lista
-      setMiembrosMinisterio((prev) =>
-        prev.map((m) => (m.id === result.id ? result : m))
+      setPersonasMinisterio((prev) =>
+        prev.map((p) => (p.id === result.id ? result : p))
       );
       setDialogEditar(false);
-      setMiembroSeleccionado(null);
+      setPersonaSeleccionada(null);
       formEditar.reset();
     } catch (error) {
       console.error("Error:", error);
@@ -314,10 +317,10 @@ export default function GestionMiembrosMinisterioPage({
     }
   };
 
-  const removerMiembro = async (miembro: MinisterioMiembro) => {
+  const removerPersona = async (persona: MinisterioPersona) => {
     if (
       !confirm(
-        `¿Estás seguro de remover a ${miembro.miembro.nombres} ${miembro.miembro.apellidos} del ministerio?`
+        `¿Estás seguro de remover a ${persona.persona.nombres} ${persona.persona.apellidos} del ministerio?`
       )
     ) {
       return;
@@ -325,63 +328,63 @@ export default function GestionMiembrosMinisterioPage({
 
     try {
       const response = await fetch(
-        `/api/ministerios/${id}/miembros/${miembro.miembro.id}`,
+        `/api/ministerios/${id}/miembros/${persona.persona.id}`,
         { method: "DELETE" }
       );
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Error al remover el miembro");
+        throw new Error(error.error || "Error al remover la persona");
       }
 
       // Actualizar la lista (marcar como inactivo)
-      setMiembrosMinisterio((prev) =>
-        prev.map((m) =>
-          m.id === miembro.id
-            ? { ...m, estado: "Inactivo", fechaFin: new Date().toISOString() }
-            : m
+      setPersonasMinisterio((prev) =>
+        prev.map((p) =>
+          p.id === persona.id
+            ? { ...p, estado: "Inactivo", fechaFin: new Date().toISOString() }
+            : p
         )
       );
     } catch (error) {
       console.error("Error:", error);
       alert(
-        error instanceof Error ? error.message : "Error al remover el miembro"
+        error instanceof Error ? error.message : "Error al remover la persona"
       );
     }
   };
 
-  const editarMiembro = (miembro: MinisterioMiembro) => {
-    setMiembroSeleccionado(miembro);
+  const editarPersona = (persona: MinisterioPersona) => {
+    setPersonaSeleccionada(persona);
     formEditar.reset({
-      rol: miembro.rol || "",
-      estado: miembro.estado,
-      esLider: miembro.esLider,
+      rol: persona.rol || "",
+      estado: persona.estado,
+      esLider: persona.esLider,
     });
     setDialogEditar(true);
   };
 
-  // Filtrar miembros disponibles (que no estén ya en el ministerio activamente)
-  const miembrosDisponibles = todosLosMiembros.filter(
-    (miembro) =>
-      !miembrosMinisterio.some(
-        (mm) => mm.miembro.id === miembro.id && mm.estado === "Activo"
+  // Filtrar personas disponibles (que no estén ya en el ministerio activamente)
+  const personasDisponibles = todasLasPersonas.filter(
+    (persona) =>
+      !personasMinisterio.some(
+        (pm) => pm.persona.id === persona.id && pm.estado === "Activo"
       )
   );
 
-  // Filtrar miembros por búsqueda
-  const miembrosFiltrados = miembrosMinisterio.filter(
-    (miembro) =>
-      miembro.miembro.nombres.toLowerCase().includes(busqueda.toLowerCase()) ||
-      miembro.miembro.apellidos
+  // Filtrar personas por búsqueda
+  const personasFiltradas = personasMinisterio.filter(
+    (persona) =>
+      persona.persona.nombres.toLowerCase().includes(busqueda.toLowerCase()) ||
+      persona.persona.apellidos
         .toLowerCase()
         .includes(busqueda.toLowerCase()) ||
-      (miembro.rol &&
-        miembro.rol.toLowerCase().includes(busqueda.toLowerCase()))
+      (persona.rol &&
+        persona.rol.toLowerCase().includes(busqueda.toLowerCase()))
   );
 
   // Obtener el líder actual
-  const liderActual = miembrosMinisterio.find(
-    (m) => m.esLider && m.estado === "Activo"
+  const liderActual = personasMinisterio.find(
+    (p) => p.esLider && p.estado === "Activo"
   );
 
   if (loading) {
@@ -391,7 +394,7 @@ export default function GestionMiembrosMinisterioPage({
         <SidebarInset>
           <div className="flex items-center justify-center h-screen">
             <Loader2 className="h-8 w-8 animate-spin" />
-            <span className="ml-2">Cargando gestión de miembros...</span>
+            <span className="ml-2">Cargando gestión de personas...</span>
           </div>
         </SidebarInset>
       </SidebarProvider>
@@ -458,7 +461,7 @@ export default function GestionMiembrosMinisterioPage({
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
-                  <BreadcrumbPage>Gestión de Miembros</BreadcrumbPage>
+                  <BreadcrumbPage>Gestión de Personas</BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
@@ -478,14 +481,14 @@ export default function GestionMiembrosMinisterioPage({
               <DialogTrigger asChild>
                 <Button>
                   <UserPlus className="mr-2 h-4 w-4" />
-                  Agregar Miembro
+                  Agregar Persona
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Agregar Miembro al Ministerio</DialogTitle>
+                  <DialogTitle>Agregar Persona al Ministerio</DialogTitle>
                   <DialogDescription>
-                    Selecciona un miembro para agregar al ministerio{" "}
+                    Selecciona una persona para agregar al ministerio{" "}
                     {ministerio?.nombre}
                   </DialogDescription>
                 </DialogHeader>
@@ -502,19 +505,19 @@ export default function GestionMiembrosMinisterioPage({
 
                     <FormField
                       control={formAgregar.control}
-                      name="miembroId"
+                      name="personaId"
                       render={() => (
                         <FormItem>
                           <FormLabel>
-                            Miembro
+                            Persona
                             <span className="text-red-500 ml-1">*</span>
                           </FormLabel>
                           <FormControl>
                             <MiembroSelector
-                              miembros={miembrosDisponibles}
-                              onSeleccionar={setMiembroParaAgregar}
-                              miembroSeleccionado={miembroParaAgregar}
-                              placeholder="Buscar y seleccionar miembro..."
+                              miembros={personasDisponibles}
+                              onSeleccionar={setPersonaParaAgregar}
+                              miembroSeleccionado={personaParaAgregar}
+                              placeholder="Buscar y seleccionar persona..."
                               disabled={isSubmitting}
                             />
                           </FormControl>
@@ -586,7 +589,7 @@ export default function GestionMiembrosMinisterioPage({
                             </FormLabel>
                             <FormDescription>
                               {liderActual
-                                ? `Actualmente ${liderActual.miembro.nombres} ${liderActual.miembro.apellidos} es el líder`
+                                ? `Actualmente ${liderActual.persona.nombres} ${liderActual.persona.apellidos} es el líder`
                                 : "Este ministerio no tiene líder asignado"}
                             </FormDescription>
                           </div>
@@ -600,7 +603,7 @@ export default function GestionMiembrosMinisterioPage({
                         variant="outline"
                         onClick={() => {
                           setDialogAgregar(false);
-                          setMiembroParaAgregar(null);
+                          setPersonaParaAgregar(null);
                         }}
                         disabled={isSubmitting}
                       >
@@ -608,7 +611,7 @@ export default function GestionMiembrosMinisterioPage({
                       </Button>
                       <Button
                         type="submit"
-                        disabled={isSubmitting || !miembroParaAgregar}
+                        disabled={isSubmitting || !personaParaAgregar}
                       >
                         {isSubmitting ? "Agregando..." : "Agregar"}
                       </Button>
@@ -625,15 +628,15 @@ export default function GestionMiembrosMinisterioPage({
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Users className="h-5 w-5" />
-                    Miembros de {ministerio?.nombre}
+                    Personas de {ministerio?.nombre}
                   </CardTitle>
                   <CardDescription>
-                    Gestiona los miembros y sus roles en el ministerio
+                    Gestiona las personas y sus roles en el ministerio
                   </CardDescription>
                 </div>
                 <Badge variant="secondary">
                   {
-                    miembrosMinisterio.filter((m) => m.estado === "Activo")
+                    personasMinisterio.filter((p) => p.estado === "Activo")
                       .length
                   }{" "}
                   activos
@@ -646,7 +649,7 @@ export default function GestionMiembrosMinisterioPage({
                 <div className="relative flex-1">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar miembros por nombre o rol..."
+                    placeholder="Buscar personas por nombre o rol..."
                     value={busqueda}
                     onChange={(e) => setBusqueda(e.target.value)}
                     className="pl-8"
@@ -654,65 +657,65 @@ export default function GestionMiembrosMinisterioPage({
                 </div>
               </div>
 
-              {/* Lista de miembros */}
-              {miembrosFiltrados.length === 0 ? (
+              {/* Lista de personas */}
+              {personasFiltradas.length === 0 ? (
                 <div className="text-center py-12">
                   <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground mb-4">
                     {busqueda
-                      ? "No se encontraron miembros"
-                      : "No hay miembros en este ministerio"}
+                      ? "No se encontraron personas"
+                      : "No hay personas en este ministerio"}
                   </p>
                   {!busqueda && (
                     <Button onClick={() => setDialogAgregar(true)}>
                       <Plus className="mr-2 h-4 w-4" />
-                      Agregar primer miembro
+                      Agregar primer persona
                     </Button>
                   )}
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {miembrosFiltrados.map((miembro) => (
+                  {personasFiltradas.map((persona) => (
                     <div
-                      key={miembro.id}
+                      key={persona.id}
                       className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border"
                     >
                       <div className="flex items-center gap-4">
                         <Avatar className="h-12 w-12">
                           <AvatarImage
-                            src={miembro.miembro.foto || "/placeholder.svg"}
+                            src={persona.persona.foto || "/placeholder.svg"}
                           />
                           <AvatarFallback>
-                            {`${miembro.miembro.nombres[0]}${miembro.miembro.apellidos[0]}`}
+                            {`${persona.persona.nombres[0]}${persona.persona.apellidos[0]}`}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <p className="font-medium">
-                            {miembro.miembro.nombres}{" "}
-                            {miembro.miembro.apellidos}
+                            {persona.persona.nombres}{" "}
+                            {persona.persona.apellidos}
                           </p>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span>{miembro.rol || "Miembro"}</span>
+                            <span>{persona.rol || "Persona"}</span>
                             <span>•</span>
-                            <span>Desde {formatDate(miembro.fechaInicio)}</span>
-                            {miembro.fechaFin && (
+                            <span>Desde {formatDate(persona.fechaInicio)}</span>
+                            {persona.fechaFin && (
                               <>
                                 <span>•</span>
                                 <span>
-                                  Hasta {formatDate(miembro.fechaFin)}
+                                  Hasta {formatDate(persona.fechaFin)}
                                 </span>
                               </>
                             )}
                           </div>
-                          {miembro.miembro.correo && (
+                          {persona.persona.correo && (
                             <div className="text-xs text-muted-foreground">
-                              {miembro.miembro.correo}
+                              {persona.persona.correo}
                             </div>
                           )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {getEstadoBadge(miembro.estado)}
+                        {getEstadoBadge(persona.estado)}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm">
@@ -722,20 +725,20 @@ export default function GestionMiembrosMinisterioPage({
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
                               onClick={() =>
-                                router.push(`/miembros/${miembro.miembro.id}`)
+                                router.push(`/personas/${persona.persona.id}`)
                               }
                             >
                               Ver perfil
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => editarMiembro(miembro)}
+                              onClick={() => editarPersona(persona)}
                             >
                               <Edit className="mr-2 h-4 w-4" />
                               Editar rol
                             </DropdownMenuItem>
-                            {miembro.estado === "Activo" && (
+                            {persona.estado === "Activo" && (
                               <DropdownMenuItem
-                                onClick={() => removerMiembro(miembro)}
+                                onClick={() => removerPersona(persona)}
                                 className="text-red-600"
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
@@ -757,11 +760,11 @@ export default function GestionMiembrosMinisterioPage({
         <Dialog open={dialogEditar} onOpenChange={setDialogEditar}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Editar Miembro del Ministerio</DialogTitle>
+              <DialogTitle>Editar Persona del Ministerio</DialogTitle>
               <DialogDescription>
                 Actualiza el rol y estado de{" "}
-                {miembroSeleccionado?.miembro.nombres}{" "}
-                {miembroSeleccionado?.miembro.apellidos}
+                {personaSeleccionada?.persona.nombres}{" "}
+                {personaSeleccionada?.persona.apellidos}
               </DialogDescription>
             </DialogHeader>
             <Form {...formEditar}>

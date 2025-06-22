@@ -123,7 +123,7 @@ export async function GET() {
         iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
       },
       include: {
-        miembros: {
+        personas: {
           select: {
             id: true,
             nombres: true,
@@ -131,13 +131,13 @@ export async function GET() {
             foto: true,
             fechaNacimiento: true,
             estado: true,
-            relacion: true,
+            relacionFamiliar: true,
           },
           orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
         },
         _count: {
           select: {
-            miembros: true,
+            personas: true,
           },
         },
       },
@@ -146,24 +146,25 @@ export async function GET() {
 
     // Calcular estadísticas adicionales para cada familia
     const familiasConEstadisticas = familias.map((familia) => {
-      const todosMiembros = familia.miembros;
+      const todasPersonas = familia.personas;
 
-      const miembrosActivos = todosMiembros.filter(
-        (m) => m.estado === "Activo"
+      const personasActivas = todasPersonas.filter(
+        (p) => p.estado === "ACTIVA"
       ).length;
 
       // Encontrar el jefe de familia (primer miembro con relacion "Cabeza de Familia" o similar)
       const jefeFamilia =
-        todosMiembros.find(
-          (m) =>
-            m.relacion === "Cabeza de Familia" ||
-            m.relacion === "Jefe de Familia" ||
-            m.relacion === "Padre" ||
-            m.relacion === "Madre"
-        ) || todosMiembros[0]; // Si no hay jefe explícito, tomar el primero
+        todasPersonas.find(
+          (p) =>
+            p.relacionFamiliar === "Cabeza de Familia" ||
+            p.relacionFamiliar === "Jefe de Familia" ||
+            p.relacionFamiliar === "Padre" ||
+            p.relacionFamiliar === "Madre"
+        ) || todasPersonas[0]; // Si no hay jefe explícito, tomar el primero
 
       return {
         ...familia,
+        miembros: todasPersonas, // Mantenemos el nombre "miembros" para el frontend
         jefeFamilia: jefeFamilia
           ? {
               id: jefeFamilia.id,
@@ -172,21 +173,21 @@ export async function GET() {
               foto: jefeFamilia.foto,
               fechaNacimiento: jefeFamilia.fechaNacimiento,
               estado: jefeFamilia.estado,
-              relacion: jefeFamilia.relacion,
+              relacion: jefeFamilia.relacionFamiliar,
             }
           : null,
-        totalMiembros: todosMiembros.length,
-        miembrosActivos,
+        totalMiembros: todasPersonas.length,
+        miembrosActivos: personasActivas,
         edadPromedio:
-          todosMiembros.length > 0
-            ? todosMiembros
-                .filter((m) => m.fechaNacimiento)
-                .reduce((acc, m) => {
+          todasPersonas.length > 0
+            ? todasPersonas
+                .filter((p) => p.fechaNacimiento)
+                .reduce((acc, p) => {
                   const edad =
                     new Date().getFullYear() -
-                    new Date(m.fechaNacimiento!).getFullYear();
+                    new Date(p.fechaNacimiento!).getFullYear();
                   return acc + edad;
-                }, 0) / todosMiembros.filter((m) => m.fechaNacimiento).length
+                }, 0) / todasPersonas.filter((p) => p.fechaNacimiento).length
             : 0,
       };
     });
@@ -248,7 +249,7 @@ export async function POST(request: NextRequest) {
 
     // Verificar que el jefe de familia existe si se proporciona y pertenece a la misma iglesia
     if (jefeFamiliaId && jefeFamiliaId.trim() !== "") {
-      const jefeFamilia = await prisma.miembro.findFirst({
+      const jefeFamilia = await prisma.persona.findFirst({
         where: {
           id: parseInt(jefeFamiliaId),
           iglesiaId: usuarioIglesia.iglesiaId, // Verificar que pertenece a la misma iglesia
@@ -259,7 +260,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             error:
-              "El miembro seleccionado como cabeza de familia no existe o no pertenece a tu iglesia",
+              "La persona seleccionada como cabeza de familia no existe o no pertenece a tu iglesia",
           },
           { status: 404 }
         );
@@ -275,31 +276,31 @@ export async function POST(request: NextRequest) {
         notas: parseString(notas),
       },
       include: {
-        miembros: {
+        personas: {
           select: {
             id: true,
             nombres: true,
             apellidos: true,
             foto: true,
             estado: true,
-            relacion: true,
+            relacionFamiliar: true,
           },
         },
         _count: {
           select: {
-            miembros: true,
+            personas: true,
           },
         },
       },
     });
 
-    // Si se asignó un jefe de familia, actualizar el miembro para que pertenezca a esta familia
+    // Si se asignó un jefe de familia, actualizar la persona para que pertenezca a esta familia
     if (jefeFamiliaId && jefeFamiliaId.trim() !== "") {
-      await prisma.miembro.update({
+      await prisma.persona.update({
         where: { id: parseInt(jefeFamiliaId) },
         data: {
           familiaId: nuevaFamilia.id,
-          relacion: "Cabeza de Familia",
+          relacionFamiliar: "Cabeza de Familia",
         },
       });
     }

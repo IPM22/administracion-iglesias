@@ -138,7 +138,7 @@ interface PersonaFamilia {
   estado: string;
   foto?: string;
   parentescoFamiliar?: string;
-  tipo: "miembro" | "visita";
+  tipo: "miembro" | "visita" | "nino";
   fechaIngreso?: string;
   fechaPrimeraVisita?: string;
 }
@@ -152,7 +152,7 @@ interface Persona {
   telefono?: string;
   celular?: string;
   estado: string;
-  tipo: "miembro" | "visita";
+  tipo: "miembro" | "visita" | "nino";
   fechaBautismo?: string;
 }
 
@@ -200,7 +200,13 @@ export default function FamiliaDetallePage({
 
       if (familiaResponse.ok) {
         const familiaData = await familiaResponse.json();
-        setFamilia(familiaData);
+        // Asegurar que miembros y visitas siempre sean arrays
+        const familiaConArraysInicializados = {
+          ...familiaData,
+          miembros: familiaData.miembros || [],
+          visitas: familiaData.visitas || [],
+        };
+        setFamilia(familiaConArraysInicializados);
       } else {
         throw new Error("Error al cargar familia");
       }
@@ -381,8 +387,14 @@ export default function FamiliaDetallePage({
   // Combinar miembros y visitas en una sola lista
   const todasLasPersonas = familia
     ? [
-        ...familia.miembros.map((m) => ({ ...m, tipo: "miembro" as const })),
-        ...familia.visitas.map((v) => ({ ...v, tipo: "visita" as const })),
+        ...(familia.miembros || []).map((m) => ({
+          ...m,
+          tipo: "miembro" as const,
+        })),
+        ...(familia.visitas || []).map((v) => ({
+          ...v,
+          tipo: "visita" as const,
+        })),
       ]
     : [];
 

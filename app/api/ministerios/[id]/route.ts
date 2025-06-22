@@ -33,9 +33,9 @@ export async function GET(
         iglesiaId, // ✅ Filtrar por iglesia del usuario
       },
       include: {
-        miembros: {
+        personas: {
           include: {
-            miembro: {
+            persona: {
               select: {
                 id: true,
                 nombres: true,
@@ -65,7 +65,7 @@ export async function GET(
         },
         _count: {
           select: {
-            miembros: {
+            personas: {
               where: {
                 estado: "Activo",
               },
@@ -163,12 +163,12 @@ export async function PUT(
         descripcion: parseString(descripcion),
       },
       include: {
-        miembros: {
+        personas: {
           where: {
             estado: "Activo",
           },
           include: {
-            miembro: {
+            persona: {
               select: {
                 id: true,
                 nombres: true,
@@ -180,7 +180,7 @@ export async function PUT(
         },
         _count: {
           select: {
-            miembros: {
+            personas: {
               where: {
                 estado: "Activo",
               },
@@ -220,7 +220,7 @@ export async function DELETE(
     const ministerio = await prisma.ministerio.findUnique({
       where: { id: ministerioId },
       include: {
-        miembros: true,
+        personas: true,
         actividades: true,
       },
     });
@@ -232,15 +232,15 @@ export async function DELETE(
       );
     }
 
-    // Verificar si tiene miembros activos
-    const miembrosActivos = ministerio.miembros.filter(
-      (m) => m.estado === "Activo"
+    // Verificar si tiene personas activas
+    const personasActivas = ministerio.personas.filter(
+      (p) => p.estado === "Activo"
     );
-    if (miembrosActivos.length > 0) {
+    if (personasActivas.length > 0) {
       return NextResponse.json(
         {
           error:
-            "No se puede eliminar el ministerio porque tiene miembros activos",
+            "No se puede eliminar el ministerio porque tiene personas activas",
         },
         { status: 400 }
       );
