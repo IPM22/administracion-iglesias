@@ -66,7 +66,11 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { tipoVinculo, descripcion, miembroVinculoId } = body;
+    const { tipoVinculo, descripcion, miembroVinculoId, personaVinculoId } =
+      body;
+
+    // Para mantener compatibilidad, usar miembroVinculoId si se proporciona, sino personaVinculoId
+    const vinculoPersonaId = miembroVinculoId || personaVinculoId;
 
     // Verificar que el vínculo existe y está relacionado con esta familia
     const vinculo = await prisma.vinculoFamiliar.findFirst({
@@ -86,29 +90,29 @@ export async function PUT(
       );
     }
 
-    // Validar que el miembro conector pertenezca a una de las familias vinculadas
-    if (miembroVinculoId) {
-      const miembroVinculoData = await prisma.miembro.findUnique({
-        where: { id: miembroVinculoId },
+    // Validar que la persona conectora pertenezca a una de las familias vinculadas
+    if (vinculoPersonaId) {
+      const personaVinculoData = await prisma.persona.findUnique({
+        where: { id: vinculoPersonaId },
         select: { id: true, familiaId: true, nombres: true, apellidos: true },
       });
 
-      if (!miembroVinculoData) {
+      if (!personaVinculoData) {
         return NextResponse.json(
-          { error: "El miembro conector no existe" },
+          { error: "La persona conectora no existe" },
           { status: 404 }
         );
       }
 
-      // Verificar que el miembro pertenezca a una de las familias que se están vinculando
+      // Verificar que la persona pertenezca a una de las familias que se están vinculando
       if (
-        miembroVinculoData.familiaId !== vinculo.familiaOrigenId &&
-        miembroVinculoData.familiaId !== vinculo.familiaRelacionadaId
+        personaVinculoData.familiaId !== vinculo.familiaOrigenId &&
+        personaVinculoData.familiaId !== vinculo.familiaRelacionadaId
       ) {
         return NextResponse.json(
           {
             error:
-              "El miembro conector debe pertenecer a una de las familias que se están vinculando",
+              "La persona conectora debe pertenecer a una de las familias que se están vinculando",
           },
           { status: 400 }
         );
@@ -122,10 +126,10 @@ export async function PUT(
         tipoVinculo: tipoVinculo || vinculo.tipoVinculo,
         descripcion:
           descripcion !== undefined ? descripcion : vinculo.descripcion,
-        miembroVinculoId:
-          miembroVinculoId !== undefined
-            ? miembroVinculoId
-            : vinculo.miembroVinculoId,
+        personaVinculoId:
+          vinculoPersonaId !== undefined
+            ? vinculoPersonaId
+            : vinculo.personaVinculoId,
       },
       include: {
         familiaOrigen: {
@@ -142,13 +146,6 @@ export async function PUT(
             apellido: true,
             nombre: true,
             estado: true,
-          },
-        },
-        miembroVinculo: {
-          select: {
-            id: true,
-            nombres: true,
-            apellidos: true,
           },
         },
       },

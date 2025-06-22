@@ -32,14 +32,6 @@ export async function GET(
             apellido: true,
             nombre: true,
             estado: true,
-            jefeFamilia: {
-              select: {
-                id: true,
-                nombres: true,
-                apellidos: true,
-                foto: true,
-              },
-            },
           },
         },
         familiaRelacionada: {
@@ -48,22 +40,6 @@ export async function GET(
             apellido: true,
             nombre: true,
             estado: true,
-            jefeFamilia: {
-              select: {
-                id: true,
-                nombres: true,
-                apellidos: true,
-                foto: true,
-              },
-            },
-          },
-        },
-        miembroVinculo: {
-          select: {
-            id: true,
-            nombres: true,
-            apellidos: true,
-            foto: true,
           },
         },
       },
@@ -96,8 +72,16 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { familiaRelacionadaId, tipoVinculo, descripcion, miembroVinculoId } =
-      body;
+    const {
+      familiaRelacionadaId,
+      tipoVinculo,
+      descripcion,
+      miembroVinculoId,
+      personaVinculoId,
+    } = body;
+
+    // Para mantener compatibilidad, usar miembroVinculoId si se proporciona, sino personaVinculoId
+    const vinculoPersonaId = miembroVinculoId || personaVinculoId;
 
     // Validaciones
     if (!familiaRelacionadaId || !tipoVinculo) {
@@ -150,29 +134,29 @@ export async function POST(
       );
     }
 
-    // Validar que el miembro conector pertenezca a una de las familias vinculadas
-    if (miembroVinculoId) {
-      const miembroVinculo = await prisma.miembro.findUnique({
-        where: { id: miembroVinculoId },
+    // Validar que la persona conectora pertenezca a una de las familias vinculadas
+    if (vinculoPersonaId) {
+      const personaVinculo = await prisma.persona.findUnique({
+        where: { id: vinculoPersonaId },
         select: { id: true, familiaId: true, nombres: true, apellidos: true },
       });
 
-      if (!miembroVinculo) {
+      if (!personaVinculo) {
         return NextResponse.json(
-          { error: "El miembro conector no existe" },
+          { error: "La persona conectora no existe" },
           { status: 404 }
         );
       }
 
-      // Verificar que el miembro pertenezca a una de las familias que se están vinculando
+      // Verificar que la persona pertenezca a una de las familias que se están vinculando
       if (
-        miembroVinculo.familiaId !== familiaOrigenId &&
-        miembroVinculo.familiaId !== familiaRelacionadaId
+        personaVinculo.familiaId !== familiaOrigenId &&
+        personaVinculo.familiaId !== familiaRelacionadaId
       ) {
         return NextResponse.json(
           {
             error:
-              "El miembro conector debe pertenecer a una de las familias que se están vinculando",
+              "La persona conectora debe pertenecer a una de las familias que se están vinculando",
           },
           { status: 400 }
         );
@@ -186,7 +170,7 @@ export async function POST(
         familiaRelacionadaId,
         tipoVinculo,
         descripcion,
-        miembroVinculoId,
+        personaVinculoId: vinculoPersonaId,
       },
       include: {
         familiaOrigen: {
@@ -203,13 +187,6 @@ export async function POST(
             apellido: true,
             nombre: true,
             estado: true,
-          },
-        },
-        miembroVinculo: {
-          select: {
-            id: true,
-            nombres: true,
-            apellidos: true,
           },
         },
       },
