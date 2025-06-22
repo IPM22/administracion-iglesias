@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import React, { use, useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { AppSidebar } from "../../../components/app-sidebar";
 import {
@@ -150,7 +150,7 @@ interface MiembroDetalle {
   visitasInvitadas: VisitaInvitada[];
 }
 
-export default function MiembroDetallePage({
+function MiembroDetalleContent({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -352,7 +352,11 @@ export default function MiembroDetallePage({
                 <Users className="mr-2 h-4 w-4" />
                 Ministerios
               </Button>
-              <Button onClick={() => router.push(`/miembros/${id}/editar`)}>
+              <Button
+                onClick={() =>
+                  router.push(`/miembros/${iglesiaActiva?.id}/editar`)
+                }
+              >
                 <Edit className="mr-2 h-4 w-4" />
                 Editar
               </Button>
@@ -512,7 +516,11 @@ export default function MiembroDetallePage({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => router.push(`/miembros/${id}/ministerios`)}
+                      onClick={() =>
+                        router.push(
+                          `/miembros/${iglesiaActiva?.id}/ministerios`
+                        )
+                      }
                     >
                       Ver Todos
                     </Button>
@@ -528,7 +536,9 @@ export default function MiembroDetallePage({
                       <Button
                         variant="outline"
                         onClick={() =>
-                          router.push(`/miembros/${id}/ministerios/nuevo`)
+                          router.push(
+                            `/miembros/${iglesiaActiva?.id}/ministerios/nuevo`
+                          )
                         }
                       >
                         <Users className="mr-2 h-4 w-4" />
@@ -626,7 +636,9 @@ export default function MiembroDetallePage({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => router.push(`/miembros/${id}/familia`)}
+                      onClick={() =>
+                        router.push(`/miembros/${iglesiaActiva?.id}/familia`)
+                      }
                     >
                       Gestionar
                     </Button>
@@ -642,7 +654,9 @@ export default function MiembroDetallePage({
                       <Button
                         variant="outline"
                         onClick={() =>
-                          router.push(`/miembros/${id}/familia/agregar`)
+                          router.push(
+                            `/miembros/${iglesiaActiva?.id}/familia/agregar`
+                          )
                         }
                       >
                         <Heart className="mr-2 h-4 w-4" />
@@ -740,7 +754,9 @@ export default function MiembroDetallePage({
                             variant="ghost"
                             size="sm"
                             onClick={() =>
-                              router.push(`/miembros/${id}/familia`)
+                              router.push(
+                                `/miembros/${iglesiaActiva?.id}/familia`
+                              )
                             }
                             className="text-muted-foreground hover:text-primary"
                           >
@@ -768,7 +784,9 @@ export default function MiembroDetallePage({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => router.push(`/visitas?invitadoPor=${id}`)}
+                      onClick={() =>
+                        router.push(`/visitas?invitadoPor=${iglesiaActiva?.id}`)
+                      }
                     >
                       Ver Todas
                     </Button>
@@ -1023,7 +1041,9 @@ export default function MiembroDetallePage({
                     variant="outline"
                     className="w-full justify-start"
                     onClick={() =>
-                      router.push(`/miembros/${id}/ministerios/nuevo`)
+                      router.push(
+                        `/miembros/${iglesiaActiva?.id}/ministerios/nuevo`
+                      )
                     }
                   >
                     <Users className="mr-2 h-4 w-4" />
@@ -1033,7 +1053,9 @@ export default function MiembroDetallePage({
                     variant="outline"
                     className="w-full justify-start"
                     onClick={() =>
-                      router.push(`/miembros/${id}/familia/agregar`)
+                      router.push(
+                        `/miembros/${iglesiaActiva?.id}/familia/agregar`
+                      )
                     }
                   >
                     <Heart className="mr-2 h-4 w-4" />
@@ -1043,7 +1065,9 @@ export default function MiembroDetallePage({
                     variant="outline"
                     className="w-full justify-start"
                     onClick={() =>
-                      router.push(`/visitas/nueva?invitadoPor=${id}`)
+                      router.push(
+                        `/visitas/nueva?invitadoPor=${iglesiaActiva?.id}`
+                      )
                     }
                   >
                     <UserPlus className="mr-2 h-4 w-4" />
@@ -1081,7 +1105,9 @@ export default function MiembroDetallePage({
                     className="mt-4"
                     onClick={() => {
                       setMinisteriosDialogOpen(false);
-                      router.push(`/miembros/${id}/ministerios/nuevo`);
+                      router.push(
+                        `/miembros/${iglesiaActiva?.id}/ministerios/nuevo`
+                      );
                     }}
                   >
                     <Users className="mr-2 h-4 w-4" />
@@ -1162,7 +1188,7 @@ export default function MiembroDetallePage({
               <Button
                 onClick={() => {
                   setMinisteriosDialogOpen(false);
-                  router.push(`/miembros/${id}/ministerios`);
+                  router.push(`/miembros/${iglesiaActiva?.id}/ministerios`);
                 }}
               >
                 Ver Todos los Ministerios
@@ -1172,5 +1198,26 @@ export default function MiembroDetallePage({
         </Dialog>
       </SidebarInset>
     </SidebarProvider>
+  );
+}
+
+export default function MiembroDetallePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="text-muted-foreground">Cargando miembro...</p>
+          </div>
+        </div>
+      }
+    >
+      <MiembroDetalleContent params={params} />
+    </Suspense>
   );
 }

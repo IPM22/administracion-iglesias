@@ -54,7 +54,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { CloudinaryUploader } from "../../../components/CloudinaryUploader";
 import { PhoneInput } from "../../../components/PhoneInput";
 import { ModeToggle } from "../../../components/mode-toggle";
@@ -201,7 +201,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export default function ComunidadNuevaPage() {
+function ComunidadNuevaContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [saving, setSaving] = useState(false);
@@ -1876,5 +1876,22 @@ export default function ComunidadNuevaPage() {
         </div>
       </SidebarInset>
     </SidebarProvider>
+  );
+}
+
+export default function ComunidadNuevaPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="text-muted-foreground">Cargando página...</p>
+          </div>
+        </div>
+      }
+    >
+      <ComunidadNuevaContent />
+    </Suspense>
   );
 }

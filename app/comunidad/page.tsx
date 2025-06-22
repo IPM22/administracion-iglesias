@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  Suspense,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
@@ -247,7 +253,7 @@ const FiltrosSection = React.memo(
 
 FiltrosSection.displayName = "FiltrosSection";
 
-export default function ComunidadPage() {
+function ComunidadContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [todasLasPersonas, setTodasLasPersonas] = useState<Persona[]>([]);
@@ -1115,5 +1121,22 @@ export default function ComunidadPage() {
         </div>
       </SidebarInset>
     </SidebarProvider>
+  );
+}
+
+export default function ComunidadPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="text-muted-foreground">Cargando comunidad...</p>
+          </div>
+        </div>
+      }
+    >
+      <ComunidadContent />
+    </Suspense>
   );
 }
