@@ -38,7 +38,7 @@ interface Iglesia {
   createdAt: string;
   _count: {
     usuarios: number;
-    miembros: number;
+    personas: number;
   };
 }
 
@@ -293,7 +293,7 @@ export default function BuscarIglesiaPage() {
                         {iglesia._count.usuarios} usuarios
                       </Badge>
                       <Badge variant="outline" className="text-xs">
-                        {iglesia._count.miembros} miembros
+                        {iglesia._count.personas} personas
                       </Badge>
                     </div>
                   </div>

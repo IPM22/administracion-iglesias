@@ -132,7 +132,9 @@ export async function GET(request: NextRequest) {
               usuarios: {
                 where: { estado: "ACTIVO" },
               },
-              miembros: true,
+              personas: {
+                where: { rol: "MIEMBRO" },
+              },
             },
           },
         },

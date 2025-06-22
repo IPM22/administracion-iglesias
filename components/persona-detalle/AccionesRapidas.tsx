@@ -43,7 +43,7 @@ export function AccionesRapidas({
     {
       label: "Editar Información",
       icon: Edit,
-      action: () => router.push(`/miembros/${persona.id}/editar`),
+      action: () => router.push(`/comunidad/${persona.id}/editar`),
     },
   ];
 
@@ -51,14 +51,14 @@ export function AccionesRapidas({
     {
       label: "Registrar Nueva Visita",
       icon: Calendar,
-      action: () => router.push(`/visitas/${persona.id}/historial/nueva`),
+      action: () => router.push(`/personas/${persona.id}/historial/nueva`),
     },
     {
       label: miembroConvertido ? "Ya es miembro" : "Convertir a Miembro",
       icon: UserPlus,
       action: () => {
         if (!miembroConvertido) {
-          router.push(`/visitas/${persona.id}/convertir`);
+          router.push(`/comunidad/${persona.id}/convertir`);
         }
       },
       disabled: miembroConvertido,
@@ -66,7 +66,7 @@ export function AccionesRapidas({
     {
       label: "Editar Información",
       icon: Edit,
-      action: () => router.push(`/visitas/${persona.id}/editar`),
+      action: () => router.push(`/comunidad/${persona.id}/editar`),
     },
   ];
 

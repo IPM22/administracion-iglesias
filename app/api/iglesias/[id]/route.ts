@@ -26,7 +26,9 @@ export async function GET(
             usuarios: {
               where: { estado: "ACTIVO" },
             },
-            miembros: true,
+            personas: {
+              where: { rol: "MIEMBRO" },
+            },
           },
         },
       },
