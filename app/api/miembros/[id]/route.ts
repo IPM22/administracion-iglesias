@@ -1,19 +1,20 @@
-import { prisma } from "../../../../lib/db";
 import { NextRequest, NextResponse } from "next/server";
-import { parseDateForAPI } from "@/lib/date-utils";
+import { PrismaClient } from "@prisma/client";
 import { getUserContext, requireAuth } from "../../../../lib/auth-utils";
+
+const prisma = new PrismaClient();
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+  const miembroId = parseInt(id);
+
   try {
     // Obtener contexto del usuario autenticado
     const userContext = await getUserContext(request);
     const { iglesiaId } = requireAuth(userContext);
-
-    const { id } = await params;
-    const miembroId = parseInt(id);
 
     if (isNaN(miembroId)) {
       return NextResponse.json(
@@ -22,28 +23,15 @@ export async function GET(
       );
     }
 
-    const miembro = await prisma.miembro.findUnique({
+    const persona = await prisma.persona.findUnique({
       where: {
         id: miembroId,
-        iglesiaId, // ✅ Verificar que el miembro pertenece a la iglesia del usuario
+        iglesiaId, // ✅ Verificar que la persona pertenece a la iglesia del usuario
       },
       include: {
         familia: true,
-        visitaOriginal: true,
-      },
-    });
-
-    if (!miembro) {
-      return NextResponse.json(
-        { error: "Miembro no encontrado" },
-        { status: 404 }
-      );
-    }
-
-    // Obtener ministerios activos del miembro usando la relación correcta
-    const miembroConMinisterios = await prisma.miembro.findUnique({
-      where: { id: miembroId },
-      include: {
+        personaInvita: true,
+        personaConvertida: true,
         ministerios: {
           where: {
             estado: "Activo",
@@ -64,96 +52,79 @@ export async function GET(
       },
     });
 
-    const ministerios = miembroConMinisterios?.ministerios || [];
-
-    // Obtener familiares del miembro
-    const familiares = await prisma.familiar.findMany({
-      where: {
-        miembroId: miembroId,
-      },
-      select: {
-        id: true,
-        nombres: true,
-        apellidos: true,
-        relacion: true,
-        esMiembro: true,
-        miembroRelacionadoId: true,
-      },
-      orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
-    });
-
-    console.log("🔍 DEBUG API - Familiares raw de Prisma:", familiares);
-    console.log("🔍 DEBUG API - Número de familiares:", familiares.length);
-    if (familiares.length > 0) {
-      console.log("🔍 DEBUG API - Primer familiar raw:", familiares[0]);
-      console.log(
-        "🔍 DEBUG API - Keys del primer familiar:",
-        Object.keys(familiares[0])
+    if (!persona) {
+      return NextResponse.json(
+        { error: "Persona no encontrada" },
+        { status: 404 }
       );
     }
 
-    // Obtener visitas invitadas por este miembro
-    const visitasInvitadas = await prisma.visita.findMany({
+    // Obtener familiares de la persona
+    const familiares = await prisma.familiar.findMany({
       where: {
-        miembroInvitaId: miembroId,
-        iglesiaId, // ✅ También filtrar visitas por iglesia
+        personaId: persona.id,
+      },
+      orderBy: [{ relacion: "asc" }],
+    });
+
+    // Obtener personas invitadas por esta persona
+    const personasInvitadas = await prisma.persona.findMany({
+      where: {
+        personaInvitaId: persona.id,
+        iglesiaId, // ✅ También filtrar personas por iglesia
       },
       orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
     });
 
-    // Formatear los datos para el frontend
-    const miembroCompleto = {
-      ...miembro,
-      ministerios: ministerios.map((m) => ({
+    // Formatear los datos para el frontend (compatible con la interfaz existente)
+    const personaCompleta = {
+      ...persona,
+      // Mapear los ministerios
+      ministerios: persona.ministerios.map((m) => ({
         id: m.id,
         ministerio: m.ministerio,
-        rol: m.rol || m.cargo, // ✅ Usar 'rol' primero, fallback a 'cargo'
+        rol: m.rol || m.cargo,
         fechaInicio: m.fechaInicio?.toISOString(),
         fechaFin: m.fechaFin?.toISOString(),
-        esLider: m.esLider, // ✅ Usar el campo real
+        esLider: m.esLider,
       })),
+
+      // Mapear los familiares usando los campos correctos del modelo
       familiares: familiares.map((f) => ({
-        id: f.id.toString(), // ✅ Asegurar que ID es string
+        id: f.id.toString(),
         familiar: {
-          id: f.miembroRelacionadoId || 0,
-          nombres: f.nombres || "", // ✅ Asegurar que no sea null
-          apellidos: f.apellidos || "", // ✅ Asegurar que no sea null
-          foto: null, // ✅ Familiar no tiene foto, siempre null
+          id: f.personaRelacionadaId || 0,
+          nombres: f.nombres || "",
+          apellidos: f.apellidos || "",
+          foto: null, // Los familiares no tienen foto en este modelo
           estado: f.esMiembro ? "Activo" : "No Miembro",
         },
-        tipoRelacion: f.relacion || "", // ✅ Asegurar que no sea null
-        fuente: "directa",
+        tipoRelacion: f.relacion || "",
+        fuente: "directa" as const,
       })),
-      visitasInvitadas: visitasInvitadas.map((v) => ({
-        id: v.id,
-        nombres: v.nombres || "", // ✅ Asegurar que no sea null
-        apellidos: v.apellidos || "", // ✅ Asegurar que no sea null
-        foto: v.foto || null,
-        totalVisitas: 1,
-        fechaPrimeraVisita: v.fechaPrimeraVisita?.toISOString(),
-        estado: v.estado || "Activa",
+
+      // Mapear las personas invitadas
+      visitasInvitadas: personasInvitadas.map((p) => ({
+        id: p.id,
+        nombres: p.nombres || "",
+        apellidos: p.apellidos || "",
+        foto: p.foto || null,
+        totalVisitas: 1, // Simplificado por ahora
+        fechaPrimeraVisita: p.fechaPrimeraVisita?.toISOString(),
+        estado: p.estado || "ACTIVA",
       })),
-      notasAdicionales: miembro.notas,
+
+      // Compatibilidad con campos esperados
+      notasAdicionales: persona.notas,
     };
 
     console.log(
-      "🔍 DEBUG API - Familiares mapeados:",
-      miembroCompleto.familiares
+      `🔍 DEBUG API - Persona ${persona.id} cargada con ${familiares.length} familiares y ${personasInvitadas.length} personas invitadas`
     );
-    if (miembroCompleto.familiares.length > 0) {
-      console.log(
-        "🔍 DEBUG API - Primer familiar mapeado:",
-        miembroCompleto.familiares[0]
-      );
-      console.log(
-        "🔍 DEBUG API - Estructura familiar.familiar:",
-        miembroCompleto.familiares[0].familiar
-      );
-    }
 
-    return NextResponse.json(miembroCompleto);
+    return NextResponse.json(personaCompleta);
   } catch (error) {
-    console.error("Error al obtener miembro:", error);
+    console.error("Error al obtener persona:", error);
     console.error(
       "Stack trace:",
       error instanceof Error ? error.stack : "No disponible"
@@ -167,7 +138,7 @@ export async function GET(
     }
 
     return NextResponse.json(
-      { error: "Error al obtener el miembro" },
+      { error: "Error al obtener la persona" },
       { status: 500 }
     );
   }
@@ -193,7 +164,7 @@ export async function PUT(
     }
 
     // Verificar que el miembro existe y pertenece a la iglesia del usuario
-    const miembroExistente = await prisma.miembro.findUnique({
+    const miembroExistente = await prisma.persona.findUnique({
       where: {
         id: miembroId,
         iglesiaId,
@@ -219,59 +190,62 @@ export async function PUT(
       sexo,
       estadoCivil,
       ocupacion,
-      familiaId,
+      foto,
       fechaIngreso,
       fechaBautismo,
-      fechaConfirmacion,
-      estado,
-      foto,
       notasAdicionales,
-      parentescoFamiliar,
     } = body;
 
-    // Función para manejar strings vacías
+    // Función para parsear strings a Date, con manejo de errores
     const parseString = (value: string) => {
-      if (!value || value.trim() === "") {
-        return null;
-      }
-      return value.trim();
+      return value && value.trim() !== "" ? value.trim() : undefined;
     };
 
-    // Función especial para el correo
+    // Función para parsear emails con validación básica
     const parseEmail = (email: string) => {
-      if (!email || email.trim() === "") {
-        return null;
-      }
-      return email.trim();
+      const cleanEmail = parseString(email);
+      if (!cleanEmail) return undefined;
+
+      // Validación básica de email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(cleanEmail) ? cleanEmail : undefined;
     };
 
-    const miembroActualizado = await prisma.miembro.update({
+    // Función para parsear fechas desde string
+    const parseDate = (dateString: string) => {
+      if (!dateString) return undefined;
+      const date = new Date(dateString);
+      return isNaN(date.getTime()) ? undefined : date;
+    };
+
+    // Preparar datos para actualización
+    const dataToUpdate = {
+      nombres: parseString(nombres) || miembroExistente.nombres,
+      apellidos: parseString(apellidos) || miembroExistente.apellidos,
+      correo: parseEmail(correo) || miembroExistente.correo,
+      telefono: parseString(telefono) || miembroExistente.telefono,
+      celular: parseString(celular) || miembroExistente.celular,
+      direccion: parseString(direccion) || miembroExistente.direccion,
+      sexo: parseString(sexo) || miembroExistente.sexo,
+      estadoCivil: parseString(estadoCivil) || miembroExistente.estadoCivil,
+      ocupacion: parseString(ocupacion) || miembroExistente.ocupacion,
+      foto: parseString(foto) || miembroExistente.foto,
+      notas: parseString(notasAdicionales) || miembroExistente.notas,
+      fechaNacimiento:
+        parseDate(fechaNacimiento) || miembroExistente.fechaNacimiento,
+      fechaIngreso: parseDate(fechaIngreso) || miembroExistente.fechaIngreso,
+      fechaBautismo: parseDate(fechaBautismo) || miembroExistente.fechaBautismo,
+      updatedAt: new Date(),
+    };
+
+    const personaActualizada = await prisma.persona.update({
       where: { id: miembroId },
-      data: {
-        nombres: parseString(nombres) || miembroExistente.nombres,
-        apellidos: parseString(apellidos) || miembroExistente.apellidos,
-        correo: parseEmail(correo),
-        telefono: parseString(telefono),
-        celular: parseString(celular),
-        direccion: parseString(direccion),
-        fechaNacimiento: parseDateForAPI(fechaNacimiento),
-        sexo: parseString(sexo),
-        estadoCivil: parseString(estadoCivil),
-        ocupacion: parseString(ocupacion),
-        familiaId: familiaId ? parseInt(familiaId) : null,
-        fechaIngreso: parseDateForAPI(fechaIngreso),
-        fechaBautismo: parseDateForAPI(fechaBautismo),
-        fechaConfirmacion: parseDateForAPI(fechaConfirmacion),
-        estado: parseString(estado) || miembroExistente.estado,
-        foto: parseString(foto),
-        notas: parseString(notasAdicionales),
-        relacion: parseString(parentescoFamiliar),
-      },
+      data: dataToUpdate,
     });
 
-    return NextResponse.json(miembroActualizado);
+    return NextResponse.json(personaActualizada);
   } catch (error) {
-    console.error("Error al actualizar miembro:", error);
+    console.error("Error al actualizar persona:", error);
 
     if (error instanceof Error && error.message === "Usuario no autenticado") {
       return NextResponse.json(
@@ -281,7 +255,7 @@ export async function PUT(
     }
 
     return NextResponse.json(
-      { error: "Error al actualizar el miembro" },
+      { error: "Error al actualizar la persona" },
       { status: 500 }
     );
   }
@@ -307,27 +281,27 @@ export async function DELETE(
     }
 
     // Verificar que el miembro existe y pertenece a la iglesia del usuario
-    const miembro = await prisma.miembro.findUnique({
+    const persona = await prisma.persona.findUnique({
       where: {
         id: miembroId,
         iglesiaId,
       },
     });
 
-    if (!miembro) {
+    if (!persona) {
       return NextResponse.json(
         { error: "Miembro no encontrado" },
         { status: 404 }
       );
     }
 
-    await prisma.miembro.delete({
+    await prisma.persona.delete({
       where: { id: miembroId },
     });
 
     return NextResponse.json({ message: "Miembro eliminado correctamente" });
   } catch (error) {
-    console.error("Error al eliminar miembro:", error);
+    console.error("Error al eliminar persona:", error);
 
     if (error instanceof Error && error.message === "Usuario no autenticado") {
       return NextResponse.json(
@@ -337,7 +311,7 @@ export async function DELETE(
     }
 
     return NextResponse.json(
-      { error: "Error al eliminar el miembro" },
+      { error: "Error al eliminar la persona" },
       { status: 500 }
     );
   }
@@ -366,14 +340,14 @@ export async function PATCH(
     const { familiaId, parentescoFamiliar } = body;
 
     // Verificar que el miembro existe y pertenece a la iglesia del usuario
-    const miembroExistente = await prisma.miembro.findUnique({
+    const personaExistente = await prisma.persona.findUnique({
       where: {
         id: miembroId,
         iglesiaId,
       },
     });
 
-    if (!miembroExistente) {
+    if (!personaExistente) {
       return NextResponse.json(
         { error: "Miembro no encontrado" },
         { status: 404 }
@@ -394,14 +368,14 @@ export async function PATCH(
       dataToUpdate.relacion = parentescoFamiliar;
     }
 
-    const miembroActualizado = await prisma.miembro.update({
+    const personaActualizada = await prisma.persona.update({
       where: { id: miembroId },
       data: dataToUpdate,
     });
 
-    return NextResponse.json(miembroActualizado);
+    return NextResponse.json(personaActualizada);
   } catch (error) {
-    console.error("Error al actualizar miembro:", error);
+    console.error("Error al actualizar persona:", error);
 
     if (error instanceof Error && error.message === "Usuario no autenticado") {
       return NextResponse.json(
@@ -411,7 +385,7 @@ export async function PATCH(
     }
 
     return NextResponse.json(
-      { error: "Error al actualizar el miembro" },
+      { error: "Error al actualizar la persona" },
       { status: 500 }
     );
   }

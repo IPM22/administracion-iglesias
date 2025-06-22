@@ -53,7 +53,7 @@ interface TipoActividad {
 interface HistorialVisita {
   id: number;
   fecha: string;
-  visita: {
+  persona: {
     id: number;
     nombres: string;
     apellidos: string;
@@ -72,6 +72,9 @@ interface ActividadDetalle {
   nombre: string;
   descripcion?: string;
   fecha: string;
+  fechaInicio?: string;
+  fechaFin?: string;
+  esRangoFechas: boolean;
   horaInicio?: string;
   horaFin?: string;
   ubicacion?: string;
@@ -82,6 +85,13 @@ interface ActividadDetalle {
   tipoActividad: TipoActividad;
   historialVisitas: HistorialVisita[];
   banner?: string;
+  horarios?: Array<{
+    id: number;
+    fecha: string;
+    horaInicio: string;
+    horaFin: string;
+    notas?: string;
+  }>;
 }
 
 export default function DetalleActividadPage({
@@ -358,29 +368,80 @@ export default function DetalleActividadPage({
             <CardContent>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <Calendar className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Fecha</p>
-                      <p className="text-sm text-muted-foreground">
-                        {formatearFecha(actividad.fecha)}
-                      </p>
-                    </div>
-                  </div>
-                  {(actividad.horaInicio || actividad.horaFin) && (
-                    <div className="flex items-center gap-3">
-                      <Clock className="h-5 w-5 text-muted-foreground" />
+                  {/* Mostrar fechas y horarios múltiples si existen */}
+                  {actividad.esRangoFechas &&
+                  actividad.fechaInicio &&
+                  actividad.fechaFin ? (
+                    <div className="flex items-start gap-3">
+                      <Calendar className="h-5 w-5 text-muted-foreground mt-1" />
                       <div>
-                        <p className="font-medium">Horario</p>
+                        <p className="font-medium">Fechas del Evento</p>
                         <p className="text-sm text-muted-foreground">
-                          {actividad.horaInicio &&
-                            formatearHora(actividad.horaInicio)}
-                          {actividad.horaInicio && actividad.horaFin && " - "}
-                          {actividad.horaFin &&
-                            formatearHora(actividad.horaFin)}
+                          Del {formatearFecha(actividad.fechaInicio)} al{" "}
+                          {formatearFecha(actividad.fechaFin)}
                         </p>
                       </div>
                     </div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <Calendar className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">Fecha</p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatearFecha(actividad.fecha)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mostrar horarios múltiples si existen */}
+                  {actividad.horarios && actividad.horarios.length > 0 ? (
+                    <div className="flex items-start gap-3">
+                      <Clock className="h-5 w-5 text-muted-foreground mt-1" />
+                      <div className="w-full">
+                        <p className="font-medium mb-2">Horarios del Evento</p>
+                        <div className="space-y-2">
+                          {actividad.horarios.map((horario) => (
+                            <div
+                              key={horario.id}
+                              className="bg-muted/30 p-3 rounded-lg"
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-medium text-sm">
+                                  {formatearFecha(horario.fecha)}
+                                </span>
+                                <span className="text-sm text-muted-foreground">
+                                  {formatearHora(horario.horaInicio)} -{" "}
+                                  {formatearHora(horario.horaFin)}
+                                </span>
+                              </div>
+                              {horario.notas && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {horario.notas}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Mostrar horario único si no hay horarios múltiples */
+                    (actividad.horaInicio || actividad.horaFin) && (
+                      <div className="flex items-center gap-3">
+                        <Clock className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium">Horario</p>
+                          <p className="text-sm text-muted-foreground">
+                            {actividad.horaInicio &&
+                              formatearHora(actividad.horaInicio)}
+                            {actividad.horaInicio && actividad.horaFin && " - "}
+                            {actividad.horaFin &&
+                              formatearHora(actividad.horaFin)}
+                          </p>
+                        </div>
+                      </div>
+                    )
                   )}
                 </div>
                 <div className="space-y-3">
@@ -391,6 +452,17 @@ export default function DetalleActividadPage({
                         <p className="font-medium">Ubicación</p>
                         <p className="text-sm text-muted-foreground">
                           {actividad.ubicacion}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {actividad.responsable && (
+                    <div className="flex items-center gap-3">
+                      <Users className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">Responsable</p>
+                        <p className="text-sm text-muted-foreground">
+                          {actividad.responsable}
                         </p>
                       </div>
                     </div>
@@ -420,19 +492,19 @@ export default function DetalleActividadPage({
                       key={historial.id}
                       className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted/80 transition-colors cursor-pointer"
                       onClick={() =>
-                        router.push(`/visitas/${historial.visita.id}`)
+                        router.push(`/visitas/${historial.persona.id}`)
                       }
                     >
                       <div className="flex items-center gap-3">
                         <MiembroAvatar
-                          foto={historial.visita.foto}
-                          nombre={`${historial.visita.nombres} ${historial.visita.apellidos}`}
+                          foto={historial.persona.foto}
+                          nombre={`${historial.persona.nombres} ${historial.persona.apellidos}`}
                           size="sm"
                         />
                         <div>
                           <p className="font-medium">
-                            {historial.visita.nombres}{" "}
-                            {historial.visita.apellidos}
+                            {historial.persona.nombres}{" "}
+                            {historial.persona.apellidos}
                           </p>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <span>

@@ -78,24 +78,30 @@ export async function GET(request: Request) {
       miembrosNuevos30Dias,
       miembrosNuevos60Dias,
     ] = await Promise.all([
-      prisma.miembro.count({
-        where: { iglesiaId },
-      }),
-      prisma.miembro.count({
+      prisma.persona.count({
         where: {
           iglesiaId,
-          estado: "Activo",
+          rol: "MIEMBRO",
         },
       }),
-      prisma.miembro.count({
+      prisma.persona.count({
         where: {
           iglesiaId,
+          rol: "MIEMBRO",
+          estado: "ACTIVA",
+        },
+      }),
+      prisma.persona.count({
+        where: {
+          iglesiaId,
+          rol: "MIEMBRO",
           createdAt: { gte: hace30Dias },
         },
       }),
-      prisma.miembro.count({
+      prisma.persona.count({
         where: {
           iglesiaId,
+          rol: "MIEMBRO",
           createdAt: { gte: hace60Dias, lt: hace30Dias },
         },
       }),
@@ -107,43 +113,147 @@ export async function GET(request: Request) {
       visitasNuevas,
       visitasRecurrentes,
       visitasConvertidas,
+      visitasInactivas,
       visitasNuevas30Dias,
       visitasNuevas60Dias,
     ] = await Promise.all([
-      prisma.visita.count({
-        where: { iglesiaId },
-      }),
-      prisma.visita.count({
+      prisma.persona.count({
         where: {
           iglesiaId,
-          estado: "Nuevo",
+          rol: "VISITA",
         },
       }),
-      prisma.visita.count({
+      prisma.persona.count({
         where: {
           iglesiaId,
-          estado: "Recurrente",
+          rol: "VISITA",
+          estado: "NUEVA",
         },
       }),
-      prisma.visita.count({
+      prisma.persona.count({
         where: {
           iglesiaId,
-          estado: "Convertido",
+          rol: "VISITA",
+          estado: "RECURRENTE",
         },
       }),
-      prisma.visita.count({
+      prisma.persona.count({
         where: {
           iglesiaId,
+          rol: "VISITA",
+          personaConvertidaId: { not: null },
+        },
+      }),
+      prisma.persona.count({
+        where: {
+          iglesiaId,
+          rol: "VISITA",
+          estado: "INACTIVA",
+        },
+      }),
+      prisma.persona.count({
+        where: {
+          iglesiaId,
+          rol: "VISITA",
           createdAt: { gte: hace30Dias },
         },
       }),
-      prisma.visita.count({
+      prisma.persona.count({
         where: {
           iglesiaId,
+          rol: "VISITA",
           createdAt: { gte: hace60Dias, lt: hace30Dias },
         },
       }),
     ]);
+
+    // Nuevas estadísticas por tipo de persona
+    const [
+      ninosCount,
+      adolescentesCount,
+      jovenesCount,
+      adultosCount,
+      adultosMayoresCount,
+      envejecientesCount,
+    ] = await Promise.all([
+      prisma.persona.count({
+        where: { iglesiaId, tipo: "NINO" },
+      }),
+      prisma.persona.count({
+        where: { iglesiaId, tipo: "ADOLESCENTE" },
+      }),
+      prisma.persona.count({
+        where: { iglesiaId, tipo: "JOVEN" },
+      }),
+      prisma.persona.count({
+        where: { iglesiaId, tipo: "ADULTO" },
+      }),
+      prisma.persona.count({
+        where: { iglesiaId, tipo: "ADULTO_MAYOR" },
+      }),
+      prisma.persona.count({
+        where: { iglesiaId, tipo: "ENVEJECIENTE" },
+      }),
+    ]);
+
+    // Estadísticas específicas por rol y tipo para miembros
+    const [
+      ninosMiembros,
+      adolescentesMiembros,
+      jovenesMiembros,
+      adultosMiembros,
+      adultosMayoresMiembros,
+      envejecientesMiembros,
+    ] = await Promise.all([
+      prisma.persona.count({
+        where: { iglesiaId, rol: "MIEMBRO", tipo: "NINO" },
+      }),
+      prisma.persona.count({
+        where: { iglesiaId, rol: "MIEMBRO", tipo: "ADOLESCENTE" },
+      }),
+      prisma.persona.count({
+        where: { iglesiaId, rol: "MIEMBRO", tipo: "JOVEN" },
+      }),
+      prisma.persona.count({
+        where: { iglesiaId, rol: "MIEMBRO", tipo: "ADULTO" },
+      }),
+      prisma.persona.count({
+        where: { iglesiaId, rol: "MIEMBRO", tipo: "ADULTO_MAYOR" },
+      }),
+      prisma.persona.count({
+        where: { iglesiaId, rol: "MIEMBRO", tipo: "ENVEJECIENTE" },
+      }),
+    ]);
+
+    // Estadísticas eclesiásticas
+    const [bautizados, confirmados, enMinisterios, adolescentesSinBautismo] =
+      await Promise.all([
+        prisma.persona.count({
+          where: {
+            iglesiaId,
+            fechaBautismo: { not: null },
+          },
+        }),
+        prisma.persona.count({
+          where: {
+            iglesiaId,
+            fechaConfirmacion: { not: null },
+          },
+        }),
+        prisma.persona.count({
+          where: {
+            iglesiaId,
+            ministerios: { some: {} },
+          },
+        }),
+        prisma.persona.count({
+          where: {
+            iglesiaId,
+            tipo: "ADOLESCENTE",
+            fechaBautismo: null,
+          },
+        }),
+      ]);
 
     // Estadísticas de familias (CON FILTRO DE IGLESIA)
     const [
@@ -176,11 +286,12 @@ export async function GET(request: Request) {
     ]);
 
     // Distribución por edades de miembros (CON FILTRO DE IGLESIA)
-    const miembrosConEdad = await prisma.miembro.findMany({
+    const miembrosConEdad = await prisma.persona.findMany({
       where: {
         iglesiaId,
+        rol: "MIEMBRO",
         fechaNacimiento: { not: null },
-        estado: "Activo",
+        estado: "ACTIVA",
       },
       select: {
         fechaNacimiento: true,
@@ -206,14 +317,14 @@ export async function GET(request: Request) {
     });
 
     // Conversiones recientes (últimas 10) (CON FILTRO DE IGLESIA)
-    const conversionesRecientes = await prisma.visita.findMany({
+    const conversionesRecientes = await prisma.persona.findMany({
       where: {
         iglesiaId,
-        estado: "Convertido",
-        miembroConvertidoId: { not: null },
+        rol: "VISITA",
+        personaConvertidaId: { not: null },
       },
       include: {
-        miembroConvertido: {
+        personaConvertida: {
           select: {
             nombres: true,
             apellidos: true,
@@ -230,6 +341,25 @@ export async function GET(request: Request) {
       if (anterior === 0) return actual > 0 ? 100 : 0;
       return Math.round(((actual - anterior) / anterior) * 100);
     };
+
+    // Cálculo de cambio en conversiones
+    const conversionesActuales = visitasConvertidas;
+    const conversionesAnteriores = await prisma.persona.count({
+      where: {
+        iglesiaId,
+        rol: "VISITA",
+        personaConvertidaId: { not: null },
+        updatedAt: { gte: hace60Dias, lt: hace30Dias },
+      },
+    });
+
+    // Calcular tasas
+    const tasaBautismo =
+      totalMiembros > 0 ? Math.round((bautizados / totalMiembros) * 100) : 0;
+    const tasaRetencion =
+      totalVisitas > 0
+        ? Math.round((visitasRecurrentes / totalVisitas) * 100)
+        : 0;
 
     // Próximas actividades reales de la base de datos (CON FILTRO DE IGLESIA)
     const proximasActividadesDB = await prisma.actividad.findMany({
@@ -321,14 +451,35 @@ export async function GET(request: Request) {
       totalFamilias,
       familiasActivas,
 
-      // Visitas por estado
+      // Nuevas estadísticas por tipo de persona
+      porTipoPersona: {
+        ninos: ninosCount,
+        adolescentes: adolescentesCount,
+        jovenes: jovenesCount,
+        adultos: adultosCount,
+        adultosMayores: adultosMayoresCount,
+        envejecientes: envejecientesCount,
+      },
+
+      // Estadísticas específicas por rol y tipo para miembros
+      miembrosPorTipo: {
+        ninos: ninosMiembros,
+        adolescentes: adolescentesMiembros,
+        jovenes: jovenesMiembros,
+        adultos: adultosMiembros,
+        adultosMayores: adultosMayoresMiembros,
+        envejecientes: envejecientesMiembros,
+      },
+
+      // Visitas por estado (incluyendo inactivas)
       visitasPorEstado: {
         nuevas: visitasNuevas,
         recurrentes: visitasRecurrentes,
         convertidas: visitasConvertidas,
+        inactivas: visitasInactivas,
       },
 
-      // Cambios mensuales
+      // Cambios mensuales (incluyendo conversiones)
       cambios: {
         miembros: calcularPorcentajeCambio(
           miembrosNuevos30Dias,
@@ -342,6 +493,10 @@ export async function GET(request: Request) {
           familiasNuevas30Dias,
           familiasNuevas60Dias
         ),
+        conversiones: calcularPorcentajeCambio(
+          conversionesActuales,
+          conversionesAnteriores
+        ),
       },
 
       // Nuevos en los últimos 30 días
@@ -351,21 +506,30 @@ export async function GET(request: Request) {
         familias: familiasNuevas30Dias,
       },
 
-      // Distribución por edades
+      // Distribución por edades (mantenida para compatibilidad)
       distribucionEdades,
+
+      // Nuevas estadísticas eclesiásticas
+      estadisticasEclesiasticas: {
+        bautizados,
+        confirmados,
+        enMinisterios,
+        adolescentesSinBautismo,
+      },
 
       // Próximas actividades reales
       proximasActividades,
 
-      // Conversiones recientes
+      // Conversiones recientes (incluyendo tipo de persona)
       conversionesRecientes: conversionesRecientes.map((conversion) => ({
         nombres: conversion.nombres,
         apellidos: conversion.apellidos,
-        fechaConversion: conversion.miembroConvertido?.createdAt,
+        fechaConversion: conversion.personaConvertida?.createdAt,
         fechaOriginal: conversion.createdAt,
+        tipoPersona: conversion.tipo, // Incluir el tipo de persona
       })),
 
-      // Métricas de conversión
+      // Métricas de conversión y bautismo
       tasaConversion:
         totalVisitas > 0
           ? Math.round((visitasConvertidas / totalVisitas) * 100)
@@ -376,6 +540,10 @@ export async function GET(request: Request) {
         familiasActivas > 0
           ? Math.round((totalMiembros + totalVisitas) / familiasActivas)
           : 0,
+
+      // Nuevas tasas calculadas
+      tasaBautismo,
+      tasaRetencion,
     };
 
     return NextResponse.json(respuesta);

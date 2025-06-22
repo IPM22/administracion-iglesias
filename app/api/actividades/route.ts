@@ -55,9 +55,14 @@ export async function GET() {
             descripcion: true,
           },
         },
+        horarios: {
+          orderBy: {
+            fecha: "asc",
+          },
+        },
         historialVisitas: {
           include: {
-            visita: {
+            persona: {
               select: {
                 id: true,
                 nombres: true,

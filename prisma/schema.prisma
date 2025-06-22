@@ -36,12 +36,11 @@ model Iglesia {
   
   // Relaciones
   usuarios      UsuarioIglesia[]
-  miembros      Miembro[]
   familias      Familia[]
-  visitas       Visita[]
   ministerios   Ministerio[]
   actividades   Actividad[]
   tiposActividad TipoActividad[]
+  personas      Persona[]
   
   @@map("iglesias")
 }
@@ -107,11 +106,33 @@ enum EstadoUsuarioIglesia {
   SUSPENDIDO
 }
 
-// ===== TABLAS EXISTENTES ACTUALIZADAS =====
+// ===== MODELO UNIFICADO PERSONA =====
 
-model Miembro {
+enum TipoPersona {
+  NINO
+  ADOLESCENTE
+  JOVEN
+  ADULTO
+  ADULTO_MAYOR
+  ENVEJECIENTE
+}
+
+enum RolPersona {
+  MIEMBRO
+  VISITA
+  INVITADO
+}
+
+enum EstadoPersona {
+  ACTIVA
+  INACTIVA
+  RECURRENTE
+  NUEVA
+}
+
+model Persona {
   id                Int       @id @default(autoincrement())
-  iglesiaId         Int       // NUEVO: Filtro por iglesia
+  iglesiaId         Int
   nombres           String
   apellidos         String
   correo            String?
@@ -124,33 +145,47 @@ model Miembro {
   ocupacion         String?
   foto              String?
   notas             String?
-  
-  // Información eclesiástica
-  fechaIngreso      DateTime  @default(now())
+
+  // Clasificación
+  tipo              TipoPersona     @default(NINO)
+  rol               RolPersona      @default(VISITA)
+  estado            EstadoPersona   @default(ACTIVA)
+
+  // Info eclesiástica
+  fechaIngreso      DateTime?
   fechaBautismo     DateTime?
   fechaConfirmacion DateTime?
-  estado            String    @default("Activo")
-  
-  // Relación familiar
+
+  // Info específica de visitas
+  fechaPrimeraVisita    DateTime?
+  comoConocioIglesia    String?
+  motivoVisita          String?
+  intereses             String?
+
+  // Familia
   familiaId         Int?
-  relacion          String?
-  
-  // Timestamps
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime? @updatedAt
-  
-  // Relaciones
+  relacionFamiliar  String?
+
+  // Conversión / vínculos
+  personaInvitaId   Int?
+  personaConvertidaId Int? @unique
+  fechaConversion   DateTime?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
   iglesia           Iglesia   @relation(fields: [iglesiaId], references: [id], onDelete: Cascade)
   familia           Familia?  @relation(fields: [familiaId], references: [id])
-  ministerios       MiembroMinisterio[]
-  visitasInvitadas  Visita[]  @relation("MiembroInvita")
+  personaInvita     Persona?  @relation("PersonaInvita", fields: [personaInvitaId], references: [id])
+  personaConvertida Persona?  @relation("PersonaConvertida", fields: [personaConvertidaId], references: [id])
+  personasInvitadas Persona[] @relation("PersonaInvita")
+  personasConvertidas Persona[] @relation("PersonaConvertida")
+
   historialVisitas  HistorialVisita[]
+  ministerios       PersonaMinisterio[]
   familiares        Familiar[]
-  
-  // Para conversiones desde visitas
-  visitaOriginal    Visita?   @relation("VisitaConvertida")
-  
-  @@map("miembros")
+
+  @@map("personas")
 }
 
 model Familia {
@@ -170,60 +205,11 @@ model Familia {
   
   // Relaciones
   iglesia         Iglesia   @relation(fields: [iglesiaId], references: [id], onDelete: Cascade)
-  miembros        Miembro[]
-  visitas         Visita[]
+  personas        Persona[]
   vinculos        VinculoFamiliar[] @relation("FamiliaOrigen")
   vinculosRelacionados VinculoFamiliar[] @relation("FamiliaRelacionada")
   
   @@map("familias")
-}
-
-model Visita {
-  id                    Int       @id @default(autoincrement())
-  iglesiaId             Int       // NUEVO: Filtro por iglesia
-  nombres               String
-  apellidos             String
-  correo                String?
-  telefono              String?
-  celular               String?
-  direccion             String?
-  fechaNacimiento       DateTime?
-  sexo                  String?
-  estadoCivil           String?
-  ocupacion             String?
-  foto                  String?
-  
-  // Información de la visita
-  fechaPrimeraVisita    DateTime?
-  comoConocioIglesia    String?
-  motivoVisita          String?
-  intereses             String?
-  notas                 String?
-  estado                String    @default("Activa")
-  
-  // Relación familiar
-  familia               String?
-  familiaId             Int?
-  
-  // Invitación
-  miembroInvitaId       Int?
-  
-  // Conversión a miembro
-  miembroConvertidoId   Int?      @unique
-  fechaConversion       DateTime?
-  
-  // Timestamps
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime? @updatedAt
-  
-  // Relaciones
-  iglesia               Iglesia   @relation(fields: [iglesiaId], references: [id], onDelete: Cascade)
-  familiaRelacion       Familia?  @relation(fields: [familiaId], references: [id])
-  miembroInvita         Miembro?  @relation("MiembroInvita", fields: [miembroInvitaId], references: [id])
-  miembroConvertido     Miembro?  @relation("VisitaConvertida", fields: [miembroConvertidoId], references: [id])
-  historialVisitas      HistorialVisita[]
-  
-  @@map("visitas")
 }
 
 model Ministerio {
@@ -241,42 +227,60 @@ model Ministerio {
   
   // Relaciones
   iglesia           Iglesia   @relation(fields: [iglesiaId], references: [id], onDelete: Cascade)
-  miembros          MiembroMinisterio[]
+  personas          PersonaMinisterio[]
   actividades       Actividad[]
   
   @@map("ministerios")
 }
 
-model Actividad {
-  id                Int       @id @default(autoincrement())
-  iglesiaId         Int       // NUEVO: Filtro por iglesia
-  nombre            String
-  descripcion       String?
-  fecha             DateTime  // Mantener por compatibilidad
-  fechaInicio       DateTime? // Nueva fecha de inicio para rangos
-  fechaFin          DateTime? // Nueva fecha de fin para rangos
-  esRangoFechas     Boolean   @default(false) // Indica si es una actividad de múltiples días
-  horaInicio        String?
-  horaFin           String?
-  ubicacion         String?
-  googleMapsEmbed   String?
-  responsable       String?
-  estado            String    @default("Programada")
-  banner            String?
-  
-  // Relaciones
-  tipoActividadId   Int
-  ministerioId      Int?
+model ActividadHorario {
+  id          Int      @id @default(autoincrement())
+  actividadId Int
+  fecha       DateTime
+  horaInicio  String?
+  horaFin     String?
+  notas       String?
   
   // Timestamps
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   
   // Relaciones
-  iglesia           Iglesia       @relation(fields: [iglesiaId], references: [id], onDelete: Cascade)
-  tipoActividad     TipoActividad @relation(fields: [tipoActividadId], references: [id])
-  ministerio        Ministerio?   @relation(fields: [ministerioId], references: [id])
-  historialVisitas  HistorialVisita[]
+  actividad   Actividad @relation(fields: [actividadId], references: [id], onDelete: Cascade)
+  historialVisitas HistorialVisita[]
+  
+  @@map("actividad_horarios")
+}
+
+model Actividad {
+  id              Int       @id @default(autoincrement())
+  iglesiaId       Int
+  nombre          String
+  descripcion     String?
+  fecha           DateTime
+  fechaInicio     DateTime?
+  fechaFin        DateTime?
+  esRangoFechas   Boolean   @default(false)
+  horaInicio      String?
+  horaFin         String?
+  ubicacion       String?
+  googleMapsEmbed String?   @db.Text
+  responsable     String?
+  estado          String    @default("Programada")
+  banner          String?
+  tipoActividadId Int
+  ministerioId    Int?
+  
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relaciones
+  iglesia         Iglesia   @relation(fields: [iglesiaId], references: [id], onDelete: Cascade)
+  tipoActividad   TipoActividad @relation(fields: [tipoActividadId], references: [id], onDelete: Restrict)
+  ministerio      Ministerio? @relation(fields: [ministerioId], references: [id], onDelete: SetNull)
+  horarios        ActividadHorario[] // Nueva relación
+  historialVisitas HistorialVisita[]
   
   @@map("actividades")
 }
@@ -302,11 +306,12 @@ model TipoActividad {
   @@map("tipos_actividad")
 }
 
-// ===== TABLAS DE RELACIÓN (SIN CAMBIOS MAYORES) =====
+// ===== TABLAS DE RELACIÓN ACTUALIZADAS =====
 
-model MiembroMinisterio {
+// Nueva tabla para relacionar personas con ministerios
+model PersonaMinisterio {
   id          Int         @id @default(autoincrement())
-  miembroId   Int
+  personaId   Int
   ministerioId Int
   cargo       String?
   rol         String?
@@ -320,20 +325,21 @@ model MiembroMinisterio {
   updatedAt   DateTime    @updatedAt
   
   // Relaciones
-  miembro     Miembro     @relation(fields: [miembroId], references: [id], onDelete: Cascade)
+  persona     Persona     @relation(fields: [personaId], references: [id], onDelete: Cascade)
   ministerio  Ministerio  @relation(fields: [ministerioId], references: [id], onDelete: Cascade)
   
-  @@unique([miembroId, ministerioId])
-  @@map("miembro_ministerios")
+  @@unique([personaId, ministerioId])
+  @@map("persona_ministerios")
 }
 
 model HistorialVisita {
   id              Int           @id @default(autoincrement())
-  miembroId       Int?
-  visitaId        Int?
+  personaId       Int?
   actividadId     Int?
+  horarioId       Int?          // Nuevo: referencia al horario específico
   tipoActividadId Int?
   fecha           DateTime      @default(now())
+  fechaEspecifica DateTime?     // Nueva: fecha específica para actividades de rango
   notas           String?
   
   // Timestamps
@@ -341,9 +347,9 @@ model HistorialVisita {
   updatedAt       DateTime      @updatedAt
   
   // Relaciones
-  miembro         Miembro?      @relation(fields: [miembroId], references: [id], onDelete: Cascade)
-  visita          Visita?       @relation(fields: [visitaId], references: [id], onDelete: Cascade)
+  persona         Persona?      @relation(fields: [personaId], references: [id], onDelete: Cascade)
   actividad       Actividad?    @relation(fields: [actividadId], references: [id], onDelete: Cascade)
+  horario         ActividadHorario? @relation(fields: [horarioId], references: [id], onDelete: SetNull)
   tipoActividad   TipoActividad? @relation(fields: [tipoActividadId], references: [id], onDelete: Cascade)
   
   @@map("historial_visitas")
@@ -351,21 +357,21 @@ model HistorialVisita {
 
 model Familiar {
   id            Int     @id @default(autoincrement())
-  miembroId     Int
+  personaId     Int
   nombres       String
   apellidos     String
   relacion      String
   fechaNacimiento DateTime?
   telefono      String?
   esMiembro     Boolean @default(false)
-  miembroRelacionadoId Int?
+  personaRelacionadaId Int?
   
   // Timestamps
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   
   // Relaciones
-  miembro       Miembro  @relation(fields: [miembroId], references: [id], onDelete: Cascade)
+  persona       Persona  @relation(fields: [personaId], references: [id], onDelete: Cascade)
   
   @@map("familiares")
 }
@@ -376,7 +382,7 @@ model VinculoFamiliar {
   familiaRelacionadaId  Int
   tipoVinculo           String
   descripcion           String?
-  miembroVinculoId      Int?
+  personaVinculoId      Int?
   fechaCreacion         DateTime @default(now())
   activo                Boolean  @default(true)
   

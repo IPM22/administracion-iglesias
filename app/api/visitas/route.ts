@@ -45,9 +45,10 @@ export async function GET() {
       );
     }
 
-    const visitas = await prisma.visita.findMany({
+    const visitas = await prisma.persona.findMany({
       where: {
-        iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
+        iglesiaId: usuarioIglesia.iglesiaId,
+        rol: "VISITA",
       },
       include: {
         historialVisitas: {
@@ -59,7 +60,7 @@ export async function GET() {
             fecha: "desc",
           },
         },
-        miembroConvertido: {
+        personaConvertida: {
           select: {
             id: true,
             nombres: true,
@@ -126,8 +127,6 @@ export async function POST(request: NextRequest) {
       sexo,
       estadoCivil,
       ocupacion,
-      familia,
-      estado,
       foto,
       notasAdicionales,
       fechaPrimeraVisita,
@@ -141,9 +140,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const nuevaVisita = await prisma.visita.create({
+    const nuevaVisita = await prisma.persona.create({
       data: {
-        iglesiaId: usuarioIglesia.iglesiaId, // AGREGAR IGLESIA ID
+        iglesiaId: usuarioIglesia.iglesiaId,
         nombres: nombres.trim(),
         apellidos: apellidos.trim(),
         correo: parseString(correo),
@@ -154,11 +153,12 @@ export async function POST(request: NextRequest) {
         sexo: parseString(sexo),
         estadoCivil: parseString(estadoCivil),
         ocupacion: parseString(ocupacion),
-        familia: parseString(familia),
-        estado: parseString(estado) || "Nuevo",
         foto: parseString(foto),
-        notas: parseString(notasAdicionales), // Corregido: el campo se llama 'notas' en el schema
+        notas: parseString(notasAdicionales),
         fechaPrimeraVisita: parseDateForAPI(fechaPrimeraVisita as string),
+        rol: "VISITA",
+        estado: "NUEVA",
+        tipo: "ADULTO",
       },
     });
 

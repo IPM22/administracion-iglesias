@@ -71,7 +71,7 @@ const formSchema = z.object({
   ocupacion: z.string().optional(),
   familia: z.string().optional(),
   fechaPrimeraVisita: z.string().optional(),
-  estado: z.enum(["Activa", "Inactiva"]).optional(),
+  estado: z.enum(["Nueva", "Recurrente"]).optional(),
   foto: z.string().optional(),
   notasAdicionales: z.string().optional(),
 });
@@ -157,7 +157,7 @@ export default function EditarVisitaPage({
           ocupacion: data.ocupacion || "",
           familia: data.familia || "",
           fechaPrimeraVisita: formatDateForInput(data.fechaPrimeraVisita),
-          estado: data.estado as "Activa" | "Inactiva" | undefined,
+          estado: data.estado as "Nueva" | "Recurrente" | undefined,
           foto: data.foto || "",
           notasAdicionales: data.notasAdicionales || "",
         });
@@ -637,9 +637,9 @@ export default function EditarVisitaPage({
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="Activa">Activa</SelectItem>
-                                <SelectItem value="Inactiva">
-                                  Inactiva
+                                <SelectItem value="Nueva">Nueva</SelectItem>
+                                <SelectItem value="Recurrente">
+                                  Recurrente
                                 </SelectItem>
                               </SelectContent>
                             </Select>

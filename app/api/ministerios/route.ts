@@ -17,12 +17,12 @@ export async function GET(request: NextRequest) {
     const ministerios = await prisma.ministerio.findMany({
       where: { iglesiaId }, // ✅ Filtrar por iglesia del usuario
       include: {
-        miembros: {
+        personas: {
           where: {
             estado: "Activo",
           },
           include: {
-            miembro: {
+            persona: {
               select: {
                 id: true,
                 nombres: true,
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
         },
         _count: {
           select: {
-            miembros: {
+            personas: {
               where: {
                 estado: "Activo",
               },
@@ -108,12 +108,12 @@ export async function POST(request: NextRequest) {
         descripcion: parseString(descripcion),
       },
       include: {
-        miembros: {
+        personas: {
           where: {
             estado: "Activo",
           },
           include: {
-            miembro: {
+            persona: {
               select: {
                 id: true,
                 nombres: true,
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
         },
         _count: {
           select: {
-            miembros: {
+            personas: {
               where: {
                 estado: "Activo",
               },

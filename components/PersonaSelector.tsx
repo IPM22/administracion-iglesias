@@ -17,7 +17,7 @@ interface Persona {
   telefono?: string;
   celular?: string;
   estado: string;
-  tipo: "miembro" | "visita"; // Distinguir entre miembro bautizado y visita
+  tipo: "miembro" | "visita" | "nino"; // Distinguir entre miembro bautizado, visita y niño
   fechaBautismo?: string; // Para mostrar si está bautizado
 }
 
@@ -70,19 +70,42 @@ export default function PersonaSelector({
   };
 
   const obtenerIconoTipo = (tipo: string) => {
-    return tipo === "miembro" ? (
-      <UserCheck className="h-3 w-3" />
-    ) : (
-      <Users className="h-3 w-3" />
-    );
+    switch (tipo) {
+      case "miembro":
+        return <UserCheck className="h-3 w-3" />;
+      case "visita":
+        return <Users className="h-3 w-3" />;
+      case "nino":
+        return <User className="h-3 w-3" />;
+      default:
+        return <User className="h-3 w-3" />;
+    }
   };
 
   const obtenerColorTipo = (tipo: string) => {
-    return tipo === "miembro" ? "default" : "secondary";
+    switch (tipo) {
+      case "miembro":
+        return "default";
+      case "visita":
+        return "secondary";
+      case "nino":
+        return "outline";
+      default:
+        return "outline";
+    }
   };
 
   const obtenerTextoTipo = (tipo: string) => {
-    return tipo === "miembro" ? "Miembro" : "Visita";
+    switch (tipo) {
+      case "miembro":
+        return "Miembro";
+      case "visita":
+        return "Visita";
+      case "nino":
+        return "Niño";
+      default:
+        return "Persona";
+    }
   };
 
   return (

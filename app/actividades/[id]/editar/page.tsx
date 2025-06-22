@@ -42,6 +42,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Edit, Clock, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -51,6 +52,7 @@ import { ModeToggle } from "../../../../components/mode-toggle";
 import { CloudinaryUploader } from "../../../../components/CloudinaryUploader";
 import MinisterioSelector from "../../../../components/MinisterioSelector";
 import { GoogleMapsEmbed } from "@/components/GoogleMapsEmbed";
+import { HorariosSelector } from "../../../../components/HorariosSelector";
 
 interface TipoActividad {
   id: number;
@@ -69,6 +71,9 @@ interface ActividadData {
   nombre: string;
   descripcion?: string;
   fecha: string;
+  fechaInicio?: string;
+  fechaFin?: string;
+  esRangoFechas: boolean;
   horaInicio?: string;
   horaFin?: string;
   ubicacion?: string;
@@ -80,12 +85,22 @@ interface ActividadData {
   tipoActividad: TipoActividad;
   ministerio?: Ministerio;
   banner?: string;
+  horarios?: Array<{
+    id: number;
+    fecha: string;
+    horaInicio: string;
+    horaFin: string;
+    notas?: string;
+  }>;
 }
 
 const formSchema = z.object({
   nombre: z.string().min(1, "El nombre es requerido"),
   descripcion: z.string().optional(),
-  fecha: z.string().min(1, "La fecha es requerida"),
+  fecha: z.string().optional(),
+  fechaInicio: z.string().optional(),
+  fechaFin: z.string().optional(),
+  esRangoFechas: z.boolean(),
   horaInicio: z.string().optional(),
   horaFin: z.string().optional(),
   ubicacion: z.string().optional(),
@@ -114,6 +129,15 @@ export default function EditarActividadPage({
   const [actividad, setActividad] = useState<ActividadData | null>(null);
   const [ministerioSeleccionado, setMinisterioSeleccionado] =
     useState<Ministerio | null>(null);
+  const [horariosMultiples, setHorariosMultiples] = useState<
+    Array<{
+      id?: number;
+      fecha: string;
+      horaInicio: string;
+      horaFin: string;
+      notas?: string;
+    }>
+  >([]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -121,6 +145,9 @@ export default function EditarActividadPage({
       nombre: "",
       descripcion: "",
       fecha: "",
+      fechaInicio: "",
+      fechaFin: "",
+      esRangoFechas: false,
       horaInicio: "",
       horaFin: "",
       ubicacion: "",
@@ -202,11 +229,22 @@ export default function EditarActividadPage({
           .toISOString()
           .split("T")[0];
 
+        // Formatear fechas de inicio y fin si existen
+        const fechaInicioFormateada = actividadData.fechaInicio
+          ? new Date(actividadData.fechaInicio).toISOString().split("T")[0]
+          : "";
+        const fechaFinFormateada = actividadData.fechaFin
+          ? new Date(actividadData.fechaFin).toISOString().split("T")[0]
+          : "";
+
         // Cargar datos en el formulario
         form.reset({
           nombre: actividadData.nombre,
           descripcion: actividadData.descripcion || "",
           fecha: fechaFormateada,
+          fechaInicio: fechaInicioFormateada,
+          fechaFin: fechaFinFormateada,
+          esRangoFechas: actividadData.esRangoFechas,
           horaInicio: actividadData.horaInicio || "",
           horaFin: actividadData.horaFin || "",
           ubicacion: actividadData.ubicacion || "",
@@ -217,6 +255,26 @@ export default function EditarActividadPage({
           estado: actividadData.estado,
           banner: actividadData.banner || "",
         });
+
+        // Cargar horarios existentes si los hay
+        if (actividadData.horarios && actividadData.horarios.length > 0) {
+          const horariosFormateados = actividadData.horarios.map(
+            (h: {
+              id: number;
+              fecha: string;
+              horaInicio: string;
+              horaFin: string;
+              notas?: string;
+            }) => ({
+              id: h.id,
+              fecha: new Date(h.fecha).toISOString().split("T")[0],
+              horaInicio: h.horaInicio || "",
+              horaFin: h.horaFin || "",
+              notas: h.notas || "",
+            })
+          );
+          setHorariosMultiples(horariosFormateados);
+        }
       } catch (error) {
         console.error("💥 Error general:", error);
         setError("Error al cargar los datos");
@@ -249,6 +307,31 @@ export default function EditarActividadPage({
       return;
     }
 
+    // Validaciones de fechas
+    if (values.esRangoFechas) {
+      if (!values.fechaInicio || !values.fechaFin) {
+        setError(
+          "Para actividades de múltiples días se requieren fecha de inicio y fin"
+        );
+        setSaving(false);
+        return;
+      }
+
+      if (new Date(values.fechaFin) < new Date(values.fechaInicio)) {
+        setError(
+          "La fecha de fin debe ser posterior o igual a la fecha de inicio"
+        );
+        setSaving(false);
+        return;
+      }
+    } else {
+      if (!values.fecha) {
+        setError("La fecha es requerida");
+        setSaving(false);
+        return;
+      }
+    }
+
     try {
       const response = await fetch(`/api/actividades/${id}`, {
         method: "PUT",
@@ -258,6 +341,7 @@ export default function EditarActividadPage({
         body: JSON.stringify({
           ...values,
           tipoActividadId: parseInt(values.tipoActividadId),
+          horarios: horariosMultiples,
         }),
       });
 
@@ -506,20 +590,80 @@ export default function EditarActividadPage({
                   />
 
                   <div className="grid gap-4 md:grid-cols-3">
-                    {/* Fecha */}
-                    <FormField
-                      control={form.control}
-                      name="fecha"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Fecha</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {/* Control de Rango de Fechas */}
+                    <div className="md:col-span-3">
+                      <FormField
+                        control={form.control}
+                        name="esRangoFechas"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base">
+                                Actividad de múltiples días
+                              </FormLabel>
+                              <FormDescription>
+                                Activa esta opción para campamentos, campañas
+                                evangelísticas o eventos que duran varios días
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Fecha única o rango de fechas */}
+                    {!form.watch("esRangoFechas") ? (
+                      // Fecha única
+                      <FormField
+                        control={form.control}
+                        name="fecha"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Fecha</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    ) : (
+                      // Rango de fechas
+                      <>
+                        <FormField
+                          control={form.control}
+                          name="fechaInicio"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Fecha de Inicio</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="fechaFin"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Fecha de Fin</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    )}
 
                     {/* Hora Inicio */}
                     <FormField
@@ -553,6 +697,15 @@ export default function EditarActividadPage({
                       )}
                     />
                   </div>
+
+                  {/* Horarios Múltiples */}
+                  <HorariosSelector
+                    horarios={horariosMultiples}
+                    onHorariosChange={setHorariosMultiples}
+                    fechaInicio={form.watch("fechaInicio")}
+                    fechaFin={form.watch("fechaFin")}
+                    esRangoFechas={form.watch("esRangoFechas")}
+                  />
 
                   {/* Ubicación con Google Maps Embed */}
                   <FormField

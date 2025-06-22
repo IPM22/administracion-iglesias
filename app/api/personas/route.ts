@@ -1,113 +1,275 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import {
-  getUserContext,
-  requireAuth,
-  createIglesiaFilter,
-} from "../../../lib/auth-utils";
+  crearPersonaSchema,
+  filtrosPersonaSchema,
+} from "@/src/lib/validations/persona";
+import {
+  aplicarReglasAutomaticas,
+  calcularTipoPersonaAutomatico,
+} from "@/src/lib/services/persona-automation";
 
 const prisma = new PrismaClient();
 
+interface WhereClause {
+  tipo?: string | { in: string[] };
+  rol?: string;
+  estado?: string;
+  familiaId?: number;
+  sexo?: string;
+  estadoCivil?: string;
+  fechaBautismo?: { not: null } | null;
+  fechaNacimiento?: {
+    gte?: Date;
+    lte?: Date;
+  };
+  OR?: Array<{
+    nombres?: { contains: string; mode: "insensitive" };
+    apellidos?: { contains: string; mode: "insensitive" };
+    correo?: { contains: string; mode: "insensitive" };
+    telefono?: { contains: string };
+    celular?: { contains: string };
+  }>;
+}
+
+// GET /api/personas - Obtener personas con filtros
 export async function GET(request: NextRequest) {
   try {
-    // Obtener contexto del usuario autenticado
-    const userContext = await getUserContext(request);
-    const { iglesiaId } = requireAuth(userContext);
+    const { searchParams } = new URL(request.url);
 
-    console.log("🔍 Obteniendo personas para iglesia ID:", iglesiaId);
+    // Parsear filtros
+    const filtros = {
+      tipo: searchParams.get("tipo") || undefined,
+      rol: searchParams.get("rol") || undefined,
+      estado: searchParams.get("estado") || undefined,
+      familiaId: searchParams.get("familiaId")
+        ? parseInt(searchParams.get("familiaId")!)
+        : undefined,
+      edadMin: searchParams.get("edadMin")
+        ? parseInt(searchParams.get("edadMin")!)
+        : undefined,
+      edadMax: searchParams.get("edadMax")
+        ? parseInt(searchParams.get("edadMax")!)
+        : undefined,
+      genero: searchParams.get("genero") || undefined,
+      estadoCivil: searchParams.get("estadoCivil") || undefined,
+      conBautismo:
+        searchParams.get("conBautismo") === "true"
+          ? true
+          : searchParams.get("conBautismo") === "false"
+          ? false
+          : undefined,
+      busqueda: searchParams.get("busqueda") || undefined,
+    };
 
-    // Obtener miembros
-    const miembros = await prisma.miembro.findMany({
-      where: createIglesiaFilter(iglesiaId),
-      select: {
-        id: true,
-        nombres: true,
-        apellidos: true,
-        correo: true,
-        telefono: true,
-        celular: true,
-        foto: true,
-        estado: true,
-        fechaBautismo: true,
+    // Validar filtros
+    const filtrosValidados = filtrosPersonaSchema.parse(filtros);
+
+    // Construir where clause
+    const where: Prisma.PersonaWhereInput = {};
+
+    if (filtrosValidados.tipo) {
+      // Manejar múltiples tipos separados por coma
+      if (filtrosValidados.tipo.includes(",")) {
+        where.tipo = { in: filtrosValidados.tipo.split(",") as any };
+      } else {
+        where.tipo = filtrosValidados.tipo as any;
+      }
+    }
+
+    if (filtrosValidados.rol) {
+      where.rol = filtrosValidados.rol as any;
+    }
+
+    if (filtrosValidados.estado) {
+      where.estado = filtrosValidados.estado as any;
+    }
+
+    if (filtrosValidados.familiaId) {
+      where.familiaId = filtrosValidados.familiaId;
+    }
+
+    if (filtrosValidados.genero) {
+      where.sexo = filtrosValidados.genero;
+    }
+
+    if (filtrosValidados.estadoCivil) {
+      where.estadoCivil = filtrosValidados.estadoCivil;
+    }
+
+    if (filtrosValidados.conBautismo !== undefined) {
+      where.fechaBautismo = filtrosValidados.conBautismo ? { not: null } : null;
+    }
+
+    // Filtro de búsqueda por texto
+    if (filtrosValidados.busqueda) {
+      const busqueda = filtrosValidados.busqueda.toLowerCase();
+      where.OR = [
+        { nombres: { contains: busqueda, mode: "insensitive" } },
+        { apellidos: { contains: busqueda, mode: "insensitive" } },
+        { correo: { contains: busqueda, mode: "insensitive" } },
+        { telefono: { contains: busqueda } },
+        { celular: { contains: busqueda } },
+      ];
+    }
+
+    // Filtro por edad (requiere cálculo)
+    if (filtrosValidados.edadMin || filtrosValidados.edadMax) {
+      const now = new Date();
+      const fechaNacimientoFilter: any = {};
+
+      if (filtrosValidados.edadMax) {
+        const minFechaNacimiento = new Date(
+          now.getFullYear() - filtrosValidados.edadMax - 1,
+          now.getMonth(),
+          now.getDate()
+        );
+        fechaNacimientoFilter.gte = minFechaNacimiento;
+      }
+      if (filtrosValidados.edadMin) {
+        const maxFechaNacimiento = new Date(
+          now.getFullYear() - filtrosValidados.edadMin,
+          now.getMonth(),
+          now.getDate()
+        );
+        fechaNacimientoFilter.lte = maxFechaNacimiento;
+      }
+
+      where.fechaNacimiento = fechaNacimientoFilter;
+    }
+
+    // Paginación
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const skip = (page - 1) * limit;
+
+    // Obtener personas
+    const [personas, total] = await Promise.all([
+      prisma.persona.findMany({
+        where,
+        include: {
+          familia: {
+            select: {
+              id: true,
+              apellido: true,
+              nombre: true,
+            },
+          },
+          ministerios: {
+            include: {
+              ministerio: {
+                select: {
+                  nombre: true,
+                  colorHex: true,
+                },
+              },
+            },
+          },
+          _count: {
+            select: {
+              historialVisitas: true,
+            },
+          },
+        },
+        orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
+        skip,
+        take: limit,
+      }),
+      prisma.persona.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      personas,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
       },
-      orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
     });
-
-    // Obtener visitas que no han sido convertidas a miembros
-    const visitas = await prisma.visita.findMany({
-      where: {
-        ...createIglesiaFilter(iglesiaId),
-        estado: { not: "Convertido" },
-      },
-      select: {
-        id: true,
-        nombres: true,
-        apellidos: true,
-        correo: true,
-        telefono: true,
-        celular: true,
-        foto: true,
-        estado: true,
-        fechaPrimeraVisita: true,
-      },
-      orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
-    });
-
-    // Combinar y formatear las personas
-    const personas = [
-      ...miembros.map((miembro) => ({
-        id: miembro.id,
-        nombres: miembro.nombres || "",
-        apellidos: miembro.apellidos || "",
-        correo: miembro.correo || null,
-        telefono: miembro.telefono || null,
-        celular: miembro.celular || null,
-        foto: miembro.foto || null,
-        estado: miembro.estado || "Activo",
-        tipo: "miembro" as const,
-        fechaBautismo: miembro.fechaBautismo,
-      })),
-      ...visitas.map((visita) => ({
-        id: visita.id,
-        nombres: visita.nombres || "",
-        apellidos: visita.apellidos || "",
-        correo: visita.correo || null,
-        telefono: visita.telefono || null,
-        celular: visita.celular || null,
-        foto: visita.foto || null,
-        estado: visita.estado || "Nuevo",
-        tipo: "visita" as const,
-        fechaBautismo: null,
-      })),
-    ];
-
-    // Ordenar por apellido y nombre
-    personas.sort((a, b) => {
-      const apellidoCompare = a.apellidos.localeCompare(b.apellidos);
-      if (apellidoCompare !== 0) return apellidoCompare;
-      return a.nombres.localeCompare(b.nombres);
-    });
-
-    console.log(
-      `✅ Se encontraron ${personas.length} personas para esta iglesia`
-    );
-
-    return NextResponse.json(personas);
   } catch (error) {
-    console.error("Error al obtener personas:", error);
+    console.error("Error obteniendo personas:", error);
+    return NextResponse.json(
+      { error: "Error interno del servidor" },
+      { status: 500 }
+    );
+  }
+}
 
-    if (error instanceof Error && error.message === "Usuario no autenticado") {
-      return NextResponse.json(
-        { error: "Usuario no autenticado" },
-        { status: 401 }
+// POST /api/personas - Crear nueva persona
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+
+    // Validar datos de entrada
+    const datosValidados = crearPersonaSchema.parse(body);
+
+    // Determinar tipo si se proporciona fecha de nacimiento
+    let tipoFinal = datosValidados.tipo;
+    if (datosValidados.fechaNacimiento && !datosValidados.tipo) {
+      tipoFinal = calcularTipoPersonaAutomatico(
+        new Date(datosValidados.fechaNacimiento)
       );
+    }
+
+    // Aplicar reglas automáticas si no se especifican rol y estado
+    let rolFinal = datosValidados.rol;
+    let estadoFinal = datosValidados.estado;
+
+    if (!rolFinal || !estadoFinal) {
+      const reglas = aplicarReglasAutomaticas(
+        tipoFinal as any,
+        datosValidados.fechaBautismo
+          ? new Date(datosValidados.fechaBautismo)
+          : null,
+        datosValidados.fechaIngreso
+          ? new Date(datosValidados.fechaIngreso)
+          : null
+      );
+      rolFinal = rolFinal || reglas.rol;
+      estadoFinal = estadoFinal || reglas.estado;
+    }
+
+    // Crear persona
+    const persona = await prisma.persona.create({
+      data: {
+        ...datosValidados,
+        tipo: tipoFinal as any,
+        rol: rolFinal as any,
+        estado: estadoFinal as any,
+      },
+      include: {
+        familia: {
+          select: {
+            id: true,
+            apellido: true,
+            nombre: true,
+          },
+        },
+        ministerios: {
+          include: {
+            ministerio: {
+              select: {
+                nombre: true,
+                colorHex: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({ persona }, { status: 201 });
+  } catch (error) {
+    console.error("Error creando persona:", error);
+
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

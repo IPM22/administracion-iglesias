@@ -77,7 +77,7 @@ interface TipoActividad {
 
 interface HistorialVisita {
   id: number;
-  visita: {
+  persona: {
     id: number;
     nombres: string;
     apellidos: string;
@@ -136,16 +136,84 @@ export default function ActividadesPage() {
   useEffect(() => {
     const fetchActividades = async () => {
       try {
+        console.log("🔄 Iniciando carga de actividades...");
+
         const response = await fetch("/api/actividades");
+        console.log(
+          "📡 Respuesta del servidor:",
+          response.status,
+          response.statusText
+        );
+
         if (!response.ok) {
-          throw new Error("Error al cargar las actividades");
+          const errorText = await response.text();
+          console.error("❌ Error del servidor:", response.status, errorText);
+          throw new Error(`Error ${response.status}: ${errorText}`);
         }
+
         const data = await response.json();
-        setActividades(data);
-        setActividadesFiltradas(data);
+        console.log("✅ Actividades recibidas:", data);
+        console.log(
+          "📊 Cantidad de actividades:",
+          Array.isArray(data) ? data.length : "No es array"
+        );
+
+        // Verificar que data es un array válido
+        if (!Array.isArray(data)) {
+          console.error(
+            "❌ Los datos recibidos no son un array:",
+            typeof data,
+            data
+          );
+          throw new Error("Formato de datos inválido - se esperaba un array");
+        }
+
+        // Verificar que cada actividad tiene la estructura correcta
+        const actividadesValidas = data.filter((actividad, index) => {
+          const esValida =
+            actividad &&
+            typeof actividad.id === "number" &&
+            typeof actividad.nombre === "string" &&
+            typeof actividad.fecha === "string" &&
+            actividad.tipoActividad &&
+            typeof actividad.tipoActividad.nombre === "string";
+
+          if (!esValida) {
+            console.warn(
+              `⚠️ Actividad ${index} tiene estructura inválida:`,
+              actividad
+            );
+          }
+
+          return esValida;
+        });
+
+        console.log(
+          "✅ Actividades válidas:",
+          actividadesValidas.length,
+          "de",
+          data.length
+        );
+
+        setActividades(actividadesValidas);
+        setActividadesFiltradas(actividadesValidas);
       } catch (error) {
-        console.error("Error:", error);
+        console.error("💥 Error completo:", error);
+        console.error(
+          "🔍 Stack trace:",
+          error instanceof Error ? error.stack : "No stack trace"
+        );
+
+        // Mostrar el error al usuario
+        const mensajeError =
+          error instanceof Error
+            ? `Error al cargar actividades: ${error.message}`
+            : "Error desconocido al cargar actividades";
+
+        // Podrías mostrar esto en la UI si quisieras
+        alert(mensajeError);
       } finally {
+        console.log("🏁 Finalizando carga de actividades");
         setLoading(false);
       }
     };

@@ -67,10 +67,11 @@ export async function GET(
     }
 
     // Verificar que la visita existe y pertenece a la iglesia del usuario
-    const visitaExiste = await prisma.visita.findUnique({
+    const visitaExiste = await prisma.persona.findUnique({
       where: {
         id: visitaId,
         iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
+        rol: "VISITA",
       },
     });
 
@@ -82,7 +83,7 @@ export async function GET(
     }
 
     const historial = await prisma.historialVisita.findMany({
-      where: { visitaId: visitaId },
+      where: { personaId: visitaId },
       include: {
         tipoActividad: true,
         actividad: {
@@ -96,7 +97,7 @@ export async function GET(
             },
           },
         },
-        miembro: {
+        persona: {
           select: {
             id: true,
             nombres: true,
@@ -169,9 +170,9 @@ export async function POST(
     const body = await request.json();
     const {
       fecha,
+      fechaEspecifica,
       tipoActividadId,
       actividadId,
-      invitadoPorId,
       observaciones,
     } = body;
 
@@ -193,28 +194,28 @@ export async function POST(
       );
     }
 
-    // Verificar que la visita existe y pertenece a la iglesia del usuario
-    const visitaExiste = await prisma.visita.findUnique({
+    // Verificar que la persona existe y pertenece a la iglesia del usuario
+    const personaExiste = await prisma.persona.findUnique({
       where: {
         id: visitaId,
         iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
       },
     });
 
-    if (!visitaExiste) {
+    if (!personaExiste) {
       return NextResponse.json(
-        { error: "Visita no encontrada" },
+        { error: "Persona no encontrada" },
         { status: 404 }
       );
     }
 
     const nuevoHistorial = await prisma.historialVisita.create({
       data: {
-        visitaId: visitaId,
+        personaId: visitaId,
         fecha: new Date(fecha),
+        fechaEspecifica: fechaEspecifica ? new Date(fechaEspecifica) : null,
         tipoActividadId: parseNumber(tipoActividadId),
         actividadId: parseNumber(actividadId),
-        miembroId: parseNumber(invitadoPorId),
         notas: parseString(observaciones),
       },
       include: {
@@ -230,7 +231,7 @@ export async function POST(
             },
           },
         },
-        miembro: {
+        persona: {
           select: {
             id: true,
             nombres: true,
@@ -239,6 +240,22 @@ export async function POST(
         },
       },
     });
+
+    // Verificar si la visita debe cambiar de estado a RECURRENTE
+    // Contar el total de visitas (incluyendo la que acabamos de crear)
+    const totalVisitas = await prisma.historialVisita.count({
+      where: {
+        personaId: visitaId,
+      },
+    });
+
+    // Si tiene más de 2 visitas y su estado actual es NUEVA, cambiar a RECURRENTE
+    if (totalVisitas > 2 && personaExiste.estado === "NUEVA") {
+      await prisma.persona.update({
+        where: { id: visitaId },
+        data: { estado: "RECURRENTE" },
+      });
+    }
 
     return NextResponse.json(nuevoHistorial, { status: 201 });
   } catch (error: unknown) {
@@ -317,10 +334,11 @@ export async function DELETE(
     }
 
     // Verificar que la visita existe y pertenece a la iglesia del usuario
-    const visitaExiste = await prisma.visita.findUnique({
+    const visitaExiste = await prisma.persona.findUnique({
       where: {
         id: visitaId,
         iglesiaId: usuarioIglesia.iglesiaId, // FILTRAR POR IGLESIA
+        rol: "VISITA",
       },
     });
 
@@ -335,7 +353,7 @@ export async function DELETE(
     const registroExistente = await prisma.historialVisita.findFirst({
       where: {
         id: historialIdNum,
-        visitaId: visitaId,
+        personaId: visitaId,
       },
     });
 
@@ -350,6 +368,22 @@ export async function DELETE(
     await prisma.historialVisita.delete({
       where: { id: historialIdNum },
     });
+
+    // Verificar si la visita debe cambiar de estado de RECURRENTE a NUEVA
+    // Contar el total de visitas restantes después de la eliminación
+    const totalVisitasRestantes = await prisma.historialVisita.count({
+      where: {
+        personaId: visitaId,
+      },
+    });
+
+    // Si tiene 2 o menos visitas y su estado actual es RECURRENTE, cambiar a NUEVA
+    if (totalVisitasRestantes <= 2 && visitaExiste.estado === "RECURRENTE") {
+      await prisma.persona.update({
+        where: { id: visitaId },
+        data: { estado: "NUEVA" },
+      });
+    }
 
     return NextResponse.json(
       { message: "Registro eliminado exitosamente" },

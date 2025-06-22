@@ -3,7 +3,6 @@
 import type * as React from "react";
 import {
   Users,
-  UserPlus,
   Calendar,
   Heart,
   HomeIcon,
@@ -33,40 +32,25 @@ const navMainItems = [
     isActive: true,
   },
   {
-    title: "Miembros",
-    url: "/miembros",
+    title: "Comunidad",
+    url: "/comunidad",
     icon: Users,
     items: [
       {
-        title: "Lista de Miembros",
-        url: "/miembros",
+        title: "Miembros",
+        url: "/comunidad?tab=miembros",
       },
       {
-        title: "Nuevo Miembro",
-        url: "/miembros/nuevo",
+        title: "Visitas",
+        url: "/comunidad?tab=visitas",
       },
       {
-        title: "Reportes",
-        url: "/miembros/reportes",
-      },
-    ],
-  },
-  {
-    title: "Visitas",
-    url: "/visitas",
-    icon: UserPlus,
-    items: [
-      {
-        title: "Lista de Visitas",
-        url: "/visitas",
+        title: "Niños y Adolescentes",
+        url: "/comunidad?tab=ninos",
       },
       {
-        title: "Nueva Visita",
-        url: "/visitas/nueva",
-      },
-      {
-        title: "Seguimiento",
-        url: "/visitas/seguimiento",
+        title: "Nueva Persona",
+        url: "/comunidad/nueva",
       },
     ],
   },

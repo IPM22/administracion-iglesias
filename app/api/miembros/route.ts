@@ -1,10 +1,6 @@
 import { prisma } from "../../../lib/db";
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getUserContext,
-  requireAuth,
-  createIglesiaFilter,
-} from "../../../lib/auth-utils";
+import { getUserContext, requireAuth } from "../../../lib/auth-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,22 +8,37 @@ export async function GET(request: NextRequest) {
     const userContext = await getUserContext(request);
     const { iglesiaId } = requireAuth(userContext);
 
-    console.log("🏛️ Filtrando miembros para iglesia ID:", iglesiaId);
+    console.log("🏛️ Filtrando personas para iglesia ID:", iglesiaId);
 
-    const miembros = await prisma.miembro.findMany({
-      where: createIglesiaFilter(iglesiaId),
+    const personas = await prisma.persona.findMany({
+      where: {
+        iglesiaId,
+        estado: "ACTIVA", // Solo personas activas
+      },
+      select: {
+        id: true,
+        nombres: true,
+        apellidos: true,
+        foto: true,
+        correo: true,
+        telefono: true,
+        celular: true,
+        estado: true,
+        tipo: true,
+        rol: true,
+      },
       orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
     });
 
     console.log(
       "👥 Se encontraron",
-      miembros.length,
-      "miembros para esta iglesia"
+      personas.length,
+      "personas para esta iglesia"
     );
 
-    return NextResponse.json(miembros);
+    return NextResponse.json(personas);
   } catch (error) {
-    console.error("Error al obtener miembros:", error);
+    console.error("Error al obtener personas:", error);
 
     if (error instanceof Error && error.message === "Usuario no autenticado") {
       return NextResponse.json(
@@ -37,7 +48,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: "Error al obtener los miembros" },
+      { error: "Error al obtener las personas" },
       { status: 500 }
     );
   }
@@ -65,7 +76,6 @@ export async function POST(request: NextRequest) {
       fechaIngreso,
       fechaBautismo,
       fechaConfirmacion,
-      estado = "Activo",
       familiaId,
       relacion,
     } = body;
@@ -78,24 +88,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar si ya existe un miembro con el mismo correo en esta iglesia
+    // Verificar si ya existe una persona con el mismo correo en esta iglesia
     if (correo) {
-      const miembroExistente = await prisma.miembro.findFirst({
+      const personaExistente = await prisma.persona.findFirst({
         where: {
           correo,
           iglesiaId,
         },
       });
 
-      if (miembroExistente) {
+      if (personaExistente) {
         return NextResponse.json(
-          { error: "Ya existe un miembro con ese correo electrónico" },
+          { error: "Ya existe una persona con ese correo electrónico" },
           { status: 409 }
         );
       }
     }
 
-    const nuevoMiembro = await prisma.miembro.create({
+    const nuevaPersona = await prisma.persona.create({
       data: {
         iglesiaId, // ✅ Asignar automáticamente la iglesia del usuario
         nombres: nombres.trim(),
@@ -114,15 +124,14 @@ export async function POST(request: NextRequest) {
         fechaConfirmacion: fechaConfirmacion
           ? new Date(fechaConfirmacion)
           : null,
-        estado,
         familiaId: familiaId ? parseInt(familiaId) : null,
-        relacion: relacion?.trim() || null,
+        relacionFamiliar: relacion?.trim() || null,
       },
     });
 
-    return NextResponse.json(nuevoMiembro, { status: 201 });
+    return NextResponse.json(nuevaPersona, { status: 201 });
   } catch (error) {
-    console.error("Error al crear miembro:", error);
+    console.error("Error al crear persona:", error);
 
     if (error instanceof Error && error.message === "Usuario no autenticado") {
       return NextResponse.json(
@@ -132,7 +141,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: "Error al crear el miembro" },
+      { error: "Error al crear la persona" },
       { status: 500 }
     );
   }

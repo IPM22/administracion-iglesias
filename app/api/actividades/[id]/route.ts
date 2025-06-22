@@ -35,9 +35,14 @@ export async function GET(
             descripcion: true,
           },
         },
+        horarios: {
+          orderBy: {
+            fecha: "asc",
+          },
+        },
         historialVisitas: {
           include: {
-            visita: {
+            persona: {
               select: {
                 id: true,
                 nombres: true,
@@ -45,6 +50,7 @@ export async function GET(
                 correo: true,
                 telefono: true,
                 celular: true,
+                foto: true,
               },
             },
             tipoActividad: {
@@ -156,6 +162,7 @@ export async function PUT(
       tipoActividadId,
       ministerioId,
       estado = "Programada",
+      horarios = [],
     } = body;
 
     // Validaciones básicas
@@ -277,6 +284,31 @@ export async function PUT(
       WHERE "id" = ${actividadId}
     `;
 
+    // Manejar horarios múltiples
+    if (horarios && Array.isArray(horarios) && horarios.length > 0) {
+      // Eliminar horarios existentes
+      await prisma.actividadHorario.deleteMany({
+        where: { actividadId },
+      });
+
+      // Crear nuevos horarios
+      const horariosValidos = horarios.filter(
+        (h) => h.fecha && h.horaInicio && h.horaFin
+      );
+
+      if (horariosValidos.length > 0) {
+        await prisma.actividadHorario.createMany({
+          data: horariosValidos.map((h) => ({
+            actividadId,
+            fecha: new Date(h.fecha),
+            horaInicio: h.horaInicio,
+            horaFin: h.horaFin,
+            notas: parseString(h.notas),
+          })),
+        });
+      }
+    }
+
     // Obtener la actividad actualizada con todos los campos
     const actividadFinal = await prisma.actividad.findUnique({
       where: { id: actividadId },
@@ -289,13 +321,19 @@ export async function PUT(
             descripcion: true,
           },
         },
+        horarios: {
+          orderBy: {
+            fecha: "asc",
+          },
+        },
         historialVisitas: {
           include: {
-            visita: {
+            persona: {
               select: {
                 id: true,
                 nombres: true,
                 apellidos: true,
+                foto: true,
               },
             },
           },

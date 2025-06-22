@@ -39,32 +39,70 @@ import {
 } from "lucide-react";
 
 interface DashboardStats {
+  // Estadísticas principales por rol
   totalMiembros: number;
   miembrosActivos: number;
   totalVisitas: number;
   totalFamilias: number;
   familiasActivas: number;
+
+  // Nueva: Estadísticas por tipo de persona (basadas en edad)
+  porTipoPersona: {
+    ninos: number; // 0-9 años
+    adolescentes: number; // 10-14 años
+    jovenes: number; // 15-24 años
+    adultos: number; // 25-35 años
+    adultosMayores: number; // 36-59 años
+    envejecientes: number; // 60+ años
+  };
+
+  // Estadísticas específicas por rol y tipo
+  miembrosPorTipo: {
+    ninos: number;
+    adolescentes: number;
+    jovenes: number;
+    adultos: number;
+    adultosMayores: number;
+    envejecientes: number;
+  };
+
   visitasPorEstado: {
     nuevas: number;
     recurrentes: number;
     convertidas: number;
+    inactivas: number;
   };
+
+  // Métricas de crecimiento
   cambios: {
     miembros: number;
     visitas: number;
     familias: number;
+    conversiones: number; // Nueva métrica
   };
+
   nuevosUltimos30Dias: {
     miembros: number;
     visitas: number;
     familias: number;
   };
+
+  // Distribución por edades (mantenida para compatibilidad)
   distribucionEdades: {
     ninos: number;
     jovenes: number;
     adultos: number;
     adultosMayores: number;
   };
+
+  // Estadísticas de ministerio y vida eclesiástica
+  estadisticasEclesiasticas: {
+    bautizados: number;
+    confirmados: number;
+    enMinisterios: number;
+    adolescentesSinBautismo: number; // Métrica importante para seguimiento
+  };
+
   proximasActividades: Array<{
     id: number;
     nombre: string;
@@ -80,14 +118,21 @@ interface DashboardStats {
     estado: string;
     asistentesEsperados: number;
   }>;
+
   conversionesRecientes: Array<{
     nombres: string;
     apellidos: string;
     fechaConversion: string;
     fechaOriginal: string;
+    tipoPersona: string; // Nuevo: incluir el tipo de persona convertida
   }>;
+
   tasaConversion: number;
   promedioPersonasPorFamilia: number;
+
+  // Nuevas métricas
+  tasaBautismo: number; // % de miembros bautizados
+  tasaRetencion: number; // % de visitas que se vuelven recurrentes
 }
 
 export default function DashboardPage() {
@@ -363,7 +408,7 @@ export default function DashboardPage() {
       change: stats.cambios.miembros,
       icon: Users,
       color: "text-blue-600",
-      route: "/miembros",
+      route: "/comunidad?tab=miembros",
     },
     {
       title: "Total Visitas",
@@ -372,7 +417,18 @@ export default function DashboardPage() {
       change: stats.cambios.visitas,
       icon: UserPlus,
       color: "text-green-600",
-      route: "/visitas",
+      route: "/comunidad?tab=visitas",
+    },
+    {
+      title: "Niños y Adolescentes",
+      value:
+        (stats.porTipoPersona?.ninos || 0) +
+        (stats.porTipoPersona?.adolescentes || 0),
+      description: `${stats.porTipoPersona?.adolescentes || 0} adolescentes`,
+      change: 0, // Se puede calcular en la API si es necesario
+      icon: Heart,
+      color: "text-pink-600",
+      route: "/comunidad?tab=ninos-adolescentes",
     },
     {
       title: "Familias Activas",
@@ -387,10 +443,59 @@ export default function DashboardPage() {
       title: "Tasa Conversión",
       value: `${stats.tasaConversion}%`,
       description: `${stats.visitasPorEstado.convertidas} convertidos`,
-      change: stats.visitasPorEstado.convertidas > 0 ? 15 : 0,
+      change: stats.cambios.conversiones || 0,
       icon: Heart,
       color: "text-red-600",
-      route: "/visitas?filter=Convertido",
+      route: "/comunidad?tab=visitas&filter=convertidas",
+    },
+    {
+      title: "Tasa Bautismo",
+      value: `${stats.tasaBautismo || 0}%`,
+      description: `${
+        stats.estadisticasEclesiasticas?.bautizados || 0
+      } bautizados`,
+      change: 0,
+      icon: UserCheck,
+      color: "text-cyan-600",
+      route: "/comunidad?filter=bautizados",
+    },
+  ];
+
+  // Tarjetas adicionales para métricas específicas
+  const additionalStatsCards = [
+    {
+      title: "Jóvenes Activos",
+      value: stats.porTipoPersona?.jovenes || 0,
+      description: "15-24 años",
+      icon: Users,
+      color: "text-indigo-600",
+    },
+    {
+      title: "Adultos Mayores",
+      value:
+        (stats.porTipoPersona?.adultosMayores || 0) +
+        (stats.porTipoPersona?.envejecientes || 0),
+      description: "36+ años",
+      icon: Users,
+      color: "text-amber-600",
+    },
+    {
+      title: "En Ministerios",
+      value: stats.estadisticasEclesiasticas?.enMinisterios || 0,
+      description: `${Math.round(
+        ((stats.estadisticasEclesiasticas?.enMinisterios || 0) /
+          stats.totalMiembros) *
+          100
+      )}% de miembros`,
+      icon: UserCheck,
+      color: "text-emerald-600",
+    },
+    {
+      title: "Adolescentes sin Bautismo",
+      value: stats.estadisticasEclesiasticas?.adolescentesSinBautismo || 0,
+      description: "Requieren seguimiento",
+      icon: UserPlus,
+      color: "text-orange-600",
     },
   ];
 
@@ -442,9 +547,8 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Resto del dashboard igual que antes... */}
           {/* Tarjetas principales de estadísticas */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {statsCards.map((card, index) => {
               const Icon = card.icon;
               return (
@@ -473,7 +577,33 @@ export default function DashboardPage() {
             })}
           </div>
 
-          {/* Métricas adicionales */}
+          {/* Métricas adicionales específicas del nuevo modelo */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {additionalStatsCards.map((card, index) => {
+              const Icon = card.icon;
+              return (
+                <Card
+                  key={index}
+                  className="hover:bg-muted/50 transition-colors"
+                >
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      {card.title}
+                    </CardTitle>
+                    <Icon className={`h-4 w-4 ${card.color}`} />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{card.value}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {card.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Métricas detalladas por tipo de persona */}
           <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <CardHeader className="pb-2">
@@ -538,6 +668,14 @@ export default function DashboardPage() {
                     {stats.visitasPorEstado.convertidas}
                   </Badge>
                 </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Inactivas
+                  </span>
+                  <Badge variant="destructive">
+                    {stats.visitasPorEstado.inactivas || 0}
+                  </Badge>
+                </div>
               </CardContent>
             </Card>
 
@@ -545,45 +683,122 @@ export default function DashboardPage() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <PieChart className="h-4 w-4 text-purple-600" />
-                  Distribución por Edades
+                  Comunidad por edad
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">
-                    Niños (0-12)
+                    Niños (0-9)
                   </span>
                   <Badge variant="secondary">
-                    {stats.distribucionEdades.ninos}
+                    {stats.porTipoPersona?.ninos || 0}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">
-                    Jóvenes (13-25)
+                    Adolescentes (10-14)
                   </span>
                   <Badge variant="secondary">
-                    {stats.distribucionEdades.jovenes}
+                    {stats.porTipoPersona?.adolescentes || 0}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">
-                    Adultos (26-59)
+                    Jóvenes (15-24)
                   </span>
                   <Badge variant="secondary">
-                    {stats.distribucionEdades.adultos}
+                    {stats.porTipoPersona?.jovenes || 0}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">
-                    Mayores (60+)
+                    Adultos (25-35)
                   </span>
                   <Badge variant="secondary">
-                    {stats.distribucionEdades.adultosMayores}
+                    {stats.porTipoPersona?.adultos || 0}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Adultos Mayores (36-59)
+                  </span>
+                  <Badge variant="secondary">
+                    {stats.porTipoPersona?.adultosMayores || 0}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Envejecientes (60+)
+                  </span>
+                  <Badge variant="secondary">
+                    {stats.porTipoPersona?.envejecientes || 0}
                   </Badge>
                 </div>
               </CardContent>
             </Card>
           </div>
+
+          {/* Nueva sección: Estadísticas Eclesiásticas */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-blue-600" />
+                Vida Eclesiástica
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {stats.estadisticasEclesiasticas?.bautizados || 0}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Bautizados
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {stats.tasaBautismo || 0}% de miembros
+                  </div>
+                </div>
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">
+                    {stats.estadisticasEclesiasticas?.confirmados || 0}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Confirmados
+                  </div>
+                </div>
+                <div className="text-center p-4 bg-purple-50 rounded-lg">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {stats.estadisticasEclesiasticas?.enMinisterios || 0}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    En Ministerios
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {Math.round(
+                      ((stats.estadisticasEclesiasticas?.enMinisterios || 0) /
+                        stats.totalMiembros) *
+                        100
+                    )}
+                    % de miembros
+                  </div>
+                </div>
+                <div className="text-center p-4 bg-orange-50 rounded-lg">
+                  <div className="text-2xl font-bold text-orange-600">
+                    {stats.estadisticasEclesiasticas?.adolescentesSinBautismo ||
+                      0}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Adolescentes sin Bautismo
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Requieren seguimiento
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Próximas actividades */}
           <Card>
@@ -726,9 +941,16 @@ export default function DashboardPage() {
                           <UserCheck className="h-5 w-5 text-green-600" />
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-sm">
-                            {conversion.nombres} {conversion.apellidos}
-                          </p>
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium text-sm">
+                              {conversion.nombres} {conversion.apellidos}
+                            </p>
+                            {conversion.tipoPersona && (
+                              <Badge variant="outline" className="text-xs">
+                                {conversion.tipoPersona}
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-xs text-muted-foreground">
                             Convertido el{" "}
                             {formatearFecha(conversion.fechaConversion)}
@@ -737,6 +959,18 @@ export default function DashboardPage() {
                       </div>
                     ))}
                 </div>
+                {stats.conversionesRecientes.length > 6 && (
+                  <div className="flex justify-center mt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        router.push("/comunidad?tab=visitas&filter=convertidas")
+                      }
+                    >
+                      Ver Todas las Conversiones
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
