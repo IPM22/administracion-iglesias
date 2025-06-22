@@ -173,6 +173,19 @@ export async function GET(
             rol: jefeFamilia.rol,
           }
         : null,
+      // Para compatibilidad con el frontend, separar personas por rol
+      miembros: miembros.map((p) => ({
+        ...p,
+        parentescoFamiliar: p.relacionFamiliar, // Mapear el campo para compatibilidad
+      })),
+      visitas: visitas.map((p) => ({
+        ...p,
+        parentescoFamiliar: p.relacionFamiliar, // Mapear el campo para compatibilidad
+      })),
+      ninos: ninos.map((p) => ({
+        ...p,
+        parentescoFamiliar: p.relacionFamiliar, // Mapear el campo para compatibilidad
+      })),
       // Estadísticas generales
       totalPersonas,
       personasActivas,

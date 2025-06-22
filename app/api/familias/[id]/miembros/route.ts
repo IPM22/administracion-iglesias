@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db";
-import { sincronizarRelacionesFamiliares } from "../../../../../lib/familiares-sync";
 
 // GET - Obtener miembros de una familia
 export async function GET(
@@ -30,8 +29,8 @@ export async function GET(
       );
     }
 
-    // Obtener miembros de la familia
-    const miembros = await prisma.miembro.findMany({
+    // Obtener personas de la familia
+    const personas = await prisma.persona.findMany({
       where: { familiaId: familiaId },
       select: {
         id: true,
@@ -45,11 +44,13 @@ export async function GET(
         estado: true,
         foto: true,
         fechaIngreso: true,
+        relacionFamiliar: true,
+        rol: true,
       },
       orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
     });
 
-    return NextResponse.json(miembros);
+    return NextResponse.json(personas);
   } catch (error) {
     console.error("Error al obtener miembros de familia:", error);
     return NextResponse.json(
@@ -59,7 +60,7 @@ export async function GET(
   }
 }
 
-// POST - Agregar miembro a familia
+// POST - Agregar persona a familia
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -76,11 +77,11 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { miembroId, parentescoFamiliar } = body;
+    const { personaId, parentescoFamiliar } = body;
 
-    if (!miembroId) {
+    if (!personaId) {
       return NextResponse.json(
-        { error: "ID de miembro es requerido" },
+        { error: "ID de persona es requerido" },
         { status: 400 }
       );
     }
@@ -97,28 +98,28 @@ export async function POST(
       );
     }
 
-    // Verificar que el miembro existe
-    const miembro = await prisma.miembro.findUnique({
-      where: { id: parseInt(miembroId) },
+    // Verificar que la persona existe
+    const persona = await prisma.persona.findUnique({
+      where: { id: parseInt(personaId) },
     });
 
-    if (!miembro) {
+    if (!persona) {
       return NextResponse.json(
-        { error: "Miembro no encontrado" },
+        { error: "Persona no encontrada" },
         { status: 404 }
       );
     }
 
-    // Verificar si el miembro ya pertenece a otra familia
-    if (miembro.familiaId && miembro.familiaId !== familiaId) {
+    // Verificar si la persona ya pertenece a otra familia
+    if (persona.familiaId && persona.familiaId !== familiaId) {
       const familiaActual = await prisma.familia.findUnique({
-        where: { id: miembro.familiaId },
+        where: { id: persona.familiaId },
         select: { apellido: true, nombre: true },
       });
 
       return NextResponse.json(
         {
-          error: `El miembro ya pertenece a la familia ${
+          error: `La persona ya pertenece a la familia ${
             familiaActual?.nombre || `Familia ${familiaActual?.apellido}`
           }`,
         },
@@ -126,16 +127,12 @@ export async function POST(
       );
     }
 
-    // Agregar miembro a la familia
-    const miembroActualizado = await prisma.miembro.update({
-      where: { id: parseInt(miembroId) },
+    // Agregar persona a la familia
+    const personaActualizada = await prisma.persona.update({
+      where: { id: parseInt(personaId) },
       data: {
         familiaId: familiaId,
-        // Si es el cabeza de familia, establecer parentesco automáticamente
-        parentescoFamiliar:
-          familia.jefeFamiliaId === parseInt(miembroId)
-            ? "Cabeza de Familia"
-            : parentescoFamiliar || null,
+        relacionFamiliar: parentescoFamiliar || null,
       },
       select: {
         id: true,
@@ -149,39 +146,22 @@ export async function POST(
         estado: true,
         foto: true,
         fechaIngreso: true,
-        parentescoFamiliar: true,
+        relacionFamiliar: true,
+        rol: true,
       },
     });
 
-    // **NUEVA FUNCIONALIDAD: Sincronización automática de relaciones familiares**
-    let mensajeSincronizacion = "";
-    try {
-      const resultadoSync = await sincronizarRelacionesFamiliares(
-        parseInt(miembroId),
-        familiaId,
-        parentescoFamiliar
-      );
-      mensajeSincronizacion = resultadoSync.mensaje;
-    } catch (syncError) {
-      console.error(
-        "Error en sincronización automática de relaciones:",
-        syncError
-      );
-      mensajeSincronizacion =
-        "Miembro agregado a familia, pero hubo un problema creando las relaciones familiares automáticas";
-    }
-
     return NextResponse.json(
       {
-        miembro: miembroActualizado,
-        sincronizacion: mensajeSincronizacion,
+        persona: personaActualizada,
+        mensaje: "Persona agregada a la familia exitosamente",
       },
       { status: 201 }
     );
   } catch (error) {
-    console.error("Error al agregar miembro a familia:", error);
+    console.error("Error al agregar persona a familia:", error);
     return NextResponse.json(
-      { error: "Error al agregar miembro a la familia" },
+      { error: "Error al agregar persona a la familia" },
       { status: 500 }
     );
   }

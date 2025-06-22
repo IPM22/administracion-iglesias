@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// POST - Agregar persona (miembro o visita) a familia
+// POST - Agregar persona a familia
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -20,19 +20,12 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { personaId, tipo, parentescoFamiliar } = body;
+    const { personaId, parentescoFamiliar } = body;
 
     // Validaciones
-    if (!personaId || !tipo) {
+    if (!personaId) {
       return NextResponse.json(
-        { error: "PersonaId y tipo son requeridos" },
-        { status: 400 }
-      );
-    }
-
-    if (tipo !== "miembro" && tipo !== "visita") {
-      return NextResponse.json(
-        { error: "Tipo debe ser 'miembro' o 'visita'" },
+        { error: "PersonaId es requerido" },
         { status: 400 }
       );
     }
@@ -49,82 +42,43 @@ export async function POST(
       );
     }
 
-    // Verificar que la persona existe y agregar a la familia
-    if (tipo === "miembro") {
-      const miembro = await prisma.miembro.findUnique({
-        where: { id: personaId },
-      });
+    // Verificar que la persona existe
+    const persona = await prisma.persona.findUnique({
+      where: { id: personaId },
+    });
 
-      if (!miembro) {
-        return NextResponse.json(
-          { error: "Miembro no encontrado" },
-          { status: 404 }
-        );
-      }
-
-      // Verificar si ya pertenece a esta familia
-      if (miembro.familiaId === familiaId) {
-        return NextResponse.json(
-          { error: "El miembro ya pertenece a esta familia" },
-          { status: 400 }
-        );
-      }
-
-      // Actualizar el miembro para asignarlo a la familia
-      const updateData: { familiaId: number; relacion?: string } = {
-        familiaId: familiaId,
-      };
-      if (parentescoFamiliar) {
-        updateData.relacion = parentescoFamiliar;
-      }
-
-      await prisma.miembro.update({
-        where: { id: personaId },
-        data: updateData,
-      });
-
+    if (!persona) {
       return NextResponse.json(
-        { message: "Miembro agregado a la familia exitosamente" },
-        { status: 200 }
-      );
-    } else {
-      const visita = await prisma.visita.findUnique({
-        where: { id: personaId },
-      });
-
-      if (!visita) {
-        return NextResponse.json(
-          { error: "Visita no encontrada" },
-          { status: 404 }
-        );
-      }
-
-      // Verificar si ya pertenece a esta familia
-      if (visita.familiaId === familiaId) {
-        return NextResponse.json(
-          { error: "La visita ya pertenece a esta familia" },
-          { status: 400 }
-        );
-      }
-
-      // Actualizar la visita para asignarla a la familia
-      const updateData: { familiaId: number; familia?: string } = {
-        familiaId: familiaId,
-      };
-      if (parentescoFamiliar) {
-        updateData.familia = parentescoFamiliar;
-      }
-
-      await prisma.visita.update({
-        where: { id: personaId },
-        data: updateData,
-      });
-
-      return NextResponse.json(
-        { message: "Visita agregada a la familia exitosamente" },
-        { status: 200 }
+        { error: "Persona no encontrada" },
+        { status: 404 }
       );
     }
+
+    // Verificar si ya pertenece a esta familia
+    if (persona.familiaId === familiaId) {
+      return NextResponse.json(
+        { error: "La persona ya pertenece a esta familia" },
+        { status: 400 }
+      );
+    }
+
+    // Actualizar la persona para asignarla a la familia
+    const updateData: { familiaId: number; relacionFamiliar?: string } = {
+      familiaId: familiaId,
+    };
+    if (parentescoFamiliar) {
+      updateData.relacionFamiliar = parentescoFamiliar;
+    }
+
+    await prisma.persona.update({
+      where: { id: personaId },
+      data: updateData,
+    });
+
+    return NextResponse.json(
+      { message: "Persona agregada a la familia exitosamente" },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error al agregar persona a la familia:", error);
     return NextResponse.json(
