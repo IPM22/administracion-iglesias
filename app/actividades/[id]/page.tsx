@@ -29,6 +29,9 @@ import {
   Share2,
   Trash2,
   Loader2,
+  FileSpreadsheet,
+  FileText,
+  Monitor,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ModeToggle } from "../../../components/mode-toggle";
@@ -42,6 +45,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
 
 // Interfaces para tipado
 interface TipoActividad {
@@ -53,6 +59,7 @@ interface TipoActividad {
 interface HistorialVisita {
   id: number;
   fecha: string;
+  horarioId?: number; // Nuevo campo para asociar con horario específico
   persona: {
     id: number;
     nombres: string;
@@ -92,6 +99,14 @@ interface ActividadDetalle {
     horaFin: string;
     notas?: string;
   }>;
+}
+
+interface Horario {
+  id: number;
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
+  notas?: string;
 }
 
 export default function DetalleActividadPage({
@@ -226,6 +241,193 @@ export default function DetalleActividadPage({
       setIsDeleting(false);
       setDialogOpen(false);
     }
+  };
+
+  // Función para agrupar asistentes por horario
+  const agruparAsistentesPorHorario = () => {
+    if (!actividad?.horarios || actividad.horarios.length === 0) {
+      // Si no hay horarios específicos, mostrar todos los asistentes en un grupo general
+      return [
+        {
+          horario: null,
+          asistentes: actividad?.historialVisitas || [],
+        },
+      ];
+    }
+
+    const grupos: { horario: Horario | null; asistentes: HistorialVisita[] }[] =
+      [];
+
+    // Crear un grupo para cada horario
+    actividad.horarios.forEach((horario) => {
+      const asistentesHorario = actividad.historialVisitas.filter(
+        (h) => h.horarioId === horario.id
+      );
+      grupos.push({
+        horario,
+        asistentes: asistentesHorario,
+      });
+    });
+
+    // Agregar grupo para asistentes sin horario específico
+    const asistentesSinHorario = actividad.historialVisitas.filter(
+      (h) => !h.horarioId
+    );
+
+    if (asistentesSinHorario.length > 0) {
+      grupos.push({
+        horario: null,
+        asistentes: asistentesSinHorario,
+      });
+    }
+
+    return grupos;
+  };
+
+  // Función para exportar a Excel
+  const exportarExcel = (
+    horario: Horario | null,
+    asistentes: HistorialVisita[]
+  ) => {
+    if (!actividad) return;
+
+    const datos = asistentes.map((asistente, index) => ({
+      "#": index + 1,
+      Nombre: `${asistente.persona.nombres} ${asistente.persona.apellidos}`,
+      "Fecha de Visita": new Date(asistente.fecha).toLocaleDateString("es-ES"),
+      "Invitado por": asistente.invitadoPor
+        ? `${asistente.invitadoPor.nombres} ${asistente.invitadoPor.apellidos}`
+        : "No especificado",
+      Observaciones: asistente.observaciones || "Sin observaciones",
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(datos);
+    const wb = XLSX.utils.book_new();
+
+    const nombreHoja = horario
+      ? `${formatearFecha(horario.fecha)} ${formatearHora(horario.horaInicio)}`
+      : "Asistentes Generales";
+
+    XLSX.utils.book_append_sheet(wb, ws, nombreHoja.substring(0, 31)); // Excel tiene límite de 31 caracteres
+
+    const nombreArchivo = `${actividad.nombre}_${nombreHoja}_${
+      new Date().toISOString().split("T")[0]
+    }.xlsx`;
+    XLSX.writeFile(wb, nombreArchivo);
+  };
+
+  // Función para exportar a PDF
+  const exportarPDF = async (
+    horario: Horario | null,
+    asistentes: HistorialVisita[]
+  ) => {
+    if (!actividad) return;
+
+    const pdf = new jsPDF();
+
+    // Configurar fuente
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(18);
+
+    // Título principal
+    pdf.text(actividad.nombre, 20, 20);
+
+    // Información del horario
+    pdf.setFontSize(14);
+    pdf.setFont("helvetica", "normal");
+
+    if (horario) {
+      pdf.text(`Horario: ${formatearFecha(horario.fecha)}`, 20, 35);
+      pdf.text(
+        `${formatearHora(horario.horaInicio)} - ${formatearHora(
+          horario.horaFin
+        )}`,
+        20,
+        45
+      );
+      if (horario.notas) {
+        pdf.text(`Notas: ${horario.notas}`, 20, 55);
+      }
+    } else {
+      pdf.text("Asistentes Generales", 20, 35);
+    }
+
+    // Lista de asistentes
+    pdf.setFontSize(12);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Lista de Asistentes:", 20, 70);
+
+    let yPosition = 85;
+
+    asistentes.forEach((asistente, index) => {
+      if (yPosition > 270) {
+        // Nueva página si es necesario
+        pdf.addPage();
+        yPosition = 20;
+      }
+
+      pdf.setFont("helvetica", "normal");
+      pdf.text(
+        `${index + 1}. ${asistente.persona.nombres} ${
+          asistente.persona.apellidos
+        }`,
+        25,
+        yPosition
+      );
+
+      if (asistente.invitadoPor) {
+        yPosition += 7;
+        pdf.setFontSize(10);
+        pdf.text(
+          `   Invitado por: ${asistente.invitadoPor.nombres} ${asistente.invitadoPor.apellidos}`,
+          25,
+          yPosition
+        );
+        pdf.setFontSize(12);
+      }
+
+      if (asistente.observaciones) {
+        yPosition += 7;
+        pdf.setFontSize(10);
+        pdf.text(`   Observaciones: ${asistente.observaciones}`, 25, yPosition);
+        pdf.setFontSize(12);
+      }
+
+      yPosition += 10;
+    });
+
+    // Footer
+    pdf.setFontSize(8);
+    pdf.text(
+      `Total de asistentes: ${asistentes.length}`,
+      20,
+      pdf.internal.pageSize.height - 15
+    );
+    pdf.text(
+      `Generado el: ${new Date().toLocaleDateString("es-ES")}`,
+      20,
+      pdf.internal.pageSize.height - 10
+    );
+
+    // Descargar
+    const nombreHorario = horario
+      ? `${formatearFecha(horario.fecha)}_${formatearHora(horario.horaInicio)}`
+      : "Asistentes_Generales";
+
+    pdf.save(
+      `${actividad.nombre}_${nombreHorario}_${
+        new Date().toISOString().split("T")[0]
+      }.pdf`
+    );
+  };
+
+  // Función para abrir vista de agradecimiento
+  const abrirVistaAgradecimiento = (horario: Horario | null) => {
+    if (!actividad) return;
+
+    const horarioParam = horario ? horario.id : "general";
+    const url = `/actividades/${actividad.id}/agradecimiento?horario=${horarioParam}`;
+    window.open(url, "_blank", "fullscreen=yes,scrollbars=yes,resizable=yes");
   };
 
   if (loading) {
@@ -472,7 +674,7 @@ export default function DetalleActividadPage({
             </CardContent>
           </Card>
 
-          {/* Asistentes */}
+          {/* Asistentes por Horario */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -486,50 +688,139 @@ export default function DetalleActividadPage({
                   No hay asistentes registrados para esta actividad
                 </p>
               ) : (
-                <div className="space-y-3">
-                  {actividad.historialVisitas.map((historial) => (
-                    <div
-                      key={historial.id}
-                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted/80 transition-colors cursor-pointer"
-                      onClick={() =>
-                        router.push(`/visitas/${historial.persona.id}`)
-                      }
-                    >
-                      <div className="flex items-center gap-3">
-                        <MiembroAvatar
-                          foto={historial.persona.foto}
-                          nombre={`${historial.persona.nombres} ${historial.persona.apellidos}`}
-                          size="sm"
-                        />
-                        <div>
-                          <p className="font-medium">
-                            {historial.persona.nombres}{" "}
-                            {historial.persona.apellidos}
-                          </p>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span>
-                              {new Date(historial.fecha).toLocaleDateString()}
-                            </span>
-                            {historial.invitadoPor && (
-                              <>
-                                <span>•</span>
-                                <span>
-                                  Invitado por: {historial.invitadoPor.nombres}{" "}
-                                  {historial.invitadoPor.apellidos}
-                                </span>
-                              </>
-                            )}
+                <Tabs defaultValue="0" className="w-full">
+                  <TabsList className="grid w-full grid-cols-auto gap-1 overflow-x-auto">
+                    {agruparAsistentesPorHorario().map((grupo, index) => (
+                      <TabsTrigger
+                        key={index}
+                        value={index.toString()}
+                        className="whitespace-nowrap text-xs px-2"
+                      >
+                        {grupo.horario ? (
+                          <div className="text-center">
+                            <div className="font-medium">
+                              {formatearFecha(grupo.horario.fecha)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {formatearHora(grupo.horario.horaInicio)} -{" "}
+                              {formatearHora(grupo.horario.horaFin)}
+                            </div>
+                            <Badge variant="secondary" className="text-xs mt-1">
+                              {grupo.asistentes.length}
+                            </Badge>
                           </div>
-                          {historial.observaciones && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {historial.observaciones}
-                            </p>
-                          )}
-                        </div>
+                        ) : (
+                          <div className="text-center">
+                            <div className="font-medium">General</div>
+                            <Badge variant="secondary" className="text-xs mt-1">
+                              {grupo.asistentes.length}
+                            </Badge>
+                          </div>
+                        )}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+
+                  {agruparAsistentesPorHorario().map((grupo, index) => (
+                    <TabsContent
+                      key={index}
+                      value={index.toString()}
+                      className="mt-4"
+                    >
+                      {/* Botones de reporte para cada horario */}
+                      <div className="flex gap-2 mb-4 flex-wrap">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            exportarExcel(grupo.horario, grupo.asistentes)
+                          }
+                          className="flex items-center gap-2"
+                        >
+                          <FileSpreadsheet className="h-4 w-4" />
+                          Excel
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            exportarPDF(grupo.horario, grupo.asistentes)
+                          }
+                          className="flex items-center gap-2"
+                        >
+                          <FileText className="h-4 w-4" />
+                          PDF
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            abrirVistaAgradecimiento(grupo.horario)
+                          }
+                          className="flex items-center gap-2"
+                        >
+                          <Monitor className="h-4 w-4" />
+                          Vista Agradecimiento
+                        </Button>
                       </div>
-                    </div>
+
+                      {/* Lista de asistentes */}
+                      {grupo.asistentes.length === 0 ? (
+                        <p className="text-muted-foreground text-center py-8">
+                          No hay asistentes registrados para este horario
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          {grupo.asistentes.map((historial) => (
+                            <div
+                              key={historial.id}
+                              className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted/80 transition-colors cursor-pointer"
+                              onClick={() =>
+                                router.push(`/visitas/${historial.persona.id}`)
+                              }
+                            >
+                              <div className="flex items-center gap-3">
+                                <MiembroAvatar
+                                  foto={historial.persona.foto}
+                                  nombre={`${historial.persona.nombres} ${historial.persona.apellidos}`}
+                                  size="sm"
+                                />
+                                <div>
+                                  <p className="font-medium">
+                                    {historial.persona.nombres}{" "}
+                                    {historial.persona.apellidos}
+                                  </p>
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <span>
+                                      {new Date(
+                                        historial.fecha
+                                      ).toLocaleDateString()}
+                                    </span>
+                                    {historial.invitadoPor && (
+                                      <>
+                                        <span>•</span>
+                                        <span>
+                                          Invitado por:{" "}
+                                          {historial.invitadoPor.nombres}{" "}
+                                          {historial.invitadoPor.apellidos}
+                                        </span>
+                                      </>
+                                    )}
+                                  </div>
+                                  {historial.observaciones && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      {historial.observaciones}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </TabsContent>
                   ))}
-                </div>
+                </Tabs>
               )}
             </CardContent>
           </Card>
