@@ -44,7 +44,9 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||
     pathname.startsWith("/auth") ||
-    pathname.startsWith("/api/webhooks");
+    pathname.startsWith("/api/webhooks") ||
+    pathname.match(/^\/actividades\/\d+\/promocion/) ||
+    pathname.match(/^\/actividades\/\d+\/agradecimiento/);
 
   if (!user && !isPublicRoute) {
     const loginUrl = request.nextUrl.clone();
