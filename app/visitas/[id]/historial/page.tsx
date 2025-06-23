@@ -40,6 +40,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { formatDateShort } from "@/lib/date-utils";
 
 // Interfaces para tipado
 interface Ministerio {
@@ -187,16 +188,8 @@ export default function HistorialVisitaPage({
     });
   };
 
-  const formatDateShort = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("es-ES", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
-
   const getNombreCompleto = () => {
-    if (!visita) return "Cargando...";
+    if (!visita) return "";
     return `${visita.nombres} ${visita.apellidos}`;
   };
 
@@ -414,7 +407,7 @@ export default function HistorialVisitaPage({
                                   "Actividad no especificada"}
                               </h4>
                               <p className="text-sm text-muted-foreground">
-                                {formatDate(item.fecha)}
+                                {formatDateShort(item.fecha)}
                               </p>
                               {/* Mostrar ministerio si está disponible */}
                               {item.actividad?.ministerio && (

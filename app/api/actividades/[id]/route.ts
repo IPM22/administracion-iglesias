@@ -51,6 +51,13 @@ export async function GET(
                 telefono: true,
                 celular: true,
                 foto: true,
+                personaInvita: {
+                  select: {
+                    id: true,
+                    nombres: true,
+                    apellidos: true,
+                  },
+                },
               },
             },
             tipoActividad: {

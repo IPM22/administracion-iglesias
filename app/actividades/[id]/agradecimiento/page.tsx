@@ -5,29 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MiembroAvatar } from "../../../../components/MiembroAvatar";
-import {
-  ArrowLeft,
-  Users,
-  Calendar,
-  Clock,
-  Sparkles,
-  Heart,
-  Star,
-} from "lucide-react";
+import { ArrowLeft, Users, Sparkles, Heart, Star } from "lucide-react";
 
 // Interfaces
 interface TipoActividad {
   id: number;
   nombre: string;
   tipo: string;
-}
-
-interface Horario {
-  id: number;
-  fecha: string;
-  horaInicio: string;
-  horaFin: string;
-  notas?: string;
 }
 
 interface HistorialVisita {
@@ -39,11 +23,11 @@ interface HistorialVisita {
     nombres: string;
     apellidos: string;
     foto?: string;
-  };
-  invitadoPor?: {
-    id: number;
-    nombres: string;
-    apellidos: string;
+    personaInvita?: {
+      id: number;
+      nombres: string;
+      apellidos: string;
+    };
   };
   observaciones?: string;
 }
@@ -84,6 +68,7 @@ function AgradecimientoContent({
   const searchParams = useSearchParams();
   const { id } = use(params);
   const horarioParam = searchParams.get("horario");
+  const mockParam = searchParams.get("mock");
 
   const [actividad, setActividad] = useState<ActividadDetalle | null>(null);
   const [loading, setLoading] = useState(true);
@@ -91,12 +76,156 @@ function AgradecimientoContent({
   const [asistentesActuales, setAsistentesActuales] = useState<
     HistorialVisita[]
   >([]);
-  const [horarioActual, setHorarioActual] = useState<Horario | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Estados para paginación automática
+  const [paginaActual, setPaginaActual] = useState(0);
+  const [pausarAutoScroll, setPausarAutoScroll] = useState(false);
+
+  // Configuración del carrusel
+  const PERSONAS_POR_PAGINA = 6; // Reducido para proyector - mejor legibilidad
+  const TIEMPO_ENTRE_PAGINAS = 6000; // 6 segundos entre cambios
+
+  // Función para generar datos mock
+  const generarDatosMock = (): HistorialVisita[] => {
+    const nombres = [
+      "María",
+      "José",
+      "Ana",
+      "Carlos",
+      "Laura",
+      "Miguel",
+      "Carmen",
+      "David",
+      "Patricia",
+      "Roberto",
+      "Isabel",
+      "Francisco",
+      "Rosa",
+      "Manuel",
+      "Elena",
+      "Antonio",
+      "Sofía",
+      "Pedro",
+      "Lucía",
+      "Rafael",
+      "Valeria",
+      "Andrés",
+      "Mónica",
+      "Gabriel",
+      "Natalia",
+      "Fernando",
+      "Cristina",
+      "Eduardo",
+      "Alejandra",
+      "Joaquín",
+    ];
+
+    const apellidos = [
+      "García",
+      "Rodríguez",
+      "González",
+      "Fernández",
+      "López",
+      "Martínez",
+      "Sánchez",
+      "Pérez",
+      "Martín",
+      "Gómez",
+      "Ruiz",
+      "Díaz",
+      "Hernández",
+      "Muñoz",
+      "Álvarez",
+      "Jiménez",
+      "Moreno",
+      "Romero",
+      "Navarro",
+      "Gutiérrez",
+      "Torres",
+      "Domínguez",
+      "Vázquez",
+      "Ramos",
+      "Gil",
+      "Ramírez",
+      "Serrano",
+      "Blanco",
+      "Molina",
+      "Morales",
+    ];
+
+    const invitadores = [
+      { id: 1, nombres: "Samuel", apellidos: "Peralta Mateo" },
+      { id: 2, nombres: "María", apellidos: "González Ruiz" },
+      { id: 3, nombres: "Carlos", apellidos: "Martínez López" },
+      { id: 4, nombres: "Ana", apellidos: "Fernández García" },
+      { id: 5, nombres: "Pedro", apellidos: "Sánchez Díaz" },
+    ];
+
+    return Array.from({ length: 30 }, (_, index) => ({
+      id: index + 1,
+      fecha: new Date().toISOString(),
+      horarioId: 2,
+      persona: {
+        id: index + 100,
+        nombres: nombres[index % nombres.length],
+        apellidos: apellidos[index % apellidos.length],
+        foto: undefined,
+        personaInvita:
+          Math.random() > 0.3
+            ? invitadores[index % invitadores.length]
+            : undefined,
+      },
+      observaciones:
+        Math.random() > 0.8 ? "Primera vez en la iglesia" : undefined,
+    }));
+  };
 
   useEffect(() => {
     const fetchActividad = async () => {
       try {
+        // Si está el parámetro mock=true, usar datos simulados
+        if (mockParam === "true") {
+          const datosMock = generarDatosMock();
+          const actividadMock: ActividadDetalle = {
+            id: parseInt(id),
+            nombre: "Lo que Jesús puede hacer por ti - SIMULACIÓN",
+            descripcion: "Actividad de prueba con 30 asistentes simulados",
+            fecha: new Date().toISOString(),
+            fechaInicio: undefined,
+            fechaFin: undefined,
+            esRangoFechas: false,
+            horaInicio: "09:00",
+            horaFin: "11:30",
+            ubicacion: "Iglesia Central",
+            responsable: "Pastor Samuel",
+            estado: "Completada",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            tipoActividad: {
+              id: 1,
+              nombre: "Culto Regular",
+              tipo: "Regular",
+            },
+            historialVisitas: datosMock,
+            horarios: [
+              {
+                id: 2,
+                fecha: new Date().toISOString(),
+                horaInicio: "09:00",
+                horaFin: "11:30",
+                notas: "Horario principal",
+              },
+            ],
+          };
+
+          setActividad(actividadMock);
+          setAsistentesActuales(datosMock);
+          setLoading(false);
+          return;
+        }
+
+        // Comportamiento normal - cargar datos reales
         const response = await fetch(`/api/actividades/${id}`);
         if (!response.ok) {
           throw new Error("Error al obtener los datos de la actividad");
@@ -107,10 +236,6 @@ function AgradecimientoContent({
         // Filtrar asistentes según el horario seleccionado
         if (horarioParam && horarioParam !== "general") {
           const horarioId = parseInt(horarioParam);
-          const horario = data.horarios?.find(
-            (h: Horario) => h.id === horarioId
-          );
-          setHorarioActual(horario);
 
           const asistentesHorario = data.historialVisitas.filter(
             (h: HistorialVisita) => h.horarioId === horarioId
@@ -136,7 +261,7 @@ function AgradecimientoContent({
     };
 
     fetchActividad();
-  }, [id, horarioParam]);
+  }, [id, horarioParam, mockParam]);
 
   // Actualizar hora cada segundo
   useEffect(() => {
@@ -147,29 +272,36 @@ function AgradecimientoContent({
     return () => clearInterval(timer);
   }, []);
 
-  const formatearFecha = (fecha: string) => {
-    return new Date(fecha).toLocaleDateString("es-ES", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-  };
-
-  const formatearHora = (hora?: string) => {
-    if (!hora) return "";
-    try {
-      const [hours, minutes] = hora.split(":");
-      const date = new Date();
-      date.setHours(parseInt(hours), parseInt(minutes));
-      return date.toLocaleTimeString("es-ES", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return hora;
+  // Auto-scroll para el carrusel de personas
+  useEffect(() => {
+    if (asistentesActuales.length <= PERSONAS_POR_PAGINA || pausarAutoScroll) {
+      return;
     }
-  };
+
+    const totalPaginas = Math.ceil(
+      asistentesActuales.length / PERSONAS_POR_PAGINA
+    );
+
+    const interval = setInterval(() => {
+      setPaginaActual((prev) => (prev + 1) % totalPaginas);
+    }, TIEMPO_ENTRE_PAGINAS);
+
+    return () => clearInterval(interval);
+  }, [
+    asistentesActuales.length,
+    pausarAutoScroll,
+    PERSONAS_POR_PAGINA,
+    TIEMPO_ENTRE_PAGINAS,
+  ]);
+
+  // Funciones para la paginación
+  const totalPaginas = Math.ceil(
+    asistentesActuales.length / PERSONAS_POR_PAGINA
+  );
+  const asistentesEnPaginaActual = asistentesActuales.slice(
+    paginaActual * PERSONAS_POR_PAGINA,
+    (paginaActual + 1) * PERSONAS_POR_PAGINA
+  );
 
   const salirVistaCompleta = () => {
     if (document.fullscreenElement) {
@@ -251,48 +383,40 @@ function AgradecimientoContent({
       {/* Hora actual */}
       <div className="absolute top-4 right-4 z-10 bg-black/20 rounded-lg px-4 py-2">
         <p className="text-lg font-mono">
-          {currentTime.toLocaleTimeString("es-ES")}
+          {currentTime.toLocaleTimeString("es-ES", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          })}
         </p>
       </div>
 
       {/* Contenido principal */}
       <div className="container mx-auto px-8 py-12 h-screen flex flex-col">
+        {/* Banner de simulación */}
+        {mockParam === "true" && (
+          <div className="mb-4 bg-orange-500/20 border border-orange-400/30 rounded-lg p-3 text-center">
+            <p className="text-orange-200 font-semibold">
+              🧪 MODO SIMULACIÓN - Mostrando 30 visitas de prueba
+            </p>
+            <p className="text-orange-300 text-sm">
+              Para ver datos reales, remueve ?mock=true de la URL
+            </p>
+          </div>
+        )}
+
         {/* Encabezado */}
-        <div className="text-center mb-8">
-          <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-yellow-400 via-pink-300 to-blue-300 bg-clip-text text-transparent">
+        <div className="text-center mb-6">
+          <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-yellow-400 via-pink-300 to-blue-300 bg-clip-text text-transparent">
             ¡Gracias por Acompañarnos!
           </h1>
-          <h2 className="text-4xl font-semibold mb-2">{actividad.nombre}</h2>
-
-          {/* Información del horario */}
-          <div className="flex items-center justify-center gap-6 text-xl opacity-90 mb-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-6 w-6" />
-              {horarioActual ? (
-                <span>{formatearFecha(horarioActual.fecha)}</span>
-              ) : (
-                <span>{formatearFecha(actividad.fecha)}</span>
-              )}
-            </div>
-            {(horarioActual || actividad.horaInicio) && (
-              <div className="flex items-center gap-2">
-                <Clock className="h-6 w-6" />
-                <span>
-                  {horarioActual
-                    ? `${formatearHora(
-                        horarioActual.horaInicio
-                      )} - ${formatearHora(horarioActual.horaFin)}`
-                    : `${formatearHora(actividad.horaInicio)} - ${formatearHora(
-                        actividad.horaFin
-                      )}`}
-                </span>
-              </div>
-            )}
-          </div>
+          <h2 className="text-3xl md:text-4xl font-semibold mb-4">
+            {actividad.nombre}
+          </h2>
 
           {/* Contador de asistentes */}
-          <div className="flex items-center justify-center gap-2 text-2xl font-semibold">
-            <Users className="h-8 w-8" />
+          <div className="flex items-center justify-center gap-2 text-xl md:text-2xl font-semibold">
+            <Users className="h-7 w-7 md:h-8 md:w-8" />
             <span>
               {asistentesActuales.length} persona
               {asistentesActuales.length !== 1 ? "s" : ""} nos acompañó
@@ -312,47 +436,104 @@ function AgradecimientoContent({
             </div>
           ) : (
             <div className="h-full overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 auto-rows-max">
-                {asistentesActuales.map((asistente, index) => (
-                  <Card
-                    key={asistente.id}
-                    className="bg-white/10 backdrop-blur-sm border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105 group"
-                  >
-                    <CardContent className="p-6 text-center">
-                      <div className="mb-4 relative">
-                        <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-pink-400 rounded-full opacity-20 group-hover:opacity-40 transition-opacity duration-300"></div>
-                        <MiembroAvatar
-                          foto={asistente.persona.foto}
-                          nombre={`${asistente.persona.nombres} ${asistente.persona.apellidos}`}
-                          size="lg"
-                          className="relative z-10"
+              {/* Diseño optimizado para 20-30 personas */}
+              <div className="max-w-5xl mx-auto">
+                {/* Indicadores de página y controles si hay múltiples páginas */}
+                {totalPaginas > 1 && (
+                  <div className="flex items-center justify-center gap-4 mb-6">
+                    <div className="flex items-center gap-2">
+                      <span className="text-white/60 text-sm">Página</span>
+                      <span className="text-white font-semibold">
+                        {paginaActual + 1} de {totalPaginas}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      {Array.from({ length: totalPaginas }, (_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            setPaginaActual(i);
+                            setPausarAutoScroll(true);
+                            // Reanudar auto-scroll después de 10 segundos
+                            setTimeout(() => setPausarAutoScroll(false), 10000);
+                          }}
+                          className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                            i === paginaActual
+                              ? "bg-yellow-400 scale-125"
+                              : "bg-white/30 hover:bg-white/50"
+                          }`}
                         />
-                      </div>
-                      <h3 className="text-xl font-semibold mb-2 text-center">
-                        {asistente.persona.nombres}
-                      </h3>
-                      <h4 className="text-lg text-white/80 mb-3 text-center">
-                        {asistente.persona.apellidos}
-                      </h4>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                      {asistente.invitadoPor && (
-                        <p className="text-sm text-white/60 text-center">
-                          Invitado por:
-                          <br />
-                          <span className="font-medium">
-                            {asistente.invitadoPor.nombres}{" "}
-                            {asistente.invitadoPor.apellidos}
-                          </span>
-                        </p>
-                      )}
+                <div
+                  className="grid grid-cols-1 lg:grid-cols-2 gap-6 transition-all duration-500 ease-in-out"
+                  onMouseEnter={() => setPausarAutoScroll(true)}
+                  onMouseLeave={() => setPausarAutoScroll(false)}
+                >
+                  {asistentesEnPaginaActual.map((asistente, index) => (
+                    <Card
+                      key={asistente.id}
+                      className="bg-white/15 backdrop-blur-sm border-white/30 hover:bg-white/25 transition-all duration-300 group animate-in fade-in slide-in-from-bottom-4"
+                      style={{
+                        animationDelay: `${index * 150}ms`,
+                        animationDuration: "700ms",
+                      }}
+                    >
+                      <CardContent className="p-5 md:p-6">
+                        <div className="flex items-center gap-4">
+                          {/* Avatar y número */}
+                          <div className="flex-shrink-0 relative">
+                            <MiembroAvatar
+                              foto={asistente.persona.foto}
+                              nombre={`${asistente.persona.nombres} ${asistente.persona.apellidos}`}
+                              size="lg"
+                            />
+                            <div className="absolute -top-2 -right-2 bg-yellow-400 text-black rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold">
+                              {paginaActual * PERSONAS_POR_PAGINA + index + 1}
+                            </div>
+                          </div>
 
-                      {/* Número de asistente */}
-                      <div className="absolute top-2 right-2 bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
-                        {index + 1}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                          {/* Información principal */}
+                          <div className="flex-1 min-w-0">
+                            {/* Nombre completo destacado */}
+                            <h3 className="text-2xl md:text-3xl font-bold text-white truncate leading-tight">
+                              {asistente.persona.nombres}{" "}
+                              {asistente.persona.apellidos}
+                            </h3>
+
+                            {/* Información de quien invitó */}
+                            {asistente.persona.personaInvita ? (
+                              <p className="text-yellow-300 font-semibold text-base md:text-lg mt-2">
+                                ✨ Invitado por:{" "}
+                                {asistente.persona.personaInvita.nombres}{" "}
+                                {asistente.persona.personaInvita.apellidos}
+                              </p>
+                            ) : (
+                              <p className="text-blue-300 font-semibold text-base md:text-lg mt-2">
+                                👋 Llegó por su cuenta
+                              </p>
+                            )}
+
+                            {/* Observaciones si existen */}
+                            {asistente.observaciones && (
+                              <p className="text-white/80 text-sm md:text-base mt-2 truncate">
+                                📝 {asistente.observaciones}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Icono decorativo */}
+                          <div className="flex-shrink-0">
+                            <Heart className="h-7 w-7 md:h-8 md:w-8 text-pink-300 opacity-70 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
             </div>
           )}

@@ -35,6 +35,7 @@ import { MiembroAvatar } from "../../../components/MiembroAvatar";
 import { ModeToggle } from "../../../components/mode-toggle";
 import {
   formatDate,
+  formatDateShort,
   calcularEdad,
   calcularAniosTranscurridos,
 } from "@/lib/date-utils";
@@ -625,7 +626,6 @@ export default function ComunidadDetallePage({
                 <HistorialVisitasSection
                   historialVisitas={persona.historialVisitas}
                   personaId={persona.id}
-                  formatDate={formatDate}
                 />
               )}
 
@@ -685,7 +685,7 @@ export default function ComunidadDetallePage({
                       <span className="text-muted-foreground">Nacimiento:</span>
                       <div className="text-right">
                         <span className="font-medium">
-                          {formatDate(persona.fechaNacimiento)}
+                          {formatDateShort(persona.fechaNacimiento)}
                         </span>
                         {calcularEdad(persona.fechaNacimiento) && (
                           <p className="text-xs text-muted-foreground">
@@ -701,7 +701,7 @@ export default function ComunidadDetallePage({
                       <span className="text-muted-foreground">Ingreso:</span>
                       <div className="text-right">
                         <span className="font-medium">
-                          {formatDate(persona.fechaIngreso)}
+                          {formatDateShort(persona.fechaIngreso)}
                         </span>
                         {calcularAniosTranscurridos(persona.fechaIngreso) !==
                           null && (
@@ -725,7 +725,7 @@ export default function ComunidadDetallePage({
                       <span className="text-muted-foreground">Bautismo:</span>
                       <div className="text-right">
                         <span className="font-medium">
-                          {formatDate(persona.fechaBautismo)}
+                          {formatDateShort(persona.fechaBautismo)}
                         </span>
                       </div>
                     </div>
@@ -738,7 +738,7 @@ export default function ComunidadDetallePage({
                       </span>
                       <div className="text-right">
                         <span className="font-medium">
-                          {formatDate(persona.fechaPrimeraVisita)}
+                          {formatDateShort(persona.fechaPrimeraVisita)}
                         </span>
                       </div>
                     </div>
@@ -747,7 +747,7 @@ export default function ComunidadDetallePage({
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Registrado:</span>
                     <span className="font-medium">
-                      {formatDate(persona.createdAt)}
+                      {formatDateShort(persona.createdAt)}
                     </span>
                   </div>
                 </CardContent>

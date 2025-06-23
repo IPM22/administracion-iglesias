@@ -16,10 +16,11 @@ interface RouteParams {
 // GET /api/personas/[id] - Obtener persona por ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: RouteParams }
+  { params }: { params: Promise<RouteParams> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id: idParam } = await params;
+    const id = parseInt(idParam);
 
     if (isNaN(id)) {
       return NextResponse.json(
@@ -125,10 +126,11 @@ export async function GET(
 // PUT /api/personas/[id] - Actualizar persona
 export async function PUT(
   request: NextRequest,
-  { params }: { params: RouteParams }
+  { params }: { params: Promise<RouteParams> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id: idParam } = await params;
+    const id = parseInt(idParam);
 
     if (isNaN(id)) {
       return NextResponse.json(
@@ -229,10 +231,11 @@ export async function PUT(
 // DELETE /api/personas/[id] - Eliminar persona
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: RouteParams }
+  { params }: { params: Promise<RouteParams> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id: idParam } = await params;
+    const id = parseInt(idParam);
 
     if (isNaN(id)) {
       return NextResponse.json(

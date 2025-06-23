@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { formatDateShort, formatTime12Hour } from "@/lib/date-utils";
 
 interface HistorialVisita {
   id: number;
@@ -16,6 +17,13 @@ interface HistorialVisita {
     id: number;
     nombre: string;
   };
+  horario?: {
+    id: number;
+    fecha: string;
+    horaInicio: string;
+    horaFin: string;
+    notas?: string;
+  };
   invitadoPor?: {
     id: number;
     nombres: string;
@@ -27,14 +35,12 @@ interface HistorialVisita {
 interface HistorialVisitasSectionProps {
   historialVisitas: HistorialVisita[];
   personaId: number;
-  formatDate?: (fecha: string) => string;
   limite?: number;
 }
 
 export function HistorialVisitasSection({
   historialVisitas,
   personaId,
-  formatDate,
   limite = 5,
 }: HistorialVisitasSectionProps) {
   const router = useRouter();
@@ -70,12 +76,18 @@ export function HistorialVisitasSection({
               >
                 <div>
                   <p className="font-medium">
-                    {historial.tipoActividad?.nombre ||
-                      historial.actividad?.nombre ||
+                    {historial.actividad?.nombre ||
+                      historial.tipoActividad?.nombre ||
                       "Actividad no especificada"}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {formatDate ? formatDate(historial.fecha) : historial.fecha}
+                    {formatDateShort(historial.fecha)}
+                    {historial.horario && (
+                      <span className="ml-2">
+                        • {formatTime12Hour(historial.horario.horaInicio)} -{" "}
+                        {formatTime12Hour(historial.horario.horaFin)}
+                      </span>
+                    )}
                   </p>
                   {historial.invitadoPor && (
                     <p className="text-xs text-muted-foreground">
@@ -90,7 +102,9 @@ export function HistorialVisitasSection({
                   )}
                 </div>
                 <Badge variant="outline">
-                  {historial.tipoActividad?.tipo || "Especial"}
+                  {historial.actividad
+                    ? "Actividad Específica"
+                    : historial.tipoActividad?.tipo || "Regular"}
                 </Badge>
               </div>
             ))}

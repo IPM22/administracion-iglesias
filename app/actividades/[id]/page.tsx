@@ -245,12 +245,26 @@ export default function DetalleActividadPage({
 
   // Función para agrupar asistentes por horario
   const agruparAsistentesPorHorario = () => {
+    console.log("Datos de actividad:", actividad);
+    console.log("Historial visitas:", actividad?.historialVisitas);
+    console.log("Horarios:", actividad?.horarios);
+
+    // Si no hay historial de visitas, retornar array vacío
+    if (
+      !actividad?.historialVisitas ||
+      actividad.historialVisitas.length === 0
+    ) {
+      console.log("No hay historial de visitas");
+      return [];
+    }
+
     if (!actividad?.horarios || actividad.horarios.length === 0) {
       // Si no hay horarios específicos, mostrar todos los asistentes en un grupo general
+      console.log("No hay horarios, mostrando asistentes generales");
       return [
         {
           horario: null,
-          asistentes: actividad?.historialVisitas || [],
+          asistentes: actividad.historialVisitas,
         },
       ];
     }
@@ -263,6 +277,9 @@ export default function DetalleActividadPage({
       const asistentesHorario = actividad.historialVisitas.filter(
         (h) => h.horarioId === horario.id
       );
+      console.log(
+        `Horario ${horario.id} tiene ${asistentesHorario.length} asistentes`
+      );
       grupos.push({
         horario,
         asistentes: asistentesHorario,
@@ -274,11 +291,32 @@ export default function DetalleActividadPage({
       (h) => !h.horarioId
     );
 
+    console.log(
+      `Asistentes sin horario específico: ${asistentesSinHorario.length}`
+    );
+
     if (asistentesSinHorario.length > 0) {
       grupos.push({
         horario: null,
         asistentes: asistentesSinHorario,
       });
+    }
+
+    console.log("Grupos finales:", grupos);
+
+    // Si después de todo no hay grupos con asistentes, crear un grupo general con todos
+    const totalAsistentes = grupos.reduce(
+      (total, grupo) => total + grupo.asistentes.length,
+      0
+    );
+    if (totalAsistentes === 0 && actividad.historialVisitas.length > 0) {
+      console.log("Creando grupo de emergencia con todos los asistentes");
+      return [
+        {
+          horario: null,
+          asistentes: actividad.historialVisitas,
+        },
+      ];
     }
 
     return grupos;
@@ -689,37 +727,90 @@ export default function DetalleActividadPage({
                 </p>
               ) : (
                 <Tabs defaultValue="0" className="w-full">
-                  <TabsList className="grid w-full grid-cols-auto gap-1 overflow-x-auto">
-                    {agruparAsistentesPorHorario().map((grupo, index) => (
-                      <TabsTrigger
-                        key={index}
-                        value={index.toString()}
-                        className="whitespace-nowrap text-xs px-2"
-                      >
-                        {grupo.horario ? (
-                          <div className="text-center">
-                            <div className="font-medium">
-                              {formatearFecha(grupo.horario.fecha)}
+                  {/* Diseño para pantallas grandes */}
+                  <div className="mb-4 hidden sm:block">
+                    <TabsList className="grid w-full auto-cols-fr grid-flow-col overflow-hidden h-auto p-1">
+                      {agruparAsistentesPorHorario().map((grupo, index) => (
+                        <TabsTrigger
+                          key={index}
+                          value={index.toString()}
+                          className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs p-3 h-auto flex-col gap-1 min-w-0"
+                        >
+                          {grupo.horario ? (
+                            <div className="text-center w-full">
+                              <div className="font-medium text-xs leading-tight mb-1 truncate">
+                                {new Date(
+                                  grupo.horario.fecha
+                                ).toLocaleDateString("es-ES", {
+                                  day: "2-digit",
+                                  month: "short",
+                                })}
+                              </div>
+                              <div className="text-xs text-muted-foreground leading-tight mb-1 truncate">
+                                {formatearHora(grupo.horario.horaInicio)} -{" "}
+                                {formatearHora(grupo.horario.horaFin)}
+                              </div>
+                              <Badge
+                                variant="secondary"
+                                className="text-xs px-1 py-0 h-5 min-w-0"
+                              >
+                                {grupo.asistentes.length}
+                              </Badge>
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              {formatearHora(grupo.horario.horaInicio)} -{" "}
-                              {formatearHora(grupo.horario.horaFin)}
+                          ) : (
+                            <div className="text-center w-full">
+                              <div className="font-medium text-xs mb-1">
+                                General
+                              </div>
+                              <Badge
+                                variant="secondary"
+                                className="text-xs px-1 py-0 h-5"
+                              >
+                                {grupo.asistentes.length}
+                              </Badge>
                             </div>
-                            <Badge variant="secondary" className="text-xs mt-1">
-                              {grupo.asistentes.length}
-                            </Badge>
-                          </div>
-                        ) : (
-                          <div className="text-center">
-                            <div className="font-medium">General</div>
-                            <Badge variant="secondary" className="text-xs mt-1">
-                              {grupo.asistentes.length}
-                            </Badge>
-                          </div>
-                        )}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
+                          )}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </div>
+
+                  {/* Diseño para pantallas pequeñas */}
+                  <div className="mb-4 sm:hidden">
+                    <TabsList className="flex flex-col w-full h-auto p-1 space-y-1">
+                      {agruparAsistentesPorHorario().map((grupo, index) => (
+                        <TabsTrigger
+                          key={index}
+                          value={index.toString()}
+                          className="w-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-sm p-3 h-auto justify-between"
+                        >
+                          {grupo.horario ? (
+                            <div className="flex justify-between items-center w-full">
+                              <div className="text-left">
+                                <div className="font-medium">
+                                  {formatearFecha(grupo.horario.fecha)}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {formatearHora(grupo.horario.horaInicio)} -{" "}
+                                  {formatearHora(grupo.horario.horaFin)}
+                                </div>
+                              </div>
+                              <Badge variant="secondary" className="text-xs">
+                                {grupo.asistentes.length}
+                              </Badge>
+                            </div>
+                          ) : (
+                            <div className="flex justify-between items-center w-full">
+                              <div className="font-medium">General</div>
+                              <Badge variant="secondary" className="text-xs">
+                                {grupo.asistentes.length}
+                              </Badge>
+                            </div>
+                          )}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </div>
 
                   {agruparAsistentesPorHorario().map((grupo, index) => (
                     <TabsContent

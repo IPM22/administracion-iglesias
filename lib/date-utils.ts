@@ -174,3 +174,89 @@ export function parseDateForAPI(dateString?: string): Date | undefined {
     return undefined;
   }
 }
+
+/**
+ * Formatea una fecha en formato dd-mm-yyyy
+ * @param dateString Fecha en formato string o Date
+ * @returns Fecha formateada como dd-mm-yyyy
+ */
+export function formatDateShort(dateString?: string | Date | null): string {
+  if (!dateString) return "—";
+
+  try {
+    const date = dayjs(dateString);
+
+    if (!date.isValid()) return "—";
+
+    return date.format("DD-MM-YYYY");
+  } catch {
+    return "—";
+  }
+}
+
+/**
+ * Formatea una hora en formato de 12 horas
+ * @param timeString Hora en formato HH:mm (24 horas)
+ * @returns Hora formateada en formato de 12 horas
+ */
+export function formatTime12Hour(timeString?: string): string {
+  if (!timeString) return "—";
+
+  try {
+    // Crear una fecha temporal para formatear la hora
+    const [hours, minutes] = timeString.split(":");
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes));
+
+    return date.toLocaleTimeString("es-ES", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch {
+    return timeString; // Si falla, retornar la hora original
+  }
+}
+
+/**
+ * Formatea una fecha completa en español con formato dd-mm-yyyy
+ * @param dateString Fecha en formato string o Date
+ * @returns Fecha formateada en español
+ */
+export function formatDateComplete(dateString?: string | Date | null): string {
+  if (!dateString) return "—";
+
+  try {
+    const date = dayjs(dateString);
+
+    if (!date.isValid()) return "—";
+
+    return date.toDate().toLocaleDateString("es-ES", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  } catch {
+    return "—";
+  }
+}
+
+/**
+ * Formatea fecha y hora juntas
+ * @param dateString Fecha en formato string o Date
+ * @param timeString Hora en formato HH:mm (opcional)
+ * @returns Fecha y hora formateadas
+ */
+export function formatDateTimeShort(
+  dateString?: string | Date | null,
+  timeString?: string
+): string {
+  const formattedDate = formatDateShort(dateString);
+
+  if (timeString) {
+    const formattedTime = formatTime12Hour(timeString);
+    return `${formattedDate} • ${formattedTime}`;
+  }
+
+  return formattedDate;
+}
