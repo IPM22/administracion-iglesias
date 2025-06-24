@@ -13,10 +13,11 @@ export const config = {
      * - _next/image (optimización de imágenes)
      * - favicon.ico (favicon file)
      * - api/webhooks (webhooks públicos)
+     * - api/usuarios (API de usuarios para evitar bucles)
      * - api/actividades/[id]/public (API pública de actividades)
      * - actividades/[id]/promocion (páginas públicas de promoción)
      * - actividades/[id]/agradecimiento (páginas públicas de agradecimiento)
      */
-    "/((?!_next/static|_next/image|favicon.ico|api/webhooks|api/actividades/\\d+/public|actividades/\\d+/promocion|actividades/\\d+/agradecimiento|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/webhooks|api/usuarios|api/actividades/\\d+/public|actividades/\\d+/promocion|actividades/\\d+/agradecimiento|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

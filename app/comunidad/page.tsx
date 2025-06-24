@@ -96,6 +96,7 @@ import {
   List,
   SlidersHorizontal,
   MoreVertical,
+  MessageSquare,
 } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
 import {
@@ -103,6 +104,7 @@ import {
   ESTADOS_PERSONA,
   type FiltrosPersona,
 } from "@/src/lib/validations/persona";
+import { MensajeMasivoModal } from "@/components/MensajeMasivoModal";
 
 interface Persona {
   id: number;
@@ -846,6 +848,9 @@ function ComunidadContent() {
     </Dialog>
   );
 
+  // Estado para el modal de mensajes masivos
+  const [modalMensajeMasivo, setModalMensajeMasivo] = useState(false);
+
   const PaginationControls = () => (
     <div className="flex items-center justify-between mt-4">
       <div className="text-sm text-muted-foreground">
@@ -994,11 +999,30 @@ function ComunidadContent() {
                 </Badge>
               </div>
 
-              <Button onClick={botonInfo.onClick} className="w-full sm:w-auto">
-                <IconoBoton className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">{botonInfo.texto}</span>
-                <span className="sm:hidden">Nuevo</span>
-              </Button>
+              <div className="flex gap-2 w-full sm:w-auto">
+                {/* Botón de mensaje masivo solo para visitas */}
+                {seccionActual === "visitas" &&
+                  personasFiltradas.length > 0 && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setModalMensajeMasivo(true)}
+                      className="flex-1 sm:flex-none"
+                    >
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      <span className="hidden sm:inline">Mensaje Masivo</span>
+                      <span className="sm:hidden">WhatsApp</span>
+                    </Button>
+                  )}
+
+                <Button
+                  onClick={botonInfo.onClick}
+                  className="flex-1 sm:flex-none"
+                >
+                  <IconoBoton className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">{botonInfo.texto}</span>
+                  <span className="sm:hidden">Nuevo</span>
+                </Button>
+              </div>
             </div>
 
             {/* Toggle de vista solo en móvil */}
@@ -1555,6 +1579,14 @@ function ComunidadContent() {
           />
           <TablaPersonas />
           <DialogSeleccionTipo />
+
+          {/* Modal de mensajes masivos */}
+          <MensajeMasivoModal
+            open={modalMensajeMasivo}
+            onOpenChange={setModalMensajeMasivo}
+            personas={todasLasPersonas}
+            seccionActual={seccionActual}
+          />
         </div>
       </SidebarInset>
     </SidebarProvider>

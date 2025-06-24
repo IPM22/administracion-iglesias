@@ -92,7 +92,19 @@ export function useAuth() {
     ultimoUsuarioId.current = authUser.id;
 
     try {
-      const response = await fetch(`/api/usuarios/${authUser.id}`);
+      const response = await fetch(`/api/usuarios/${authUser.id}`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      // Verificar si la respuesta es realmente JSON
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        console.warn("La respuesta no es JSON, posible redirección a login");
+        throw new Error("Respuesta inválida del servidor");
+      }
+
       if (response.ok) {
         const usuario = await response.json();
         setUsuarioCompleto(usuario);
@@ -139,9 +151,23 @@ export function useAuth() {
         }
       } else if (response.status === 404) {
         await crearUsuarioAutomaticamente(authUser);
+      } else if (response.status === 401) {
+        // Usuario no autenticado, limpiar estado
+        console.warn("Usuario no autenticado, limpiando estado");
+        setUsuarioCompleto(null);
+        limpiarIglesia();
+      } else {
+        throw new Error(`Error del servidor: ${response.status}`);
       }
     } catch (error) {
       console.error("Error cargando usuario completo:", error);
+
+      // En caso de error, limpiar el estado para evitar bucles infinitos
+      if (error instanceof TypeError && error.message.includes("fetch")) {
+        console.error(
+          "Error de conectividad, el servidor puede no estar disponible"
+        );
+      }
     } finally {
       setInitializing(false);
       cargandoUsuario.current = false;
