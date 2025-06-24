@@ -26,7 +26,6 @@ import {
   MoreHorizontal,
   Edit,
   Trash2,
-  Eye,
   Share2,
   MapPin,
   CalendarIcon,
@@ -622,12 +621,15 @@ export default function ActividadesPage() {
                   {actividadesPaginadas.map((actividad) => (
                     <Card
                       key={actividad.id}
-                      className="group hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500"
+                      className="group hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500 cursor-pointer"
+                      onClick={() =>
+                        router.push(`/actividades/${actividad.id}`)
+                      }
                     >
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <CardTitle className="text-sm md:text-base font-semibold line-clamp-2">
+                            <CardTitle className="text-sm md:text-base font-semibold line-clamp-2 group-hover:text-primary transition-colors">
                               {actividad.nombre}
                             </CardTitle>
                             <div className="flex flex-wrap gap-1 mt-2">
@@ -654,38 +656,38 @@ export default function ActividadesPage() {
                               <Button
                                 variant="ghost"
                                 className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={(e) => e.stopPropagation()}
                               >
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() =>
-                                  router.push(`/actividades/${actividad.id}`)
-                                }
-                              >
-                                <Eye className="h-4 w-4 mr-2" />
-                                Ver detalles
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() =>
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   router.push(
                                     `/actividades/${actividad.id}/editar`
-                                  )
-                                }
+                                  );
+                                }}
                               >
                                 <Edit className="h-4 w-4 mr-2" />
                                 Editar
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => compartirActividad(actividad)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  compartirActividad(actividad);
+                                }}
                               >
                                 <Share2 className="h-4 w-4 mr-2" />
                                 Compartir
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-destructive"
-                                onClick={() => mostrarDialogEliminar(actividad)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  mostrarDialogEliminar(actividad);
+                                }}
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Eliminar

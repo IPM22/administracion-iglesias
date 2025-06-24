@@ -34,7 +34,6 @@ import {
   MoreHorizontal,
   Edit,
   Trash2,
-  Eye,
   Users,
   HomeIcon,
   Loader2,
@@ -354,61 +353,49 @@ export default function FamiliasPage() {
               {familiasFiltradas.map((familia) => (
                 <Card
                   key={familia.id}
-                  className="group hover:shadow-lg transition-all duration-200 border-l-4 border-l-orange-500"
+                  className="group hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500 cursor-pointer"
+                  onClick={() => router.push(`/familias/${familia.id}`)}
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <CardTitle className="text-sm md:text-base font-semibold line-clamp-2">
+                        <CardTitle className="text-sm md:text-base font-semibold line-clamp-2 group-hover:text-primary transition-colors">
                           Familia {familia.apellido}
+                          {familia.nombre && ` - ${familia.nombre}`}
                         </CardTitle>
-                        {familia.nombre && (
-                          <CardDescription className="text-xs md:text-sm mt-1 line-clamp-1">
-                            {familia.nombre}
-                          </CardDescription>
-                        )}
-                        <div className="flex items-center gap-1 mt-2">
-                          <Badge
-                            variant={
-                              familia.estado === "Activa"
-                                ? "default"
-                                : "secondary"
-                            }
-                            className="text-xs"
-                          >
-                            {familia.estado}
-                          </Badge>
-                        </div>
+                        <CardDescription className="text-xs md:text-sm mt-1">
+                          {familia.miembros.length}{" "}
+                          {familia.miembros.length === 1
+                            ? "miembro"
+                            : "miembros"}
+                        </CardDescription>
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"
                             className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => e.stopPropagation()}
                           >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={() =>
-                              router.push(`/familias/${familia.id}`)
-                            }
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Ver detalles
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              router.push(`/familias/${familia.id}/editar`)
-                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/familias/${familia.id}/editar`);
+                            }}
                           >
                             <Edit className="h-4 w-4 mr-2" />
                             Editar
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive"
-                            onClick={() => abrirDialogEliminar(familia)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              abrirDialogEliminar(familia);
+                            }}
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Eliminar
@@ -537,27 +524,19 @@ export default function FamiliasPage() {
                       </div>
                     )}
 
-                    {/* Botones de acción */}
+                    {/* Botón de acción simplificado */}
                     <div className="flex gap-2 pt-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => router.push(`/familias/${familia.id}`)}
-                        className="flex-1 text-xs"
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        Ver
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          router.push(`/familias/${familia.id}/editar`)
-                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/familias/${familia.id}/editar`);
+                        }}
                         className="flex-1 text-xs"
                       >
                         <Edit className="h-3 w-3 mr-1" />
-                        Editar
+                        Editar familia
                       </Button>
                     </div>
                   </CardContent>

@@ -164,127 +164,168 @@ interface FiltrosSectionProps {
   onLimpiar: () => void;
 }
 
-const FiltrosSection = React.memo(
-  ({
-    busqueda,
-    setBusqueda,
-    filtros,
-    setFiltros,
-    seccionActual,
-    onLimpiar,
-  }: FiltrosSectionProps) => {
-    const hayFiltrosActivos =
-      busqueda ||
-      Object.keys(filtros).some((key) => filtros[key as keyof FiltrosPersona]);
+const FiltrosSection = React.memo(function FiltrosSection({
+  busqueda,
+  setBusqueda,
+  filtros,
+  setFiltros,
+  seccionActual,
+  onLimpiar,
+}: FiltrosSectionProps) {
+  const hayFiltrosActivos =
+    busqueda ||
+    Object.keys(filtros).some((key) => filtros[key as keyof FiltrosPersona]);
 
-    return (
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          {/* Vista móvil compacta */}
-          <div className="block md:hidden">
-            <div className="flex items-center justify-between mb-3">
-              <CardTitle className="text-lg">Buscar personas</CardTitle>
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <SlidersHorizontal className="h-4 w-4 mr-2" />
-                    Filtros
-                    {hayFiltrosActivos && (
-                      <Badge
-                        variant="destructive"
-                        className="ml-2 h-5 w-5 p-0 text-xs"
-                      >
-                        !
-                      </Badge>
-                    )}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent>
-                  <SheetHeader>
-                    <SheetTitle>Filtros de búsqueda</SheetTitle>
-                    <SheetDescription>
-                      Personaliza tu búsqueda de personas
-                    </SheetDescription>
-                  </SheetHeader>
-                  <div className="space-y-4 mt-6">
-                    {seccionActual === "todos" && (
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">
-                          Tipo de persona
-                        </label>
-                        <Select
-                          value={filtros.tipo || "todos"}
-                          onValueChange={(value) =>
-                            setFiltros({
-                              ...filtros,
-                              tipo:
-                                value === "todos" ? undefined : (value as any),
-                            })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Todos los tipos" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="todos">
-                              Todos los tipos
-                            </SelectItem>
-                            {TIPOS_PERSONA.map((tipo) => (
-                              <SelectItem key={tipo.value} value={tipo.value}>
-                                {tipo.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-
+  return (
+    <Card className="mb-6">
+      <CardHeader className="pb-3">
+        {/* Vista móvil compacta */}
+        <div className="block md:hidden">
+          <div className="flex items-center justify-between mb-3">
+            <CardTitle className="text-lg">Buscar personas</CardTitle>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <SlidersHorizontal className="h-4 w-4 mr-2" />
+                  Filtros
+                  {hayFiltrosActivos && (
+                    <Badge
+                      variant="destructive"
+                      className="ml-2 h-5 w-5 p-0 text-xs"
+                    >
+                      !
+                    </Badge>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent>
+                <SheetHeader>
+                  <SheetTitle>Filtros de búsqueda</SheetTitle>
+                  <SheetDescription>
+                    Personaliza tu búsqueda de personas
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="space-y-4 mt-6">
+                  {seccionActual === "todos" && (
                     <div>
                       <label className="text-sm font-medium mb-2 block">
-                        Estado
+                        Tipo de persona
                       </label>
                       <Select
-                        value={filtros.estado || "todos"}
+                        value={filtros.tipo || "todos"}
                         onValueChange={(value) =>
                           setFiltros({
                             ...filtros,
-                            estado:
-                              value === "todos" ? undefined : (value as any),
+                            tipo:
+                              value === "todos"
+                                ? undefined
+                                : (value as typeof filtros.tipo),
                           })
                         }
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Todos los estados" />
+                          <SelectValue placeholder="Todos los tipos" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="todos">
-                            Todos los estados
-                          </SelectItem>
-                          {ESTADOS_PERSONA.map((estado) => (
-                            <SelectItem key={estado.value} value={estado.value}>
-                              {estado.label}
+                          <SelectItem value="todos">Todos los tipos</SelectItem>
+                          {TIPOS_PERSONA.map((tipo) => (
+                            <SelectItem key={tipo.value} value={tipo.value}>
+                              {tipo.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
+                  )}
 
-                    {hayFiltrosActivos && (
-                      <Button
-                        variant="outline"
-                        onClick={onLimpiar}
-                        className="w-full"
-                      >
-                        <RotateCcw className="h-4 w-4 mr-2" />
-                        Limpiar filtros
-                      </Button>
-                    )}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Estado
+                    </label>
+                    <Select
+                      value={filtros.estado || "todos"}
+                      onValueChange={(value) =>
+                        setFiltros({
+                          ...filtros,
+                          estado:
+                            value === "todos"
+                              ? undefined
+                              : (value as typeof filtros.estado),
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todos los estados" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos los estados</SelectItem>
+                        {ESTADOS_PERSONA.map((estado) => (
+                          <SelectItem key={estado.value} value={estado.value}>
+                            {estado.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                </SheetContent>
-              </Sheet>
-            </div>
 
-            {/* Barra de búsqueda móvil */}
+                  {hayFiltrosActivos && (
+                    <Button
+                      variant="outline"
+                      onClick={onLimpiar}
+                      className="w-full"
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Limpiar filtros
+                    </Button>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+
+          {/* Barra de búsqueda móvil */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Buscar por nombre, correo o teléfono..."
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+
+        {/* Vista desktop original */}
+        <div className="hidden md:block">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                Filtros de Búsqueda
+              </CardTitle>
+              <CardDescription>
+                Busca y filtra personas por nombre, tipo, estado y más
+              </CardDescription>
+            </div>
+            {hayFiltrosActivos && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onLimpiar}
+                className="flex items-center gap-2"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Limpiar filtros
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardHeader>
+
+      {/* Contenido de filtros desktop */}
+      <CardContent className="hidden md:block">
+        <div className="flex flex-wrap gap-4">
+          <div className="flex-1 min-w-64">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -296,112 +337,93 @@ const FiltrosSection = React.memo(
             </div>
           </div>
 
-          {/* Vista desktop original */}
-          <div className="hidden md:block">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Filter className="h-5 w-5" />
-                  Filtros de Búsqueda
-                </CardTitle>
-                <CardDescription>
-                  Busca y filtra personas por nombre, tipo, estado y más
-                </CardDescription>
-              </div>
-              {hayFiltrosActivos && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onLimpiar}
-                  className="flex items-center gap-2"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  Limpiar filtros
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-
-        {/* Contenido de filtros desktop */}
-        <CardContent className="hidden md:block">
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-64">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Buscar por nombre, correo o teléfono..."
-                  value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            {/* Solo mostrar filtro de tipo si no estamos en sección específica */}
-            {seccionActual === "todos" && (
-              <Select
-                value={filtros.tipo || "todos"}
-                onValueChange={(value) =>
-                  setFiltros({
-                    ...filtros,
-                    tipo: value === "todos" ? undefined : (value as any),
-                  })
-                }
-              >
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Tipo de persona" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos los tipos</SelectItem>
-                  {TIPOS_PERSONA.map((tipo) => (
-                    <SelectItem key={tipo.value} value={tipo.value}>
-                      {tipo.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
+          {/* Solo mostrar filtro de tipo si no estamos en sección específica */}
+          {seccionActual === "todos" && (
             <Select
-              value={filtros.estado || "todos"}
+              value={filtros.tipo || "todos"}
               onValueChange={(value) =>
                 setFiltros({
                   ...filtros,
-                  estado: value === "todos" ? undefined : (value as any),
+                  tipo:
+                    value === "todos"
+                      ? undefined
+                      : (value as typeof filtros.tipo),
                 })
               }
             >
               <SelectTrigger className="w-48">
-                <SelectValue placeholder="Estado" />
+                <SelectValue placeholder="Tipo de persona" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="todos">Todos los estados</SelectItem>
-                {ESTADOS_PERSONA.map((estado) => (
-                  <SelectItem key={estado.value} value={estado.value}>
-                    {estado.label}
+                <SelectItem value="todos">Todos los tipos</SelectItem>
+                {TIPOS_PERSONA.map((tipo) => (
+                  <SelectItem key={tipo.value} value={tipo.value}>
+                    {tipo.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-);
+          )}
+
+          <Select
+            value={filtros.estado || "todos"}
+            onValueChange={(value) =>
+              setFiltros({
+                ...filtros,
+                estado:
+                  value === "todos"
+                    ? undefined
+                    : (value as typeof filtros.estado),
+              })
+            }
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos los estados</SelectItem>
+              {ESTADOS_PERSONA.map((estado) => (
+                <SelectItem key={estado.value} value={estado.value}>
+                  {estado.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </CardContent>
+    </Card>
+  );
+});
 
 // Componente de tarjeta para vista móvil
+interface PersonaCardProps {
+  persona: Persona;
+  router: any;
+  calcularEdad: (fechaNacimiento?: string) => number | null;
+  obtenerColorEstado: (estado: string) => string;
+}
+
 const PersonaCard = ({
   persona,
   router,
   calcularEdad,
   obtenerColorEstado,
-}: any) => {
+}: PersonaCardProps) => {
   const edad = calcularEdad(persona.fechaNacimiento);
 
+  const handleCardClick = () => {
+    router.push(`/comunidad/${persona.id}`);
+  };
+
+  const handleDropdownClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
   return (
-    <Card className="mb-4 hover:shadow-md transition-shadow">
+    <Card
+      className="mb-4 hover:shadow-md transition-shadow cursor-pointer"
+      onClick={handleCardClick}
+    >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <Avatar className="h-12 w-12 flex-shrink-0">
@@ -423,7 +445,7 @@ const PersonaCard = ({
                     {TIPOS_PERSONA.find((t) => t.value === persona.tipo)?.label}
                   </Badge>
                   <Badge
-                    variant={obtenerColorEstado(persona.estado)}
+                    variant={obtenerColorEstado(persona.estado) as any}
                     className="text-xs"
                   >
                     {
@@ -440,21 +462,17 @@ const PersonaCard = ({
                     variant="ghost"
                     size="sm"
                     className="h-8 w-8 p-0 flex-shrink-0"
+                    onClick={handleDropdownClick}
                   >
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
-                    onClick={() => router.push(`/comunidad/${persona.id}`)}
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    Ver detalles
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() =>
-                      router.push(`/comunidad/${persona.id}/editar`)
-                    }
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/comunidad/${persona.id}/editar`);
+                    }}
                   >
                     <Edit className="h-4 w-4 mr-2" />
                     Editar
@@ -1083,7 +1101,11 @@ function ComunidadContent() {
                     const edad = calcularEdad(persona.fechaNacimiento);
 
                     return (
-                      <Card key={persona.id} className="p-3">
+                      <Card
+                        key={persona.id}
+                        className="p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => router.push(`/comunidad/${persona.id}`)}
+                      >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3 min-w-0 flex-1">
                             <Avatar className="h-8 w-8 flex-shrink-0">
@@ -1119,12 +1141,13 @@ function ComunidadContent() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() =>
-                              router.push(`/comunidad/${persona.id}`)
-                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/comunidad/${persona.id}/editar`);
+                            }}
                             className="h-8 w-8 p-0 flex-shrink-0"
                           >
-                            <Eye className="h-4 w-4" />
+                            <Edit className="h-4 w-4" />
                           </Button>
                         </div>
                       </Card>
@@ -1161,7 +1184,10 @@ function ComunidadContent() {
                         return (
                           <TableRow
                             key={persona.id}
-                            className="hover:bg-muted/50"
+                            className="hover:bg-muted/50 cursor-pointer"
+                            onClick={() =>
+                              router.push(`/comunidad/${persona.id}`)
+                            }
                           >
                             <TableCell>
                               <div className="flex items-center gap-3">
@@ -1211,7 +1237,9 @@ function ComunidadContent() {
                             </TableCell>
                             <TableCell>
                               <Badge
-                                variant={obtenerColorEstado(persona.estado)}
+                                variant={
+                                  obtenerColorEstado(persona.estado) as any
+                                }
                               >
                                 {
                                   ESTADOS_PERSONA.find(
@@ -1308,20 +1336,12 @@ function ComunidadContent() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() =>
-                                    router.push(`/comunidad/${persona.id}`)
-                                  }
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     router.push(
                                       `/comunidad/${persona.id}/editar`
-                                    )
-                                  }
+                                    );
+                                  }}
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>

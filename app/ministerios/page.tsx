@@ -32,7 +32,6 @@ import {
   MoreHorizontal,
   Edit,
   Trash2,
-  Eye,
   Users,
   UserPlus,
   Calendar,
@@ -313,12 +312,13 @@ export default function MinisteriosPage() {
                 return (
                   <Card
                     key={ministerio.id}
-                    className="group hover:shadow-lg transition-all duration-200 border-l-4 border-l-green-500"
+                    className="group hover:shadow-lg transition-all duration-200 border-l-4 border-l-green-500 cursor-pointer"
+                    onClick={() => router.push(`/ministerios/${ministerio.id}`)}
                   >
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <CardTitle className="text-sm md:text-base font-semibold line-clamp-2">
+                          <CardTitle className="text-sm md:text-base font-semibold line-clamp-2 group-hover:text-primary transition-colors">
                             {ministerio.nombre}
                           </CardTitle>
                           {ministerio.descripcion && (
@@ -332,47 +332,43 @@ export default function MinisteriosPage() {
                             <Button
                               variant="ghost"
                               className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => e.stopPropagation()}
                             >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={() =>
-                                router.push(`/ministerios/${ministerio.id}`)
-                              }
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              Ver detalles
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 router.push(
                                   `/ministerios/${ministerio.id}/editar`
-                                )
-                              }
+                                );
+                              }}
                             >
                               <Edit className="h-4 w-4 mr-2" />
                               Editar
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() =>
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 router.push(
                                   `/ministerios/${ministerio.id}/miembros`
-                                )
-                              }
+                                );
+                              }}
                             >
                               <UserPlus className="h-4 w-4 mr-2" />
                               Gestionar miembros
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive"
-                              onClick={() =>
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 handleEliminarMinisterio(
                                   ministerio.id,
                                   ministerio.nombre
-                                )
-                              }
+                                );
+                              }}
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Eliminar
@@ -441,31 +437,21 @@ export default function MinisteriosPage() {
                         </div>
                       </div>
 
-                      {/* Botones de acción */}
+                      {/* Botón de acción simplificado */}
                       <div className="flex gap-2 pt-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() =>
-                            router.push(`/ministerios/${ministerio.id}`)
-                          }
-                          className="flex-1 text-xs"
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          Ver
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
+                          onClick={(e) => {
+                            e.stopPropagation();
                             router.push(
                               `/ministerios/${ministerio.id}/miembros`
-                            )
-                          }
+                            );
+                          }}
                           className="flex-1 text-xs"
                         >
                           <UserPlus className="h-3 w-3 mr-1" />
-                          Miembros
+                          Gestionar miembros
                         </Button>
                       </div>
                     </CardContent>
