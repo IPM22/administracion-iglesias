@@ -31,7 +31,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Plus,
   Search,
-  Filter,
   MoreHorizontal,
   Edit,
   Trash2,
@@ -204,7 +203,7 @@ export default function FamiliasPage() {
     cargarFamilias();
   }, []);
 
-  // Filtrar familias basado en la búsqueda
+  // Filtrar familias
   const familiasFiltradas = familias.filter(
     (familia) =>
       familia.apellido.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -231,15 +230,54 @@ export default function FamiliasPage() {
     );
   }
 
+  if (error) {
+    return (
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+            <div className="flex items-center gap-2 px-4 w-full">
+              <SidebarTrigger className="-ml-1" />
+              <Separator orientation="vertical" className="mr-2 h-4" />
+              <Breadcrumb className="hidden md:flex">
+                <BreadcrumbList>
+                  <BreadcrumbItem className="hidden md:block">
+                    <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator className="hidden md:block" />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage>Familias</BreadcrumbPage>
+                  </BreadcrumbItem>
+                </BreadcrumbList>
+              </Breadcrumb>
+              <div className="flex items-center gap-2 ml-auto">
+                <ModeToggle />
+              </div>
+            </div>
+          </header>
+          <div className="flex flex-1 flex-col gap-4 p-2 md:p-4 pt-0">
+            <Card className="text-center py-12">
+              <CardContent>
+                <h3 className="text-lg font-semibold mb-2">Error</h3>
+                <p className="text-muted-foreground mb-4">{error}</p>
+                <Button onClick={cargarFamilias}>Reintentar</Button>
+              </CardContent>
+            </Card>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    );
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4 flex-1">
+          <div className="flex items-center gap-2 px-4 w-full">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
+            <Breadcrumb className="hidden md:flex">
               <BreadcrumbList>
                 <BreadcrumbItem className="hidden md:block">
                   <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
@@ -250,299 +288,326 @@ export default function FamiliasPage() {
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
-          </div>
-          <div className="px-4">
-            <ModeToggle />
+            <div className="flex items-center gap-2 ml-auto">
+              <ModeToggle />
+            </div>
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Gestión de Familias</CardTitle>
-                  <CardDescription>
-                    Administra los núcleos familiares de la congregación
-                  </CardDescription>
-                </div>
-                <Button onClick={() => router.push("/familias/nueva")}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nueva Familia
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-2 mb-6">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar familias..."
-                    className="pl-8"
-                    value={busqueda}
-                    onChange={(e) => setBusqueda(e.target.value)}
-                  />
-                </div>
-                <Button variant="outline">
-                  <Filter className="mr-2 h-4 w-4" />
-                  Filtros
-                </Button>
-              </div>
 
-              {error ? (
-                <div className="text-center py-8">
-                  <p className="text-red-600 mb-4">{error}</p>
-                  <Button onClick={cargarFamilias}>Reintentar</Button>
-                </div>
-              ) : (
-                <div className="grid gap-6 md:grid-cols-2">
-                  {familiasFiltradas.map((familia) => (
-                    <Card key={familia.id}>
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-1">
-                            <CardTitle className="text-lg flex items-center">
-                              <HomeIcon className="mr-2 h-5 w-5" />
-                              {familia.nombre || `Familia ${familia.apellido}`}
-                            </CardTitle>
-                            <CardDescription>
-                              {familia.estado === "Activa"
-                                ? "Familia activa"
-                                : "Familia inactiva"}
-                            </CardDescription>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Badge
-                              variant={
-                                familia.estado === "Activa"
-                                  ? "default"
-                                  : "secondary"
-                              }
-                            >
-                              {familia.estado}
-                            </Badge>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    router.push(`/familias/${familia.id}`)
-                                  }
-                                >
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  Ver Detalles
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    router.push(
-                                      `/familias/${familia.id}/editar`
-                                    )
-                                  }
-                                >
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="text-red-600"
-                                  onClick={() => abrirDialogEliminar(familia)}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Eliminar
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {familia.jefeFamilia && (
-                            <div className="flex items-center space-x-3">
-                              <Avatar className="h-10 w-10">
-                                <AvatarImage
-                                  src={
-                                    familia.jefeFamilia.foto ||
-                                    "/placeholder.svg"
-                                  }
-                                />
-                                <AvatarFallback>
-                                  {familia.jefeFamilia.nombres
-                                    .split(" ")
-                                    .map((n) => n[0])
-                                    .join("")}
-                                  {familia.jefeFamilia.apellidos
-                                    .split(" ")
-                                    .map((n) => n[0])
-                                    .join("")}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="text-sm font-medium">
-                                  Cabeza de Familia
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  {familia.jefeFamilia.nombres}{" "}
-                                  {familia.jefeFamilia.apellidos}
-                                </p>
-                              </div>
-                            </div>
-                          )}
+        <div className="flex flex-1 flex-col gap-4 p-2 md:p-4 pt-0">
+          {/* Header responsivo */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+                Familias
+              </h1>
+              <p className="text-sm md:text-base text-muted-foreground">
+                Gestiona las familias de la iglesia
+              </p>
+            </div>
+            <Button
+              onClick={() => router.push("/familias/crear")}
+              className="w-full sm:w-auto"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Nueva Familia</span>
+              <span className="sm:hidden">Nueva</span>
+            </Button>
+          </div>
 
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <p className="text-sm font-medium">
-                                Miembros del Hogar
-                              </p>
-                              <div className="flex items-center space-x-1">
-                                <Users className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm font-medium">
-                                  {familia.totalMiembros}
-                                </span>
-                              </div>
-                            </div>
+          {/* Barra de búsqueda responsiva */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar familias..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
 
-                            <div className="space-y-1">
-                              {familia.miembros
-                                .slice(0, 3)
-                                .map((miembro, index) => (
-                                  <div
-                                    key={index}
-                                    className="flex items-center justify-between text-sm"
-                                  >
-                                    <div className="flex items-center space-x-2">
-                                      <span>
-                                        {miembro.nombres} {miembro.apellidos}
-                                      </span>
-                                      {miembro.parentescoFamiliar && (
-                                        <Badge
-                                          variant="outline"
-                                          className="text-xs"
-                                        >
-                                          {miembro.parentescoFamiliar}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center space-x-1">
-                                      {miembro.fechaNacimiento && (
-                                        <span className="text-xs text-muted-foreground">
-                                          {calcularEdad(
-                                            miembro.fechaNacimiento
-                                          )}{" "}
-                                          años
-                                        </span>
-                                      )}
-                                      {miembro.estado === "Activo" && (
-                                        <Badge
-                                          variant="secondary"
-                                          className="text-xs"
-                                        >
-                                          Miembro
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                              {familia.miembros.length > 3 && (
-                                <p className="text-xs text-muted-foreground">
-                                  +{familia.totalMiembros - 3} miembros más
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="pt-2 border-t">
-                            <div className="flex items-center justify-between">
-                              <div className="text-sm">
-                                <span className="text-muted-foreground">
-                                  Miembros activos:{" "}
-                                </span>
-                                <span className="font-medium">
-                                  {familia.miembrosActivos}/
-                                  {familia.totalMiembros}
-                                </span>
-                              </div>
-                              <Button size="sm" variant="outline">
-                                Ver Árbol
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-
-              {!loading && familiasFiltradas.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">
-                    {busqueda
-                      ? "No se encontraron familias que coincidan con tu búsqueda"
-                      : "No hay familias registradas"}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Dialog de confirmación para eliminar familia */}
-        <Dialog open={dialogEliminar} onOpenChange={setDialogEliminar}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Confirmar Eliminación de Familia</DialogTitle>
-              <DialogDescription>
-                ¿Estás seguro de que deseas eliminar la familia{" "}
-                <strong>
-                  {familiaAEliminar?.nombre ||
-                    `Familia ${familiaAEliminar?.apellido}`}
-                </strong>
-                ?
-                <br />
-                <br />
-                Esta acción eliminará permanentemente:
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>La familia y toda su información</li>
-                  <li>
-                    Las relaciones familiares de{" "}
-                    {familiaAEliminar?.totalMiembros || 0} miembro(s)
-                  </li>
-                  <li>Las asociaciones con visitas</li>
-                </ul>
-                <br />
-                <strong className="text-red-600">
-                  Esta acción no se puede deshacer.
-                </strong>
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setDialogEliminar(false)}
-                disabled={eliminando}
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={eliminarFamilia}
-                disabled={eliminando}
-              >
-                {eliminando ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Eliminando...
-                  </>
-                ) : (
-                  "Eliminar Familia"
+          {/* Grid de familias responsivo */}
+          {familiasFiltradas.length === 0 ? (
+            <Card className="text-center py-12">
+              <CardContent>
+                <HomeIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">
+                  {busqueda ? "No se encontraron familias" : "No hay familias"}
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  {busqueda
+                    ? "Intenta con otros términos de búsqueda."
+                    : "Comienza creando la primera familia de la iglesia."}
+                </p>
+                {!busqueda && (
+                  <Button onClick={() => router.push("/familias/crear")}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Crear primera familia
+                  </Button>
                 )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {familiasFiltradas.map((familia) => (
+                <Card
+                  key={familia.id}
+                  className="group hover:shadow-lg transition-all duration-200 border-l-4 border-l-orange-500"
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-sm md:text-base font-semibold line-clamp-2">
+                          Familia {familia.apellido}
+                        </CardTitle>
+                        {familia.nombre && (
+                          <CardDescription className="text-xs md:text-sm mt-1 line-clamp-1">
+                            {familia.nombre}
+                          </CardDescription>
+                        )}
+                        <div className="flex items-center gap-1 mt-2">
+                          <Badge
+                            variant={
+                              familia.estado === "Activa"
+                                ? "default"
+                                : "secondary"
+                            }
+                            className="text-xs"
+                          >
+                            {familia.estado}
+                          </Badge>
+                        </div>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() =>
+                              router.push(`/familias/${familia.id}`)
+                            }
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            Ver detalles
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              router.push(`/familias/${familia.id}/editar`)
+                            }
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => abrirDialogEliminar(familia)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="pt-0 space-y-3">
+                    {/* Jefe de familia */}
+                    {familia.jefeFamilia ? (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={familia.jefeFamilia.foto} />
+                          <AvatarFallback className="text-xs">
+                            {familia.jefeFamilia.nombres.charAt(0)}
+                            {familia.jefeFamilia.apellidos.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium truncate">
+                            {familia.jefeFamilia.nombres}{" "}
+                            {familia.jefeFamilia.apellidos}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Jefe de familia
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Users className="h-4 w-4 flex-shrink-0" />
+                        <span className="text-xs">
+                          Sin jefe de familia asignado
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Estadísticas */}
+                    <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Users className="h-3 w-3 text-blue-500" />
+                          <span className="text-lg font-semibold">
+                            {familia.totalMiembros}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {familia.totalMiembros === 1 ? "Miembro" : "Miembros"}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Users className="h-3 w-3 text-green-500" />
+                          <span className="text-lg font-semibold">
+                            {familia.miembrosActivos}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {familia.miembrosActivos === 1 ? "Activo" : "Activos"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Edad promedio si está disponible */}
+                    {familia.edadPromedio && (
+                      <div className="pt-2 border-t">
+                        <div className="text-center">
+                          <p className="text-xs text-muted-foreground">
+                            Edad promedio:{" "}
+                            <span className="font-medium">
+                              {familia.edadPromedio.toFixed(0)} años
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Miembros muestra (primeros 3) */}
+                    {familia.miembros.length > 0 && (
+                      <div className="pt-2 border-t">
+                        <p className="text-xs font-medium mb-2">Miembros:</p>
+                        <div className="space-y-1">
+                          {familia.miembros.slice(0, 3).map((miembro) => (
+                            <div
+                              key={miembro.id}
+                              className="flex items-center justify-between"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-4 w-4">
+                                  <AvatarImage src={miembro.foto} />
+                                  <AvatarFallback className="text-xs">
+                                    {miembro.nombres.charAt(0)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-xs truncate">
+                                  {miembro.nombres} {miembro.apellidos}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {miembro.fechaNacimiento && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {calcularEdad(miembro.fechaNacimiento)}a
+                                  </span>
+                                )}
+                                <Badge
+                                  variant={
+                                    miembro.estado === "Activo"
+                                      ? "default"
+                                      : "secondary"
+                                  }
+                                  className="text-xs px-1 py-0"
+                                >
+                                  {miembro.parentescoFamiliar || miembro.estado}
+                                </Badge>
+                              </div>
+                            </div>
+                          ))}
+                          {familia.miembros.length > 3 && (
+                            <p className="text-xs text-muted-foreground text-center">
+                              +{familia.miembros.length - 3} miembros más
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Botones de acción */}
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/familias/${familia.id}`)}
+                        className="flex-1 text-xs"
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        Ver
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          router.push(`/familias/${familia.id}/editar`)
+                        }
+                        className="flex-1 text-xs"
+                      >
+                        <Edit className="h-3 w-3 mr-1" />
+                        Editar
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Dialog de eliminación - Responsivo */}
+          <Dialog open={dialogEliminar} onOpenChange={setDialogEliminar}>
+            <DialogContent className="max-w-md mx-4">
+              <DialogHeader>
+                <DialogTitle>¿Eliminar familia?</DialogTitle>
+                <DialogDescription>
+                  Esta acción no se puede deshacer. Se eliminará permanentemente
+                  la familia &quot;{familiaAEliminar?.apellido}&quot; y se
+                  removerán todos sus miembros de la familia.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="flex-col sm:flex-row gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setDialogEliminar(false)}
+                  disabled={eliminando}
+                  className="w-full sm:w-auto order-2 sm:order-1"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={eliminarFamilia}
+                  disabled={eliminando}
+                  className="w-full sm:w-auto order-1 sm:order-2"
+                >
+                  {eliminando ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Eliminando...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Eliminar
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

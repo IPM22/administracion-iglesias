@@ -57,6 +57,25 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Users,
   UserPlus,
   Search,
@@ -72,6 +91,11 @@ import {
   ChevronLeft,
   ChevronRight,
   RotateCcw,
+  ChevronDown,
+  Grid,
+  List,
+  SlidersHorizontal,
+  MoreVertical,
 } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
 import {
@@ -130,7 +154,7 @@ interface PaginationInfo {
   pages: number;
 }
 
-// Componente de filtros optimizado para búsqueda dinámica
+// Componente de filtros optimizado para móviles
 interface FiltrosSectionProps {
   busqueda: string;
   setBusqueda: (value: string) => void;
@@ -149,36 +173,158 @@ const FiltrosSection = React.memo(
     seccionActual,
     onLimpiar,
   }: FiltrosSectionProps) => {
+    const hayFiltrosActivos =
+      busqueda ||
+      Object.keys(filtros).some((key) => filtros[key as keyof FiltrosPersona]);
+
     return (
       <Card className="mb-6">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Filter className="h-5 w-5" />
-                Filtros de Búsqueda
-              </CardTitle>
-              <CardDescription>
-                Busca y filtra personas por nombre, tipo, estado y más
-              </CardDescription>
+        <CardHeader className="pb-3">
+          {/* Vista móvil compacta */}
+          <div className="block md:hidden">
+            <div className="flex items-center justify-between mb-3">
+              <CardTitle className="text-lg">Buscar personas</CardTitle>
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <SlidersHorizontal className="h-4 w-4 mr-2" />
+                    Filtros
+                    {hayFiltrosActivos && (
+                      <Badge
+                        variant="destructive"
+                        className="ml-2 h-5 w-5 p-0 text-xs"
+                      >
+                        !
+                      </Badge>
+                    )}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent>
+                  <SheetHeader>
+                    <SheetTitle>Filtros de búsqueda</SheetTitle>
+                    <SheetDescription>
+                      Personaliza tu búsqueda de personas
+                    </SheetDescription>
+                  </SheetHeader>
+                  <div className="space-y-4 mt-6">
+                    {seccionActual === "todos" && (
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">
+                          Tipo de persona
+                        </label>
+                        <Select
+                          value={filtros.tipo || "todos"}
+                          onValueChange={(value) =>
+                            setFiltros({
+                              ...filtros,
+                              tipo:
+                                value === "todos" ? undefined : (value as any),
+                            })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Todos los tipos" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="todos">
+                              Todos los tipos
+                            </SelectItem>
+                            {TIPOS_PERSONA.map((tipo) => (
+                              <SelectItem key={tipo.value} value={tipo.value}>
+                                {tipo.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">
+                        Estado
+                      </label>
+                      <Select
+                        value={filtros.estado || "todos"}
+                        onValueChange={(value) =>
+                          setFiltros({
+                            ...filtros,
+                            estado:
+                              value === "todos" ? undefined : (value as any),
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Todos los estados" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="todos">
+                            Todos los estados
+                          </SelectItem>
+                          {ESTADOS_PERSONA.map((estado) => (
+                            <SelectItem key={estado.value} value={estado.value}>
+                              {estado.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {hayFiltrosActivos && (
+                      <Button
+                        variant="outline"
+                        onClick={onLimpiar}
+                        className="w-full"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Limpiar filtros
+                      </Button>
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
             </div>
-            {(busqueda ||
-              Object.keys(filtros).some(
-                (key) => filtros[key as keyof FiltrosPersona]
-              )) && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onLimpiar}
-                className="flex items-center gap-2"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Limpiar filtros
-              </Button>
-            )}
+
+            {/* Barra de búsqueda móvil */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Buscar por nombre, correo o teléfono..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          {/* Vista desktop original */}
+          <div className="hidden md:block">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Filter className="h-5 w-5" />
+                  Filtros de Búsqueda
+                </CardTitle>
+                <CardDescription>
+                  Busca y filtra personas por nombre, tipo, estado y más
+                </CardDescription>
+              </div>
+              {hayFiltrosActivos && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onLimpiar}
+                  className="flex items-center gap-2"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Limpiar filtros
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
-        <CardContent>
+
+        {/* Contenido de filtros desktop */}
+        <CardContent className="hidden md:block">
           <div className="flex flex-wrap gap-4">
             <div className="flex-1 min-w-64">
               <div className="relative">
@@ -199,15 +345,12 @@ const FiltrosSection = React.memo(
                 onValueChange={(value) =>
                   setFiltros({
                     ...filtros,
-                    tipo:
-                      value === "todos"
-                        ? undefined
-                        : (value as typeof filtros.tipo),
+                    tipo: value === "todos" ? undefined : (value as any),
                   })
                 }
               >
                 <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filtrar por tipo" />
+                  <SelectValue placeholder="Tipo de persona" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos los tipos</SelectItem>
@@ -225,15 +368,12 @@ const FiltrosSection = React.memo(
               onValueChange={(value) =>
                 setFiltros({
                   ...filtros,
-                  estado:
-                    value === "todos"
-                      ? undefined
-                      : (value as typeof filtros.estado),
+                  estado: value === "todos" ? undefined : (value as any),
                 })
               }
             >
               <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filtrar por estado" />
+                <SelectValue placeholder="Estado" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos los estados</SelectItem>
@@ -251,7 +391,136 @@ const FiltrosSection = React.memo(
   }
 );
 
-FiltrosSection.displayName = "FiltrosSection";
+// Componente de tarjeta para vista móvil
+const PersonaCard = ({
+  persona,
+  router,
+  calcularEdad,
+  obtenerColorEstado,
+}: any) => {
+  const edad = calcularEdad(persona.fechaNacimiento);
+
+  return (
+    <Card className="mb-4 hover:shadow-md transition-shadow">
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <Avatar className="h-12 w-12 flex-shrink-0">
+            <AvatarImage src={persona.foto} />
+            <AvatarFallback>
+              {persona.nombres.charAt(0)}
+              {persona.apellidos.charAt(0)}
+            </AvatarFallback>
+          </Avatar>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-base truncate">
+                  {persona.nombres} {persona.apellidos}
+                </h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="outline" className="text-xs">
+                    {TIPOS_PERSONA.find((t) => t.value === persona.tipo)?.label}
+                  </Badge>
+                  <Badge
+                    variant={obtenerColorEstado(persona.estado)}
+                    className="text-xs"
+                  >
+                    {
+                      ESTADOS_PERSONA.find((e) => e.value === persona.estado)
+                        ?.label
+                    }
+                  </Badge>
+                </div>
+              </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 flex-shrink-0"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => router.push(`/comunidad/${persona.id}`)}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Ver detalles
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      router.push(`/comunidad/${persona.id}/editar`)
+                    }
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <div className="mt-3 space-y-2 text-sm">
+              {edad && <div className="text-muted-foreground">{edad} años</div>}
+
+              {(persona.correo || persona.telefono || persona.celular) && (
+                <div className="space-y-1">
+                  {persona.correo && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Mail className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">{persona.correo}</span>
+                    </div>
+                  )}
+                  {(persona.telefono || persona.celular) && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Phone className="h-3 w-3 flex-shrink-0" />
+                      <span>{persona.celular || persona.telefono}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {persona.familia && (
+                <div className="text-muted-foreground">
+                  Familia {persona.familia.apellido}
+                </div>
+              )}
+
+              {persona.ministerios && persona.ministerios.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {persona.ministerios.slice(0, 2).map((ministerio: any) => (
+                    <Badge
+                      key={ministerio.id}
+                      variant="outline"
+                      className="text-xs"
+                      style={{
+                        backgroundColor: ministerio.ministerio.colorHex
+                          ? `${ministerio.ministerio.colorHex}20`
+                          : undefined,
+                        borderColor: ministerio.ministerio.colorHex,
+                      }}
+                    >
+                      {ministerio.ministerio.nombre}
+                      {ministerio.esLider && " (L)"}
+                    </Badge>
+                  ))}
+                  {persona.ministerios.length > 2 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{persona.ministerios.length - 2}
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 function ComunidadContent() {
   const router = useRouter();
@@ -678,27 +947,65 @@ function ComunidadContent() {
     const seccionInfo = obtenerInfoSeccion();
     const botonInfo = obtenerInfoBoton();
     const IconoBoton = botonInfo.icono;
+    const [vistaMovil, setVistaMovil] = useState<"cards" | "table">("cards");
 
     return (
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {React.cloneElement(seccionInfo.icono, {
-                className: `h-6 w-6 ${seccionInfo.color}`,
-              })}
-              <div>
-                <CardTitle className="text-xl">{seccionInfo.titulo}</CardTitle>
-                <CardDescription>{seccionInfo.descripcion}</CardDescription>
+          <div className="space-y-4">
+            {/* Header principal */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                {React.cloneElement(seccionInfo.icono, {
+                  className: `h-5 w-5 sm:h-6 sm:w-6 ${seccionInfo.color} flex-shrink-0`,
+                })}
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="text-lg sm:text-xl truncate">
+                    {seccionInfo.titulo}
+                  </CardTitle>
+                  <CardDescription className="hidden sm:block">
+                    {seccionInfo.descripcion}
+                  </CardDescription>
+                </div>
+                <Badge
+                  variant="secondary"
+                  className="flex-shrink-0 text-xs sm:text-sm"
+                >
+                  {paginationInfo.total}{" "}
+                  {paginationInfo.total === 1 ? "persona" : "personas"}
+                </Badge>
               </div>
-              <Badge variant="secondary" className="ml-2">
-                {paginationInfo.total}{" "}
-                {paginationInfo.total === 1 ? "persona" : "personas"}
-              </Badge>
-              <Button onClick={botonInfo.onClick}>
+
+              <Button onClick={botonInfo.onClick} className="w-full sm:w-auto">
                 <IconoBoton className="h-4 w-4 mr-2" />
-                {botonInfo.texto}
+                <span className="hidden sm:inline">{botonInfo.texto}</span>
+                <span className="sm:hidden">Nuevo</span>
               </Button>
+            </div>
+
+            {/* Toggle de vista solo en móvil */}
+            <div className="flex items-center justify-between sm:hidden">
+              <CardDescription className="text-sm">
+                {seccionInfo.descripcion}
+              </CardDescription>
+              <div className="flex rounded-lg border p-1">
+                <Button
+                  variant={vistaMovil === "cards" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setVistaMovil("cards")}
+                  className="h-7 px-2"
+                >
+                  <Grid className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant={vistaMovil === "table" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setVistaMovil("table")}
+                  className="h-7 px-2"
+                >
+                  <List className="h-3 w-3" />
+                </Button>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -748,123 +1055,175 @@ function ComunidadContent() {
             </div>
           ) : (
             <>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Persona</TableHead>
-                      <TableHead>Edad</TableHead>
-                      <TableHead>Contacto</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead>Familia</TableHead>
-                      {seccionActual === "miembros" && (
-                        <TableHead>Bautismo</TableHead>
-                      )}
-                      {seccionActual === "visitas" && (
-                        <TableHead>Primera Visita</TableHead>
-                      )}
-                      <TableHead>Ministerios</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {obtenerPersonasPaginadas().map((persona) => {
-                      const edad = calcularEdad(persona.fechaNacimiento);
+              {/* Vista de tarjetas para móvil */}
+              <div
+                className={`sm:hidden ${
+                  vistaMovil === "cards" ? "block" : "hidden"
+                }`}
+              >
+                {obtenerPersonasPaginadas().map((persona) => (
+                  <PersonaCard
+                    key={persona.id}
+                    persona={persona}
+                    router={router}
+                    calcularEdad={calcularEdad}
+                    obtenerColorEstado={obtenerColorEstado}
+                  />
+                ))}
+              </div>
 
-                      return (
-                        <TableRow
-                          key={persona.id}
-                          className="hover:bg-muted/50"
-                        >
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-10 w-10">
-                                <AvatarImage src={persona.foto} />
-                                <AvatarFallback>
-                                  {persona.nombres.charAt(0)}
-                                  {persona.apellidos.charAt(0)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="font-medium">
-                                  {persona.nombres} {persona.apellidos}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
+              {/* Vista de tabla para móvil (simplificada) */}
+              <div
+                className={`sm:hidden ${
+                  vistaMovil === "table" ? "block" : "hidden"
+                }`}
+              >
+                <div className="space-y-2">
+                  {obtenerPersonasPaginadas().map((persona) => {
+                    const edad = calcularEdad(persona.fechaNacimiento);
+
+                    return (
+                      <Card key={persona.id} className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <Avatar className="h-8 w-8 flex-shrink-0">
+                              <AvatarImage src={persona.foto} />
+                              <AvatarFallback className="text-xs">
+                                {persona.nombres.charAt(0)}
+                                {persona.apellidos.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-sm truncate">
+                                {persona.nombres} {persona.apellidos}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs h-5"
+                                >
                                   {
                                     TIPOS_PERSONA.find(
                                       (t) => t.value === persona.tipo
                                     )?.label
                                   }
-                                </p>
+                                </Badge>
+                                {edad && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {edad} años
+                                  </span>
+                                )}
                               </div>
                             </div>
-                          </TableCell>
-                          <TableCell>{edad ? `${edad} años` : "N/A"}</TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              {persona.correo && (
-                                <div className="flex items-center gap-1 text-sm">
-                                  <Mail className="h-3 w-3" />
-                                  <span className="truncate max-w-32">
-                                    {persona.correo}
-                                  </span>
-                                </div>
-                              )}
-                              {(persona.telefono || persona.celular) && (
-                                <div className="flex items-center gap-1 text-sm">
-                                  <Phone className="h-3 w-3" />
-                                  <span>
-                                    {persona.celular || persona.telefono}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={obtenerColorEstado(persona.estado)}>
-                              {
-                                ESTADOS_PERSONA.find(
-                                  (e) => e.value === persona.estado
-                                )?.label
-                              }
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {persona.familia ? (
-                              <span className="text-sm">
-                                Familia {persona.familia.apellido}
-                              </span>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">
-                                -
-                              </span>
-                            )}
-                          </TableCell>
-                          {seccionActual === "miembros" && (
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              router.push(`/comunidad/${persona.id}`)
+                            }
+                            className="h-8 w-8 p-0 flex-shrink-0"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Vista de tabla completa para desktop */}
+              <div className="hidden sm:block">
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Persona</TableHead>
+                        <TableHead>Edad</TableHead>
+                        <TableHead>Contacto</TableHead>
+                        <TableHead>Estado</TableHead>
+                        <TableHead>Familia</TableHead>
+                        {seccionActual === "miembros" && (
+                          <TableHead>Bautismo</TableHead>
+                        )}
+                        {seccionActual === "visitas" && (
+                          <TableHead>Primera Visita</TableHead>
+                        )}
+                        <TableHead>Ministerios</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {obtenerPersonasPaginadas().map((persona) => {
+                        const edad = calcularEdad(persona.fechaNacimiento);
+
+                        return (
+                          <TableRow
+                            key={persona.id}
+                            className="hover:bg-muted/50"
+                          >
                             <TableCell>
-                              {persona.fechaBautismo ? (
-                                <div className="flex items-center gap-1">
-                                  <Heart className="h-3 w-3 text-red-500" />
-                                  <span className="text-sm">
-                                    {new Date(
-                                      persona.fechaBautismo
-                                    ).toLocaleDateString()}
-                                  </span>
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-10 w-10">
+                                  <AvatarImage src={persona.foto} />
+                                  <AvatarFallback>
+                                    {persona.nombres.charAt(0)}
+                                    {persona.apellidos.charAt(0)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-medium">
+                                    {persona.nombres} {persona.apellidos}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {
+                                      TIPOS_PERSONA.find(
+                                        (t) => t.value === persona.tipo
+                                      )?.label
+                                    }
+                                  </p>
                                 </div>
-                              ) : (
-                                <span className="text-sm text-muted-foreground">
-                                  No bautizado
-                                </span>
-                              )}
+                              </div>
                             </TableCell>
-                          )}
-                          {seccionActual === "visitas" && (
                             <TableCell>
-                              {persona.fechaPrimeraVisita ? (
+                              {edad ? `${edad} años` : "N/A"}
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                {persona.correo && (
+                                  <div className="flex items-center gap-1 text-sm">
+                                    <Mail className="h-3 w-3" />
+                                    <span className="truncate max-w-32">
+                                      {persona.correo}
+                                    </span>
+                                  </div>
+                                )}
+                                {(persona.telefono || persona.celular) && (
+                                  <div className="flex items-center gap-1 text-sm">
+                                    <Phone className="h-3 w-3" />
+                                    <span>
+                                      {persona.celular || persona.telefono}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={obtenerColorEstado(persona.estado)}
+                              >
+                                {
+                                  ESTADOS_PERSONA.find(
+                                    (e) => e.value === persona.estado
+                                  )?.label
+                                }
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {persona.familia ? (
                                 <span className="text-sm">
-                                  {new Date(
-                                    persona.fechaPrimeraVisita
-                                  ).toLocaleDateString()}
+                                  Familia {persona.familia.apellido}
                                 </span>
                               ) : (
                                 <span className="text-sm text-muted-foreground">
@@ -872,73 +1231,110 @@ function ComunidadContent() {
                                 </span>
                               )}
                             </TableCell>
-                          )}
-                          <TableCell>
-                            {persona.ministerios &&
-                            persona.ministerios.length > 0 ? (
-                              <div className="flex flex-wrap gap-1">
-                                {persona.ministerios
-                                  .slice(0, 2)
-                                  .map((ministerio) => (
+                            {seccionActual === "miembros" && (
+                              <TableCell>
+                                {persona.fechaBautismo ? (
+                                  <div className="flex items-center gap-1">
+                                    <Heart className="h-3 w-3 text-red-500" />
+                                    <span className="text-sm">
+                                      {new Date(
+                                        persona.fechaBautismo
+                                      ).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">
+                                    No bautizado
+                                  </span>
+                                )}
+                              </TableCell>
+                            )}
+                            {seccionActual === "visitas" && (
+                              <TableCell>
+                                {persona.fechaPrimeraVisita ? (
+                                  <span className="text-sm">
+                                    {new Date(
+                                      persona.fechaPrimeraVisita
+                                    ).toLocaleDateString()}
+                                  </span>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">
+                                    -
+                                  </span>
+                                )}
+                              </TableCell>
+                            )}
+                            <TableCell>
+                              {persona.ministerios &&
+                              persona.ministerios.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {persona.ministerios
+                                    .slice(0, 2)
+                                    .map((ministerio) => (
+                                      <Badge
+                                        key={ministerio.id}
+                                        variant="outline"
+                                        className="text-xs"
+                                        style={{
+                                          backgroundColor: ministerio.ministerio
+                                            .colorHex
+                                            ? `${ministerio.ministerio.colorHex}20`
+                                            : undefined,
+                                          borderColor:
+                                            ministerio.ministerio.colorHex,
+                                        }}
+                                      >
+                                        {ministerio.ministerio.nombre}
+                                        {ministerio.esLider && " (L)"}
+                                      </Badge>
+                                    ))}
+                                  {persona.ministerios.length > 2 && (
                                     <Badge
-                                      key={ministerio.id}
                                       variant="outline"
                                       className="text-xs"
-                                      style={{
-                                        backgroundColor: ministerio.ministerio
-                                          .colorHex
-                                          ? `${ministerio.ministerio.colorHex}20`
-                                          : undefined,
-                                        borderColor:
-                                          ministerio.ministerio.colorHex,
-                                      }}
                                     >
-                                      {ministerio.ministerio.nombre}
-                                      {ministerio.esLider && " (L)"}
+                                      +{persona.ministerios.length - 2}
                                     </Badge>
-                                  ))}
-                                {persona.ministerios.length > 2 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    +{persona.ministerios.length - 2}
-                                  </Badge>
-                                )}
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">
+                                  -
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    router.push(`/comunidad/${persona.id}`)
+                                  }
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    router.push(
+                                      `/comunidad/${persona.id}/editar`
+                                    )
+                                  }
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
                               </div>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">
-                                -
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  router.push(`/comunidad/${persona.id}`)
-                                }
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  router.push(`/comunidad/${persona.id}/editar`)
-                                }
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
-
-              {paginationInfo.pages > 1 && <PaginationControls />}
+              <PaginationControls />
             </>
           )}
         </CardContent>
@@ -972,10 +1368,17 @@ function ComunidadContent() {
             <Separator orientation="vertical" className="mr-2 h-4" />
             <Breadcrumb>
               <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+                <BreadcrumbItem>
+                  <BreadcrumbLink href="/dashboard" className="hidden md:block">
+                    Dashboard
+                  </BreadcrumbLink>
+                  <BreadcrumbLink href="/dashboard" className="md:hidden">
+                    <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center">
+                      <Users className="h-3 w-3" />
+                    </div>
+                  </BreadcrumbLink>
                 </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
+                <BreadcrumbSeparator />
                 <BreadcrumbItem>
                   <BreadcrumbPage>Comunidad</BreadcrumbPage>
                 </BreadcrumbItem>
@@ -988,17 +1391,30 @@ function ComunidadContent() {
         </header>
 
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Comunidad</h1>
-              <p className="text-muted-foreground">
-                Gestión unificada de miembros, visitas y niños
+          {/* Header móvil optimizado */}
+          <div className="block md:hidden">
+            <div className="mb-4">
+              <h1 className="text-2xl font-bold tracking-tight">Comunidad</h1>
+              <p className="text-sm text-muted-foreground">
+                Gestión de miembros, visitas y niños
               </p>
             </div>
           </div>
 
-          {/* Cards de navegación interactivas */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Header desktop */}
+          <div className="hidden md:block">
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">Comunidad</h1>
+                <p className="text-muted-foreground">
+                  Gestión unificada de miembros, visitas y niños
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Cards de navegación interactivas - optimizadas para móvil */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
             <Card
               className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
                 seccionActual === "todos"
@@ -1007,30 +1423,29 @@ function ComunidadContent() {
               }`}
               onClick={() => setSeccionActual("todos")}
             >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Personas
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 p-2 md:p-6 md:pb-2">
+                <CardTitle className="text-xs md:text-sm font-medium">
+                  <span className="hidden sm:inline">Total Personas</span>
+                  <span className="sm:hidden">Total</span>
                 </CardTitle>
                 <Users
-                  className={`h-4 w-4 ${
+                  className={`h-3 w-3 md:h-4 md:w-4 ${
                     seccionActual === "todos"
                       ? "text-gray-600"
                       : "text-muted-foreground"
                   }`}
                 />
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-2 md:p-6 pt-0">
                 <div
-                  className={`text-2xl font-bold ${
+                  className={`text-base md:text-2xl font-bold ${
                     seccionActual === "todos" ? "text-gray-600" : ""
                   }`}
                 >
                   {estadisticasGlobales.total}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {seccionActual === "todos"
-                    ? "Vista activa"
-                    : "Haz clic para ver todos"}
+                <p className="text-xs text-muted-foreground mt-0.5 md:mt-1 hidden md:block">
+                  {seccionActual === "todos" ? "Vista activa" : "Ver todos"}
                 </p>
               </CardContent>
             </Card>
@@ -1043,18 +1458,20 @@ function ComunidadContent() {
               }`}
               onClick={() => setSeccionActual("miembros")}
             >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Miembros</CardTitle>
-                <Heart className="h-4 w-4 text-blue-600" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 p-2 md:p-6 md:pb-2">
+                <CardTitle className="text-xs md:text-sm font-medium">
+                  Miembros
+                </CardTitle>
+                <Heart className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">
+              <CardContent className="p-2 md:p-6 pt-0">
+                <div className="text-base md:text-2xl font-bold text-blue-600">
                   {estadisticasGlobales.miembros}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-0.5 md:mt-1 hidden md:block">
                   {seccionActual === "miembros"
                     ? "Vista activa"
-                    : "Haz clic para ver miembros"}
+                    : "Ver miembros"}
                 </p>
               </CardContent>
             </Card>
@@ -1067,18 +1484,18 @@ function ComunidadContent() {
               }`}
               onClick={() => setSeccionActual("visitas")}
             >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Visitas</CardTitle>
-                <UserPlus className="h-4 w-4 text-green-600" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 p-2 md:p-6 md:pb-2">
+                <CardTitle className="text-xs md:text-sm font-medium">
+                  Visitas
+                </CardTitle>
+                <UserPlus className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">
+              <CardContent className="p-2 md:p-6 pt-0">
+                <div className="text-base md:text-2xl font-bold text-green-600">
                   {estadisticasGlobales.visitas}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {seccionActual === "visitas"
-                    ? "Vista activa"
-                    : "Haz clic para ver visitas"}
+                <p className="text-xs text-muted-foreground mt-0.5 md:mt-1 hidden md:block">
+                  {seccionActual === "visitas" ? "Vista activa" : "Ver visitas"}
                 </p>
               </CardContent>
             </Card>
@@ -1091,18 +1508,18 @@ function ComunidadContent() {
               }`}
               onClick={() => setSeccionActual("ninos")}
             >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Niños</CardTitle>
-                <Baby className="h-4 w-4 text-purple-600" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 p-2 md:p-6 md:pb-2">
+                <CardTitle className="text-xs md:text-sm font-medium">
+                  Niños
+                </CardTitle>
+                <Baby className="h-3 w-3 md:h-4 md:w-4 text-purple-600" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-600">
+              <CardContent className="p-2 md:p-6 pt-0">
+                <div className="text-base md:text-2xl font-bold text-purple-600">
                   {estadisticasGlobales.ninos}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {seccionActual === "ninos"
-                    ? "Vista activa"
-                    : "Haz clic para ver niños"}
+                <p className="text-xs text-muted-foreground mt-0.5 md:mt-1 hidden md:block">
+                  {seccionActual === "ninos" ? "Vista activa" : "Ver niños"}
                 </p>
               </CardContent>
             </Card>

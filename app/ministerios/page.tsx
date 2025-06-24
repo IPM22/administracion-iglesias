@@ -25,12 +25,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Plus,
   Search,
-  Filter,
   MoreHorizontal,
   Edit,
   Trash2,
@@ -115,7 +113,7 @@ export default function MinisteriosPage() {
   const handleEliminarMinisterio = async (id: number, nombre: string) => {
     if (
       !confirm(
-        `¿Estás seguro de que quieres eliminar el ministerio &quot;${nombre}&quot;?`
+        `¿Estás seguro de que quieres eliminar el ministerio "${nombre}"?`
       )
     ) {
       return;
@@ -191,26 +189,35 @@ export default function MinisteriosPage() {
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
-          <div className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-            <div className="flex items-center gap-2 px-4">
+          <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+            <div className="flex items-center gap-2 px-4 w-full">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
-              <div className="flex items-center justify-between flex-1">
-                <h1 className="text-lg font-semibold">Ministerios</h1>
+              <Breadcrumb className="hidden md:flex">
+                <BreadcrumbList>
+                  <BreadcrumbItem className="hidden md:block">
+                    <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator className="hidden md:block" />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage>Ministerios</BreadcrumbPage>
+                  </BreadcrumbItem>
+                </BreadcrumbList>
+              </Breadcrumb>
+              <div className="flex items-center gap-2 ml-auto">
                 <ModeToggle />
               </div>
             </div>
-          </div>
-          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-            <div className="flex items-center justify-center py-20">
-              <div className="text-center">
-                <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-                <p className="text-red-500">{error}</p>
-                <Button onClick={fetchMinisterios} className="mt-4">
-                  Intentar de nuevo
-                </Button>
-              </div>
-            </div>
+          </header>
+          <div className="flex flex-1 flex-col gap-4 p-2 md:p-4 pt-0">
+            <Card className="text-center py-12">
+              <CardContent>
+                <AlertTriangle className="h-12 w-12 mx-auto text-destructive mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Error</h3>
+                <p className="text-muted-foreground mb-4">{error}</p>
+                <Button onClick={fetchMinisterios}>Reintentar</Button>
+              </CardContent>
+            </Card>
           </div>
         </SidebarInset>
       </SidebarProvider>
@@ -222,10 +229,10 @@ export default function MinisteriosPage() {
       <AppSidebar />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4 flex-1">
+          <div className="flex items-center gap-2 px-4 w-full">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
+            <Breadcrumb className="hidden md:flex">
               <BreadcrumbList>
                 <BreadcrumbItem className="hidden md:block">
                   <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
@@ -236,238 +243,237 @@ export default function MinisteriosPage() {
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
-            <div className="ml-auto">
+            <div className="flex items-center gap-2 ml-auto">
               <ModeToggle />
             </div>
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Gestión de Ministerios</CardTitle>
-                  <CardDescription>
-                    Administra los ministerios y equipos de trabajo de la
-                    iglesia
-                  </CardDescription>
-                </div>
-                <Button onClick={() => router.push("/ministerios/nuevo")}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nuevo Ministerio
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-2 mb-6">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar ministerios..."
-                    className="pl-8"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <Button variant="outline">
-                  <Filter className="mr-2 h-4 w-4" />
-                  Filtros
-                </Button>
-              </div>
 
-              {ministeriosFiltrados.length === 0 ? (
-                <div className="text-center py-20">
-                  {searchTerm ? (
-                    <p className="text-muted-foreground">
-                      No se encontraron ministerios que coincidan con &quot;
-                      {searchTerm}&quot;
-                    </p>
-                  ) : (
-                    <div>
-                      <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground mb-4">
-                        No hay ministerios registrados
-                      </p>
-                      <Button onClick={() => router.push("/ministerios/nuevo")}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Crear primer ministerio
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="grid gap-6 md:grid-cols-2">
-                  {ministeriosFiltrados.map((ministerio) => {
-                    const lider = getLider(ministerio.personas);
+        <div className="flex flex-1 flex-col gap-4 p-2 md:p-4 pt-0">
+          {/* Header responsivo */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+                Ministerios
+              </h1>
+              <p className="text-sm md:text-base text-muted-foreground">
+                Gestiona los ministerios y equipos de la iglesia
+              </p>
+            </div>
+            <Button
+              onClick={() => router.push("/ministerios/crear")}
+              className="w-full sm:w-auto"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Nuevo Ministerio</span>
+              <span className="sm:hidden">Nuevo</span>
+            </Button>
+          </div>
 
-                    return (
-                      <Card key={ministerio.id}>
-                        <CardHeader>
-                          <div className="flex items-start justify-between">
-                            <div className="space-y-1">
-                              <CardTitle className="text-lg">
-                                {ministerio.nombre}
-                              </CardTitle>
-                              <CardDescription>
-                                {ministerio.descripcion || "Sin descripción"}
-                              </CardDescription>
-                            </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    router.push(`/ministerios/${ministerio.id}`)
-                                  }
-                                >
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  Ver Detalles
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    router.push(
-                                      `/ministerios/${ministerio.id}/personas`
-                                    )
-                                  }
-                                >
-                                  <UserPlus className="mr-2 h-4 w-4" />
-                                  Gestionar Personas
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    router.push(
-                                      `/ministerios/${ministerio.id}/editar`
-                                    )
-                                  }
-                                >
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="text-red-600"
-                                  onClick={() =>
-                                    handleEliminarMinisterio(
-                                      ministerio.id,
-                                      ministerio.nombre
-                                    )
-                                  }
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Eliminar
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+          {/* Barra de búsqueda responsiva */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar ministerios..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
+
+          {/* Grid de ministerios responsivo */}
+          {ministeriosFiltrados.length === 0 ? (
+            <Card className="text-center py-12">
+              <CardContent>
+                <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">
+                  {searchTerm
+                    ? "No se encontraron ministerios"
+                    : "No hay ministerios"}
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  {searchTerm
+                    ? "Intenta con otros términos de búsqueda."
+                    : "Comienza creando el primer ministerio de la iglesia."}
+                </p>
+                {!searchTerm && (
+                  <Button onClick={() => router.push("/ministerios/crear")}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Crear primer ministerio
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {ministeriosFiltrados.map((ministerio) => {
+                const lider = getLider(ministerio.personas);
+                return (
+                  <Card
+                    key={ministerio.id}
+                    className="group hover:shadow-lg transition-all duration-200 border-l-4 border-l-green-500"
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <CardTitle className="text-sm md:text-base font-semibold line-clamp-2">
+                            {ministerio.nombre}
+                          </CardTitle>
+                          {ministerio.descripcion && (
+                            <CardDescription className="text-xs md:text-sm mt-1 line-clamp-2">
+                              {ministerio.descripcion}
+                            </CardDescription>
+                          )}
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() =>
+                                router.push(`/ministerios/${ministerio.id}`)
+                              }
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              Ver detalles
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                router.push(
+                                  `/ministerios/${ministerio.id}/editar`
+                                )
+                              }
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                router.push(
+                                  `/ministerios/${ministerio.id}/miembros`
+                                )
+                              }
+                            >
+                              <UserPlus className="h-4 w-4 mr-2" />
+                              Gestionar miembros
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() =>
+                                handleEliminarMinisterio(
+                                  ministerio.id,
+                                  ministerio.nombre
+                                )
+                              }
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Eliminar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="pt-0 space-y-3">
+                      {/* Líder del ministerio */}
+                      {lider ? (
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={lider.avatar} />
+                            <AvatarFallback className="text-xs">
+                              {lider.nombre
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium truncate">
+                              {lider.nombre}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {lider.rol}
+                            </p>
                           </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-4">
-                            {lider ? (
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-2">
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarImage
-                                      src={lider.avatar || "/placeholder.svg"}
-                                    />
-                                    <AvatarFallback>
-                                      {lider.nombre
-                                        .split(" ")
-                                        .map((n) => n[0])
-                                        .join("")}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <p className="text-sm font-medium">Líder</p>
-                                    <p className="text-sm text-muted-foreground">
-                                      {lider.nombre}
-                                    </p>
-                                  </div>
-                                </div>
-                                <Badge variant="secondary">Activo</Badge>
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-between">
-                                <div className="text-sm text-muted-foreground">
-                                  Sin líder asignado
-                                </div>
-                                <Badge variant="outline">Sin líder</Badge>
-                              </div>
-                            )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Users className="h-4 w-4 flex-shrink-0" />
+                          <span className="text-xs">Sin líder asignado</span>
+                        </div>
+                      )}
 
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <p className="text-sm font-medium">
-                                  Personas Activas
-                                </p>
-                                <div className="flex items-center space-x-1">
-                                  <Users className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-sm font-medium">
-                                    {ministerio._count.personas}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {ministerio.personas &&
-                                ministerio.personas.length > 0 && (
-                                  <div className="space-y-1">
-                                    {ministerio.personas
-                                      .filter((p) => p.estado === "Activo")
-                                      .slice(0, 3)
-                                      .map((persona) => (
-                                        <div
-                                          key={persona.id}
-                                          className="flex items-center justify-between text-sm"
-                                        >
-                                          <span>{`${persona.persona.nombres} ${persona.persona.apellidos}`}</span>
-                                          <Badge
-                                            variant="outline"
-                                            className="text-xs"
-                                          >
-                                            {persona.rol || "Miembro"}
-                                          </Badge>
-                                        </div>
-                                      ))}
-                                    {ministerio._count.personas > 3 && (
-                                      <p className="text-xs text-muted-foreground">
-                                        +{ministerio._count.personas - 3}{" "}
-                                        personas más
-                                      </p>
-                                    )}
-                                  </div>
-                                )}
-                            </div>
-
-                            <div className="pt-2 border-t">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                                  <p className="text-sm text-muted-foreground">
-                                    {ministerio._count.actividades} actividades
-                                  </p>
-                                </div>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() =>
-                                    router.push(`/ministerios/${ministerio.id}`)
-                                  }
-                                >
-                                  Ver Más
-                                </Button>
-                              </div>
-                            </div>
+                      {/* Estadísticas */}
+                      <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Users className="h-3 w-3 text-blue-500" />
+                            <span className="text-lg font-semibold">
+                              {ministerio._count.personas}
+                            </span>
                           </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                          <p className="text-xs text-muted-foreground">
+                            {ministerio._count.personas === 1
+                              ? "Miembro"
+                              : "Miembros"}
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Calendar className="h-3 w-3 text-green-500" />
+                            <span className="text-lg font-semibold">
+                              {ministerio._count.actividades}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {ministerio._count.actividades === 1
+                              ? "Actividad"
+                              : "Actividades"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Botones de acción */}
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            router.push(`/ministerios/${ministerio.id}`)
+                          }
+                          className="flex-1 text-xs"
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          Ver
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            router.push(
+                              `/ministerios/${ministerio.id}/miembros`
+                            )
+                          }
+                          className="flex-1 text-xs"
+                        >
+                          <UserPlus className="h-3 w-3 mr-1" />
+                          Miembros
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
       </SidebarInset>
     </SidebarProvider>

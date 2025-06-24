@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
@@ -25,7 +24,6 @@ import {
   MapPin,
   Loader2,
   CheckCircle,
-  Clock,
   Send,
 } from "lucide-react";
 
@@ -144,18 +142,20 @@ export default function BuscarIglesiaPage() {
   if (solicitudEnviada) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-100 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-8 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle className="h-8 w-8 text-green-600" />
+        <Card className="w-full max-w-sm sm:max-w-md">
+          <CardContent className="p-6 sm:p-8 text-center">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+              <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
             </div>
-            <h2 className="text-xl font-semibold mb-2">¡Solicitud Enviada!</h2>
-            <p className="text-muted-foreground mb-4">
+            <h2 className="text-lg sm:text-xl font-semibold mb-2">
+              ¡Solicitud Enviada!
+            </h2>
+            <p className="text-sm sm:text-base text-muted-foreground mb-4">
               Tu solicitud ha sido enviada al administrador de la iglesia. Te
               notificaremos cuando sea revisada.
             </p>
-            <div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
-            <p className="text-sm text-muted-foreground mt-2">
+            <div className="animate-spin w-5 h-5 sm:w-6 sm:h-6 border-2 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-2">
               Redirigiendo al login...
             </p>
           </CardContent>
@@ -165,11 +165,11 @@ export default function BuscarIglesiaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-100 p-3 sm:p-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <Card className="mb-6">
-          <CardHeader>
+        <Card className="mb-4 sm:mb-6">
+          <CardHeader className="p-4 sm:p-6">
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
@@ -180,11 +180,11 @@ export default function BuscarIglesiaPage() {
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Search className="h-5 w-5 text-green-600" />
+                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                  <Search className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                   Buscar Iglesia
                 </CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   Encuentra y solicita unirte a una iglesia
                 </p>
               </div>
@@ -193,191 +193,200 @@ export default function BuscarIglesiaPage() {
         </Card>
 
         {/* Formulario de búsqueda */}
-        <Card className="mb-6">
-          <CardContent className="p-6">
-            <form onSubmit={handleBuscar} className="flex gap-3">
+        <Card className="mb-4 sm:mb-6">
+          <CardContent className="p-4 sm:p-6">
+            <form
+              onSubmit={handleBuscar}
+              className="flex flex-col sm:flex-row gap-3"
+            >
               <div className="flex-1">
                 <Input
+                  placeholder="Buscar por nombre de iglesia..."
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
-                  placeholder="Buscar por nombre de iglesia..."
                   className="w-full"
                 />
               </div>
-              <Button type="submit" disabled={loading}>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full sm:w-auto"
+              >
                 {loading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Search className="h-4 w-4" />
                 )}
+                <span className="ml-2">Buscar</span>
               </Button>
             </form>
           </CardContent>
         </Card>
 
-        {/* Mensajes de error */}
+        {/* Lista de iglesias */}
         {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+          <Card className="mb-4 sm:mb-6">
+            <CardContent className="p-4 sm:p-6 text-center">
+              <p className="text-red-600 text-sm sm:text-base">{error}</p>
+              <Button
+                onClick={() => buscarIglesias(busqueda)}
+                variant="outline"
+                className="mt-3"
+              >
+                Reintentar
+              </Button>
+            </CardContent>
+          </Card>
         )}
 
-        {/* Lista de iglesias */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {loading ? (
-            // Skeletons de carga
-            Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardContent className="p-6">
-                  <div className="h-4 bg-gray-200 rounded mb-3"></div>
-                  <div className="h-3 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded mb-4"></div>
-                  <div className="h-8 bg-gray-200 rounded"></div>
-                </CardContent>
-              </Card>
-            ))
-          ) : iglesias.length === 0 ? (
-            <div className="col-span-full text-center py-12">
-              <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">
-                No se encontraron iglesias
-              </h3>
-              <p className="text-muted-foreground">
-                {busqueda.trim()
-                  ? "Intenta con otros términos de búsqueda"
-                  : "Aún no hay iglesias registradas"}
+        {loading ? (
+          <Card>
+            <CardContent className="p-6 sm:p-8 text-center">
+              <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin mx-auto mb-4" />
+              <p className="text-sm sm:text-base text-muted-foreground">
+                Buscando iglesias...
               </p>
-            </div>
-          ) : (
-            iglesias.map((iglesia) => (
+            </CardContent>
+          </Card>
+        ) : iglesias.length === 0 ? (
+          <Card>
+            <CardContent className="p-6 sm:p-8 text-center">
+              <Building2 className="h-8 w-8 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-base sm:text-lg font-semibold mb-2">
+                {busqueda
+                  ? "No se encontraron iglesias"
+                  : "Comienza tu búsqueda"}
+              </h3>
+              <p className="text-sm sm:text-base text-muted-foreground">
+                {busqueda
+                  ? "Intenta con otros términos de búsqueda."
+                  : "Escribe el nombre de la iglesia que buscas."}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            {iglesias.map((iglesia) => (
               <Card
                 key={iglesia.id}
-                className="hover:shadow-lg transition-shadow"
+                className="hover:shadow-md transition-shadow"
               >
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-3 mb-4">
-                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      {iglesia.logoUrl ? (
-                        <img
-                          src={iglesia.logoUrl}
-                          alt={iglesia.nombre}
-                          className="w-8 h-8 rounded object-cover"
-                        />
-                      ) : (
-                        <Building2 className="h-6 w-6 text-blue-600" />
-                      )}
-                    </div>
+                <CardHeader className="p-4 sm:p-6">
+                  <div className="flex items-start gap-3">
+                    {iglesia.logoUrl ? (
+                      <img
+                        src={iglesia.logoUrl}
+                        alt={`Logo de ${iglesia.nombre}`}
+                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Building2 className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-sm mb-1 truncate">
+                      <CardTitle className="text-sm sm:text-base font-semibold line-clamp-2">
                         {iglesia.nombre}
-                      </h3>
+                      </CardTitle>
                       {iglesia.descripcion && (
-                        <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-2">
                           {iglesia.descripcion}
                         </p>
                       )}
                     </div>
                   </div>
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6 pt-0">
+                  <div className="space-y-3">
+                    {iglesia.direccion && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
+                        <span className="text-xs sm:text-sm text-muted-foreground truncate">
+                          {iglesia.direccion}
+                        </span>
+                      </div>
+                    )}
 
-                  {iglesia.direccion && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-3">
-                      <MapPin className="h-3 w-3" />
-                      <span className="truncate">{iglesia.direccion}</span>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex gap-2">
-                      <Badge variant="secondary" className="text-xs">
-                        <Users className="h-3 w-3 mr-1" />
-                        {iglesia._count.usuarios} usuarios
-                      </Badge>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                        <span className="text-xs sm:text-sm text-muted-foreground">
+                          {iglesia._count.usuarios + iglesia._count.personas}{" "}
+                          miembros
+                        </span>
+                      </div>
                       <Badge variant="outline" className="text-xs">
-                        {iglesia._count.personas} personas
+                        Activa
                       </Badge>
                     </div>
-                  </div>
 
-                  <Button
-                    onClick={() => handleSolicitarUnion(iglesia)}
-                    className="w-full"
-                    size="sm"
-                  >
-                    <Send className="h-3 w-3 mr-2" />
-                    Solicitar Unión
-                  </Button>
+                    <Button
+                      onClick={() => handleSolicitarUnion(iglesia)}
+                      className="w-full text-sm"
+                      size="sm"
+                    >
+                      <Send className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                      Solicitar unirse
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Modal de solicitud */}
         <Dialog open={modalAbierto} onOpenChange={setModalAbierto}>
-          <DialogContent>
+          <DialogContent className="max-w-md mx-4">
             <DialogHeader>
-              <DialogTitle>Solicitar Unión</DialogTitle>
-              <DialogDescription>
-                Envía una solicitud para unirte a {iglesiaSeleccionada?.nombre}
+              <DialogTitle className="text-base sm:text-lg">
+                Solicitar unirse a {iglesiaSeleccionada?.nombre}
+              </DialogTitle>
+              <DialogDescription className="text-sm">
+                Escribe un mensaje para el administrador de la iglesia.
               </DialogDescription>
             </DialogHeader>
-
             <div className="space-y-4">
               <div>
-                <Label htmlFor="mensaje">Mensaje (opcional)</Label>
+                <Label htmlFor="mensaje" className="text-sm font-medium">
+                  Mensaje
+                </Label>
                 <Textarea
                   id="mensaje"
                   value={mensaje}
                   onChange={(e) => setMensaje(e.target.value)}
-                  placeholder="Cuéntales un poco sobre ti y por qué quieres unirte..."
+                  placeholder="Hola, me gustaría unirme a esta iglesia..."
                   rows={4}
-                  maxLength={500}
+                  className="text-sm"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {mensaje.length}/500 caracteres
-                </p>
               </div>
-
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <div className="flex items-center gap-2 text-blue-700 mb-2">
-                  <Clock className="h-4 w-4" />
-                  <span className="text-sm font-medium">
-                    Proceso de aprobación
-                  </span>
-                </div>
-                <p className="text-xs text-blue-600">
-                  Tu solicitud será revisada por un administrador de la iglesia.
-                  Te notificaremos por email cuando haya una respuesta.
-                </p>
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setModalAbierto(false)}
-                  disabled={enviandoSolicitud}
-                  className="flex-1"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={enviarSolicitud}
-                  disabled={enviandoSolicitud}
-                  className="flex-1"
-                >
-                  {enviandoSolicitud ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Enviando...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="mr-2 h-4 w-4" />
-                      Enviar Solicitud
-                    </>
-                  )}
-                </Button>
-              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setModalAbierto(false)}
+                disabled={enviandoSolicitud}
+                className="w-full sm:w-auto order-2 sm:order-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={enviarSolicitud}
+                disabled={enviandoSolicitud || !mensaje.trim()}
+                className="w-full sm:w-auto order-1 sm:order-2"
+              >
+                {enviandoSolicitud ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Enviar solicitud
+                  </>
+                )}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

@@ -293,22 +293,6 @@ export default function DashboardPage() {
     );
   }
 
-  const formatearCambio = (porcentaje: number) => {
-    const isPositive = porcentaje >= 0;
-    const Icon = isPositive ? TrendingUp : TrendingDown;
-    const color = isPositive ? "text-green-600" : "text-red-600";
-
-    return (
-      <div className={`flex items-center gap-1 ${color}`}>
-        <Icon className="h-3 w-3" />
-        <span className="text-xs font-medium">
-          {isPositive ? "+" : ""}
-          {porcentaje}%
-        </span>
-      </div>
-    );
-  };
-
   const formatearFecha = (fecha: string) => {
     return new Date(fecha).toLocaleDateString("es-ES", {
       month: "short",
@@ -547,433 +531,383 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Tarjetas principales de estadísticas */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {statsCards.map((card, index) => {
-              const Icon = card.icon;
-              return (
-                <Card
-                  key={index}
-                  className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => router.push(card.route)}
-                >
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      {card.title}
-                    </CardTitle>
-                    <Icon className={`h-4 w-4 ${card.color}`} />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div className="text-2xl font-bold">{card.value}</div>
-                      {formatearCambio(card.change)}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {card.description}
-                    </p>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-
-          {/* Métricas adicionales específicas del nuevo modelo */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {additionalStatsCards.map((card, index) => {
-              const Icon = card.icon;
-              return (
-                <Card
-                  key={index}
-                  className="hover:bg-muted/50 transition-colors"
-                >
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      {card.title}
-                    </CardTitle>
-                    <Icon className={`h-4 w-4 ${card.color}`} />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{card.value}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {card.description}
-                    </p>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-
-          {/* Métricas detalladas por tipo de persona */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-yellow-600" />
-                  Nuevos Últimos 30 Días
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Miembros
-                  </span>
-                  <Badge variant="secondary">
-                    +{stats.nuevosUltimos30Dias.miembros}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Visitas</span>
-                  <Badge variant="secondary">
-                    +{stats.nuevosUltimos30Dias.visitas}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Familias
-                  </span>
-                  <Badge variant="secondary">
-                    +{stats.nuevosUltimos30Dias.familias}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <UserCheck className="h-4 w-4 text-blue-600" />
-                  Estados de Visitas
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Nuevas</span>
-                  <Badge variant="default">
-                    {stats.visitasPorEstado.nuevas}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Recurrentes
-                  </span>
-                  <Badge variant="secondary">
-                    {stats.visitasPorEstado.recurrentes}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Convertidas
-                  </span>
-                  <Badge variant="outline">
-                    {stats.visitasPorEstado.convertidas}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Inactivas
-                  </span>
-                  <Badge variant="destructive">
-                    {stats.visitasPorEstado.inactivas || 0}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <PieChart className="h-4 w-4 text-purple-600" />
-                  Comunidad por edad
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Niños (0-9)
-                  </span>
-                  <Badge variant="secondary">
-                    {stats.porTipoPersona?.ninos || 0}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Adolescentes (10-14)
-                  </span>
-                  <Badge variant="secondary">
-                    {stats.porTipoPersona?.adolescentes || 0}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Jóvenes (15-24)
-                  </span>
-                  <Badge variant="secondary">
-                    {stats.porTipoPersona?.jovenes || 0}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Adultos (25-35)
-                  </span>
-                  <Badge variant="secondary">
-                    {stats.porTipoPersona?.adultos || 0}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Adultos Mayores (36-59)
-                  </span>
-                  <Badge variant="secondary">
-                    {stats.porTipoPersona?.adultosMayores || 0}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Envejecientes (60+)
-                  </span>
-                  <Badge variant="secondary">
-                    {stats.porTipoPersona?.envejecientes || 0}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Nueva sección: Estadísticas Eclesiásticas */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-blue-600" />
-                Vida Eclesiástica
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {stats.estadisticasEclesiasticas?.bautizados || 0}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Bautizados
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {stats.tasaBautismo || 0}% de miembros
-                  </div>
-                </div>
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">
-                    {stats.estadisticasEclesiasticas?.confirmados || 0}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Confirmados
-                  </div>
-                </div>
-                <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">
-                    {stats.estadisticasEclesiasticas?.enMinisterios || 0}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    En Ministerios
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {Math.round(
-                      ((stats.estadisticasEclesiasticas?.enMinisterios || 0) /
-                        stats.totalMiembros) *
-                        100
-                    )}
-                    % de miembros
-                  </div>
-                </div>
-                <div className="text-center p-4 bg-orange-50 rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600">
-                    {stats.estadisticasEclesiasticas?.adolescentesSinBautismo ||
-                      0}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Adolescentes sin Bautismo
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Requieren seguimiento
-                  </div>
-                </div>
+          {/* Dashboard con filtro de iglesia e información clave */}
+          <div className="flex flex-1 flex-col gap-3 md:gap-4 p-2 md:p-4 pt-0">
+            {/* Header responsivo */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="text-xl md:text-2xl font-bold tracking-tight">
+                  Dashboard
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  {iglesiaActiva ? (
+                    <>Panel de control de {iglesiaActiva.nombre}</>
+                  ) : (
+                    "Información general del sistema"
+                  )}
+                </p>
               </div>
-            </CardContent>
-          </Card>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={cargarEstadisticas}
+                  disabled={loading}
+                  className="h-8 text-xs sm:h-9 sm:text-sm"
+                >
+                  {loading ? (
+                    <Loader2 className="h-3 w-3 animate-spin sm:h-4 sm:w-4" />
+                  ) : (
+                    <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4" />
+                  )}
+                  <span className="hidden sm:inline ml-2">Actualizar</span>
+                </Button>
+              </div>
+            </div>
 
-          {/* Próximas actividades */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-blue-600" />
-                Próximas Actividades
-                {stats.proximasActividades.length > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {stats.proximasActividades.length}
-                  </Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {stats.proximasActividades.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No hay actividades programadas próximamente</p>
-                  <Button
-                    variant="outline"
-                    className="mt-4"
-                    onClick={() => router.push("/actividades/nueva")}
-                  >
-                    Programar Actividad
-                  </Button>
-                </div>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {stats.proximasActividades.map((actividad) => (
-                    <div
-                      key={actividad.id}
-                      className="p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                      onClick={() =>
-                        router.push(`/actividades/${actividad.id}`)
-                      }
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-sm mb-1">
-                            {actividad.nombre}
-                          </h4>
-
-                          {actividad.descripcion && (
-                            <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-                              {actividad.descripcion}
-                            </p>
-                          )}
-
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Calendar className="h-3 w-3" />
-                              {actividad.fecha}
-                            </div>
-
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <MapPin className="h-3 w-3" />
-                              {actividad.lugar}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col items-end gap-2">
-                          <Badge
-                            className={`text-xs ${obtenerColorTipo(
-                              actividad.tipo
-                            )}`}
-                            variant="outline"
-                          >
-                            {actividad.tipo}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-3 border-t">
-                        {actividad.ministerio ? (
-                          <div className="flex items-center gap-1 text-sm text-blue-600">
-                            <Users className="h-4 w-4" />
-                            <span className="font-medium">
-                              {actividad.ministerio}
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="text-sm text-muted-foreground">
-                            Sin ministerio asignado
-                          </div>
-                        )}
-
-                        <Badge
-                          variant={
-                            actividad.estado === "Programada"
-                              ? "default"
-                              : "secondary"
-                          }
-                          className="text-xs"
-                        >
-                          {actividad.estado}
-                        </Badge>
-                      </div>
+            {/* Tarjetas de estadísticas principales - Grid responsivo */}
+            {stats && (
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+                {/* Total de Miembros */}
+                <Card className="relative overflow-hidden">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-xs sm:text-sm font-medium">
+                      Miembros
+                    </CardTitle>
+                    <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-lg sm:text-2xl font-bold">
+                      {stats.totalMiembros}
                     </div>
-                  ))}
-                </div>
-              )}
+                    <p className="text-xs text-muted-foreground">
+                      {stats.miembrosActivos} activos
+                    </p>
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent" />
+                  </CardContent>
+                </Card>
 
-              {stats.proximasActividades.length > 0 && (
-                <div className="flex justify-center mt-6">
-                  <Button
-                    variant="outline"
-                    onClick={() => router.push("/actividades")}
-                  >
-                    Ver Todas las Actividades
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                {/* Total de Visitas */}
+                <Card className="relative overflow-hidden">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-xs sm:text-sm font-medium">
+                      Visitas
+                    </CardTitle>
+                    <UserPlus className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-lg sm:text-2xl font-bold">
+                      {stats.totalVisitas}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {stats.visitasPorEstado.nuevas} nuevas
+                    </p>
+                    <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-transparent" />
+                  </CardContent>
+                </Card>
 
-          {/* Conversiones recientes */}
-          {stats.conversionesRecientes.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Heart className="h-5 w-5 text-red-600" />
-                  Conversiones Recientes
-                  <Badge variant="secondary" className="ml-2">
-                    {stats.conversionesRecientes.length}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {stats.conversionesRecientes
-                    .slice(0, 6)
-                    .map((conversion, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg"
-                      >
-                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-100">
-                          <UserCheck className="h-5 w-5 text-green-600" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="font-medium text-sm">
-                              {conversion.nombres} {conversion.apellidos}
-                            </p>
-                            {conversion.tipoPersona && (
+                {/* Total de Familias */}
+                <Card className="relative overflow-hidden">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-xs sm:text-sm font-medium">
+                      Familias
+                    </CardTitle>
+                    <Home className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-lg sm:text-2xl font-bold">
+                      {stats.totalFamilias}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {stats.familiasActivas} activas
+                    </p>
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-transparent" />
+                  </CardContent>
+                </Card>
+
+                {/* Tasa de Conversión */}
+                <Card className="relative overflow-hidden">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-xs sm:text-sm font-medium">
+                      Conversiones
+                    </CardTitle>
+                    <Heart className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-lg sm:text-2xl font-bold">
+                      {stats.tasaConversion.toFixed(1)}%
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {stats.conversionesRecientes.length} recientes
+                    </p>
+                    <div className="absolute inset-0 bg-gradient-to-r from-red-500/5 to-transparent" />
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Distribución por edades - Mejorada para móvil */}
+            {stats && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm md:text-base flex items-center gap-2">
+                      <PieChart className="h-4 w-4" />
+                      Distribución por Tipo de Persona
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {Object.entries(stats.porTipoPersona).map(
+                        ([tipo, cantidad]) => (
+                          <div
+                            key={tipo}
+                            className="flex items-center justify-between"
+                          >
+                            <span className="text-xs sm:text-sm capitalize">
+                              {tipo.replace(/([A-Z])/g, " $1").toLowerCase()}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-12 sm:w-16 bg-muted rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-blue-500"
+                                  style={{
+                                    width: `${
+                                      stats.totalMiembros > 0
+                                        ? (cantidad / stats.totalMiembros) * 100
+                                        : 0
+                                    }%`,
+                                  }}
+                                />
+                              </div>
+                              <span className="text-xs sm:text-sm font-medium w-6 text-right">
+                                {cantidad}
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Estado de Visitas */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm md:text-base flex items-center gap-2">
+                      <UserCheck className="h-4 w-4" />
+                      Estado de Visitas
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {Object.entries(stats.visitasPorEstado).map(
+                        ([estado, cantidad]) => (
+                          <div
+                            key={estado}
+                            className="flex items-center justify-between"
+                          >
+                            <span className="text-xs sm:text-sm capitalize">
+                              {estado}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-12 sm:w-16 bg-muted rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-green-500"
+                                  style={{
+                                    width: `${
+                                      stats.totalVisitas > 0
+                                        ? (cantidad / stats.totalVisitas) * 100
+                                        : 0
+                                    }%`,
+                                  }}
+                                />
+                              </div>
+                              <span className="text-xs sm:text-sm font-medium w-6 text-right">
+                                {cantidad}
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Actividades próximas y conversiones recientes - Layout responsivo */}
+            {stats && (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 md:gap-4">
+                {/* Próximas actividades */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm md:text-base flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Próximas Actividades
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {stats.proximasActividades.length === 0 ? (
+                      <p className="text-xs sm:text-sm text-muted-foreground text-center py-4">
+                        No hay actividades programadas
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {stats.proximasActividades
+                          .slice(0, 5)
+                          .map((actividad) => (
+                            <div
+                              key={actividad.id}
+                              className="flex flex-col sm:flex-row sm:items-center justify-between p-2 sm:p-3 rounded-lg border bg-card/50 gap-1 sm:gap-0"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <h4 className="text-xs sm:text-sm font-medium line-clamp-1">
+                                  {actividad.nombre}
+                                </h4>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1">
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Clock className="h-3 w-3" />
+                                    <span>{actividad.fecha}</span>
+                                  </div>
+                                  {actividad.lugar && (
+                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                      <MapPin className="h-3 w-3" />
+                                      <span className="truncate max-w-24 sm:max-w-none">
+                                        {actividad.lugar}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 mt-1 sm:mt-0">
+                                <Badge
+                                  variant="outline"
+                                  className={`text-xs ${obtenerColorTipo(
+                                    actividad.tipoCategoria
+                                  )}`}
+                                >
+                                  {actividad.tipo}
+                                </Badge>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Conversiones recientes */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm md:text-base flex items-center gap-2">
+                      <Zap className="h-4 w-4" />
+                      Conversiones Recientes
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {stats.conversionesRecientes.length === 0 ? (
+                      <p className="text-xs sm:text-sm text-muted-foreground text-center py-4">
+                        No hay conversiones recientes
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {stats.conversionesRecientes
+                          .slice(0, 5)
+                          .map((conversion, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-2 sm:p-3 rounded-lg border bg-card/50"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <h4 className="text-xs sm:text-sm font-medium truncate">
+                                  {conversion.nombres} {conversion.apellidos}
+                                </h4>
+                                <p className="text-xs text-muted-foreground">
+                                  {formatearFecha(conversion.fechaConversion)}
+                                </p>
+                              </div>
                               <Badge variant="outline" className="text-xs">
                                 {conversion.tipoPersona}
                               </Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Convertido el{" "}
-                            {formatearFecha(conversion.fechaConversion)}
-                          </p>
-                        </div>
+                            </div>
+                          ))}
                       </div>
-                    ))}
-                </div>
-                {stats.conversionesRecientes.length > 6 && (
-                  <div className="flex justify-center mt-4">
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        router.push("/comunidad?tab=visitas&filter=convertidas")
-                      }
-                    >
-                      Ver Todas las Conversiones
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Métricas adicionales - Grid compacto para móvil */}
+            {stats && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
+                <Card>
+                  <CardContent className="p-3 md:p-6">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Tasa Bautismo
+                        </p>
+                        <p className="text-sm sm:text-lg font-bold">
+                          {stats.tasaBautismo.toFixed(1)}%
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-3 md:p-6">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Retención
+                        </p>
+                        <p className="text-sm sm:text-lg font-bold">
+                          {stats.tasaRetencion.toFixed(1)}%
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-3 md:p-6">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-3 w-3 sm:h-4 sm:w-4 text-purple-500" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Prom/Familia
+                        </p>
+                        <p className="text-sm sm:text-lg font-bold">
+                          {stats.promedioPersonasPorFamilia.toFixed(1)}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-3 md:p-6">
+                    <div className="flex items-center gap-2">
+                      <Heart className="h-3 w-3 sm:h-4 sm:w-4 text-red-500" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          En Ministerios
+                        </p>
+                        <p className="text-sm sm:text-lg font-bold">
+                          {stats.estadisticasEclesiasticas.enMinisterios}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
         </div>
       </SidebarInset>
     </SidebarProvider>

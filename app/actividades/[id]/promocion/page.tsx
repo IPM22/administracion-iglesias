@@ -44,6 +44,13 @@ interface ActividadData {
   banner?: string;
   tipoActividad: TipoActividad;
   ministerio?: Ministerio;
+  horarios?: Array<{
+    id: number;
+    fecha: string;
+    horaInicio: string;
+    horaFin: string;
+    notas?: string;
+  }>;
 }
 
 export default function PromocionActividadPage() {
@@ -146,6 +153,39 @@ export default function PromocionActividadPage() {
     }
   };
 
+  const abrirEnWaze = () => {
+    if (actividad?.ubicacion) {
+      const wazeUrl = `https://waze.com/ul?q=${encodeURIComponent(
+        actividad.ubicacion
+      )}`;
+      window.open(wazeUrl, "_blank");
+    }
+  };
+
+  const formatearHorarios = () => {
+    if (!actividad) return [];
+
+    // Si hay horarios múltiples, los devolvemos
+    if (actividad.horarios && actividad.horarios.length > 0) {
+      return actividad.horarios.map((horario) => ({
+        fecha: formatearFecha(horario.fecha),
+        hora: `${formatearHora(horario.horaInicio)} - ${formatearHora(
+          horario.horaFin
+        )}`,
+        notas: horario.notas,
+      }));
+    }
+
+    // Si no hay horarios múltiples, devolvemos el horario principal
+    return [
+      {
+        fecha: formatearFecha(actividad.fecha),
+        hora: getHorarioCompleto(),
+        notas: null,
+      },
+    ];
+  };
+
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
       case "Programada":
@@ -210,14 +250,14 @@ export default function PromocionActividadPage() {
           <div className="space-y-2">
             <Button
               onClick={() => window.history.back()}
-              className="bg-blue-600 hover:bg-blue-700 w-full"
+              className="bg-blue-600 hover:bg-blue-700 text-white w-full font-medium shadow-lg"
             >
               Volver atrás
             </Button>
             <Button
               onClick={() => window.location.reload()}
               variant="outline"
-              className="w-full"
+              className="w-full bg-white hover:bg-gray-100 border-gray-300 text-gray-800 hover:text-gray-900 font-medium shadow-lg"
             >
               Intentar de nuevo
             </Button>
@@ -244,8 +284,10 @@ export default function PromocionActividadPage() {
                 className="object-cover"
                 priority
               />
-              {/* Overlay mejorado con gradiente más suave */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
+              {/* Overlay mejorado - Menos opaco para ver mejor la imagen */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              {/* Sombra adicional solo en el área del texto para mejor legibilidad */}
+              <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
             </>
           ) : (
             <>
@@ -276,20 +318,29 @@ export default function PromocionActividadPage() {
                 </div>
 
                 {/* Título principal - Mejor responsivo */}
-                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl xl:text-7xl font-bold text-white mb-3 sm:mb-4 leading-tight drop-shadow-2xl">
+                <h1
+                  className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl xl:text-7xl font-bold text-white mb-3 sm:mb-4 leading-tight drop-shadow-2xl"
+                  style={{ textShadow: "2px 2px 4px rgba(0,0,0,0.8)" }}
+                >
                   {actividad.nombre}
                 </h1>
 
                 {/* Información organizador */}
                 <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20">
                     <Users className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm sm:text-lg lg:text-xl text-white/90 font-semibold drop-shadow-lg">
+                    <p
+                      className="text-sm sm:text-lg lg:text-xl text-white font-semibold drop-shadow-lg"
+                      style={{ textShadow: "1px 1px 3px rgba(0,0,0,0.8)" }}
+                    >
                       {actividad.ministerio?.nombre || "Iglesia Central"}
                     </p>
-                    <p className="text-xs sm:text-sm lg:text-base text-white/75 drop-shadow">
+                    <p
+                      className="text-xs sm:text-sm lg:text-base text-white/90 drop-shadow"
+                      style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.8)" }}
+                    >
                       {actividad.tipoActividad.nombre} •{" "}
                       {actividad.tipoActividad.tipo}
                     </p>
@@ -297,23 +348,47 @@ export default function PromocionActividadPage() {
                 </div>
 
                 {/* Información clave del evento - Stack en móvil */}
-                <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-6 text-white/90">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-6 text-white">
+                  <div className="flex items-center gap-2 bg-black/20 backdrop-blur-sm rounded-lg px-3 py-2">
                     <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
-                    <span className="text-sm sm:text-base font-medium">
+                    <span
+                      className="text-sm sm:text-base font-medium"
+                      style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.8)" }}
+                    >
                       {formatearFecha(actividad.fecha)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
-                    <span className="text-sm sm:text-base font-medium">
-                      {getHorarioCompleto()}
-                    </span>
-                  </div>
+                  {/* Solo mostrar horario si NO hay horarios múltiples */}
+                  {(!actividad.horarios || actividad.horarios.length === 0) && (
+                    <div className="flex items-center gap-2 bg-black/20 backdrop-blur-sm rounded-lg px-3 py-2">
+                      <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
+                      <span
+                        className="text-sm sm:text-base font-medium"
+                        style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.8)" }}
+                      >
+                        {getHorarioCompleto()}
+                      </span>
+                    </div>
+                  )}
+                  {/* Mostrar "Varios horarios" cuando hay horarios múltiples */}
+                  {actividad.horarios && actividad.horarios.length > 0 && (
+                    <div className="flex items-center gap-2 bg-black/20 backdrop-blur-sm rounded-lg px-3 py-2">
+                      <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
+                      <span
+                        className="text-sm sm:text-base font-medium"
+                        style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.8)" }}
+                      >
+                        {actividad.horarios.length} horarios disponibles
+                      </span>
+                    </div>
+                  )}
                   {actividad.ubicacion && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 bg-black/20 backdrop-blur-sm rounded-lg px-3 py-2">
                       <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
-                      <span className="text-sm sm:text-base font-medium truncate">
+                      <span
+                        className="text-sm sm:text-base font-medium truncate"
+                        style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.8)" }}
+                      >
                         {actividad.ubicacion}
                       </span>
                     </div>
@@ -363,7 +438,7 @@ export default function PromocionActividadPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4 sm:space-y-6">
-                  <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
+                  <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 auto-fit">
                     <div className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 bg-blue-50 rounded-xl">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                         <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
@@ -378,22 +453,32 @@ export default function PromocionActividadPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 bg-green-50 rounded-xl">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+                    {/* Solo mostrar horario si NO hay horarios múltiples */}
+                    {(!actividad.horarios ||
+                      actividad.horarios.length === 0) && (
+                      <div className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 bg-green-50 rounded-xl">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-800 mb-1 text-sm sm:text-base">
+                            Horario
+                          </p>
+                          <p className="text-gray-600 text-sm sm:text-base lg:text-lg">
+                            {getHorarioCompleto()}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-gray-800 mb-1 text-sm sm:text-base">
-                          Horario
-                        </p>
-                        <p className="text-gray-600 text-sm sm:text-base lg:text-lg">
-                          {getHorarioCompleto()}
-                        </p>
-                      </div>
-                    </div>
+                    )}
 
                     {actividad.ubicacion && (
-                      <div className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 bg-red-50 rounded-xl md:col-span-2">
+                      <div
+                        className={`flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 bg-red-50 rounded-xl ${
+                          !actividad.horarios || actividad.horarios.length === 0
+                            ? "md:col-span-2"
+                            : "md:col-span-1"
+                        }`}
+                      >
                         <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
                           <MapPin className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
                         </div>
@@ -405,23 +490,40 @@ export default function PromocionActividadPage() {
                             {actividad.ubicacion}
                           </p>
                           {actividad.googleMapsEmbed && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                window.open(actividad.googleMapsEmbed, "_blank")
-                              }
-                              className="bg-white hover:bg-gray-50 text-xs sm:text-sm"
-                            >
-                              <ExternalLink className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                              Ver en Google Maps
-                            </Button>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  window.open(
+                                    actividad.googleMapsEmbed,
+                                    "_blank"
+                                  )
+                                }
+                                className="bg-white hover:bg-gray-100 border-gray-300 text-gray-800 hover:text-gray-900 text-xs sm:text-sm font-medium"
+                              >
+                                <ExternalLink className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                                Google Maps
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={abrirEnWaze}
+                                className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 hover:border-blue-700 text-xs sm:text-sm font-medium"
+                              >
+                                🚗 Waze
+                              </Button>
+                            </div>
                           )}
                         </div>
                       </div>
                     )}
 
-                    <div className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 bg-purple-50 rounded-xl">
+                    <div
+                      className={`flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 bg-purple-50 rounded-xl ${
+                        actividad.ubicacion ? "md:col-span-1" : "md:col-span-2"
+                      }`}
+                    >
                       <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
                         <Users className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
                       </div>
@@ -437,6 +539,49 @@ export default function PromocionActividadPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Card de Horarios Múltiples */}
+              {actividad.horarios && actividad.horarios.length > 0 && (
+                <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+                  <CardHeader className="pb-3 sm:pb-4">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
+                      </div>
+                      <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800">
+                        Horarios Disponibles
+                      </h2>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3 sm:space-y-4">
+                      {formatearHorarios().map((horario, index) => (
+                        <div
+                          key={index}
+                          className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 bg-indigo-50 rounded-xl border border-indigo-100"
+                        >
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-indigo-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold text-gray-800 text-sm sm:text-base">
+                              {horario.fecha}
+                            </p>
+                            <p className="text-indigo-700 font-medium text-sm sm:text-base lg:text-lg">
+                              {horario.hora}
+                            </p>
+                            {horario.notas && (
+                              <p className="text-gray-600 text-xs sm:text-sm mt-1">
+                                📝 {horario.notas}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Card del Mapa Mejorado y más prominente */}
               {actividad.googleMapsEmbed && (
@@ -473,10 +618,16 @@ export default function PromocionActividadPage() {
                         onClick={() =>
                           window.open(actividad.googleMapsEmbed, "_blank")
                         }
-                        className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm sm:text-base"
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm sm:text-base font-medium shadow-lg"
                       >
                         <MapPin className="mr-2 h-4 w-4" />
                         Abrir en Google Maps
+                      </Button>
+                      <Button
+                        onClick={abrirEnWaze}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-base font-medium shadow-lg"
+                      >
+                        🚗 Abrir en Waze
                       </Button>
                       <Button
                         variant="outline"
@@ -486,7 +637,7 @@ export default function PromocionActividadPage() {
                             alert("Dirección copiada al portapapeles");
                           }
                         }}
-                        className="bg-white hover:bg-gray-50 text-sm sm:text-base"
+                        className="bg-white hover:bg-gray-100 border-gray-300 text-gray-800 hover:text-gray-900 text-sm sm:text-base font-medium shadow-lg"
                       >
                         📋 Copiar Dirección
                       </Button>
@@ -533,7 +684,7 @@ export default function PromocionActividadPage() {
                   <div className="pt-2">
                     <Button
                       onClick={shareActivity}
-                      className="w-full bg-white text-blue-600 hover:bg-white/90 font-semibold py-2 sm:py-3 text-sm sm:text-base"
+                      className="w-full bg-white text-blue-600 hover:bg-gray-100 hover:text-blue-700 font-semibold py-2 sm:py-3 text-sm sm:text-base shadow-lg border border-white"
                     >
                       <Share2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                       Compartir Evento
@@ -563,7 +714,7 @@ export default function PromocionActividadPage() {
                       <Button
                         variant="secondary"
                         size="sm"
-                        className="bg-white/20 hover:bg-white/30 text-white border-white/30 text-xs sm:text-sm"
+                        className="bg-white hover:bg-gray-100 text-gray-800 hover:text-gray-900 border-white font-medium text-xs sm:text-sm shadow-lg"
                       >
                         <Phone className="mr-1 h-3 w-3" />
                         Llamar
@@ -571,7 +722,7 @@ export default function PromocionActividadPage() {
                       <Button
                         variant="secondary"
                         size="sm"
-                        className="bg-white/20 hover:bg-white/30 text-white border-white/30 text-xs sm:text-sm"
+                        className="bg-white hover:bg-gray-100 text-gray-800 hover:text-gray-900 border-white font-medium text-xs sm:text-sm shadow-lg"
                       >
                         <Mail className="mr-1 h-3 w-3" />
                         Email

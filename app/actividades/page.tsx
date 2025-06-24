@@ -17,13 +17,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Plus,
@@ -407,27 +401,6 @@ export default function ActividadesPage() {
     }
   };
 
-  // Agrupar actividades por mes
-  const agruparPorMes = (actividades: Actividad[]) => {
-    const grupos: { [key: string]: Actividad[] } = {};
-
-    actividades.forEach((actividad) => {
-      const fecha = new Date(actividad.fecha);
-      const mes = fecha.toLocaleDateString("es-ES", {
-        month: "long",
-      });
-      const año = fecha.getFullYear();
-      const nombreMes = `${mes.charAt(0).toUpperCase() + mes.slice(1)} ${año}`;
-
-      if (!grupos[nombreMes]) {
-        grupos[nombreMes] = [];
-      }
-      grupos[nombreMes].push(actividad);
-    });
-
-    return grupos;
-  };
-
   // Limpiar filtros
   const limpiarFiltros = () => {
     setSearchTerm("");
@@ -437,13 +410,10 @@ export default function ActividadesPage() {
   };
 
   // Cálculos de paginación
-  const actividadesAgrupadas = agruparPorMes(actividadesFiltradas);
-  const nombresGrupos = Object.keys(actividadesAgrupadas);
-  const totalItems = nombresGrupos.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const totalPages = Math.ceil(actividadesFiltradas.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const gruposActuales = nombresGrupos.slice(startIndex, endIndex);
+  const actividadesPaginadas = actividadesFiltradas.slice(startIndex, endIndex);
 
   if (loading) {
     return (
@@ -464,10 +434,10 @@ export default function ActividadesPage() {
       <AppSidebar />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4 flex-1">
+          <div className="flex items-center gap-2 px-4 w-full">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
+            <Breadcrumb className="hidden md:flex">
               <BreadcrumbList>
                 <BreadcrumbItem className="hidden md:block">
                   <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
@@ -478,366 +448,446 @@ export default function ActividadesPage() {
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
-          </div>
-          <div className="px-4">
-            <ModeToggle />
+            <div className="flex items-center gap-2 ml-auto">
+              <ModeToggle />
+            </div>
           </div>
         </header>
 
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Gestión de Actividades</CardTitle>
-                  <CardDescription>
-                    Administra y promociona las actividades de la iglesia
-                  </CardDescription>
-                </div>
-                <Button onClick={() => router.push("/actividades/nueva")}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nueva Actividad
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Controles de vista */}
-              <div className="flex items-center gap-2 mb-4">
-                <Button
-                  variant={vistaActual === "proximas" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setVistaActual("proximas")}
-                >
-                  Próximas
-                </Button>
-                <Button
-                  variant={vistaActual === "historico" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setVistaActual("historico")}
-                >
-                  Historial
-                </Button>
-              </div>
+        <div className="flex flex-1 flex-col gap-4 p-2 md:p-4 pt-0">
+          {/* Header con título y botón crear - Responsivo */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+                Actividades
+              </h1>
+              <p className="text-sm md:text-base text-muted-foreground">
+                Gestiona las actividades de la iglesia
+              </p>
+            </div>
+            <Button
+              onClick={() => router.push("/actividades/crear")}
+              className="w-full sm:w-auto"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Nueva Actividad</span>
+              <span className="sm:hidden">Nueva</span>
+            </Button>
+          </div>
 
-              {/* Búsqueda y filtros */}
-              <div className="flex items-center space-x-2 mb-6">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar actividades..."
-                    className="pl-8"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowFilters(!showFilters)}
-                >
-                  <Filter className="mr-2 h-4 w-4" />
-                  Filtros
-                  {(filtroEstado !== "todos" || filtroTipo !== "todos") && (
-                    <Badge variant="secondary" className="ml-2 h-5 w-5 p-0">
-                      !
-                    </Badge>
-                  )}
-                </Button>
-              </div>
+          {/* Pestañas de vista - Mejorado para móvil */}
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+            <div className="flex bg-muted p-1 rounded-lg w-full sm:w-auto">
+              <Button
+                variant={vistaActual === "proximas" ? "default" : "ghost"}
+                onClick={() => setVistaActual("proximas")}
+                className="flex-1 sm:flex-none text-xs sm:text-sm"
+              >
+                Próximas
+              </Button>
+              <Button
+                variant={vistaActual === "historico" ? "default" : "ghost"}
+                onClick={() => setVistaActual("historico")}
+                className="flex-1 sm:flex-none text-xs sm:text-sm"
+              >
+                Histórico
+              </Button>
+            </div>
+          </div>
 
-              {/* Panel de filtros */}
-              {showFilters && (
-                <div className="border rounded-lg p-4 mb-4 bg-muted">
-                  <div className="flex flex-wrap items-end gap-4">
-                    <div className="w-40 space-y-1">
-                      <label className="text-sm font-medium">Estado</label>
+          {/* Controles de búsqueda y filtros - Optimizado para móvil */}
+          <div className="flex flex-col gap-3">
+            {/* Barra de búsqueda principal */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar actividades..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className="w-full sm:w-auto"
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                <span className="sm:hidden">Filtros</span>
+                <span className="hidden sm:inline">
+                  {showFilters ? "Ocultar filtros" : "Mostrar filtros"}
+                </span>
+              </Button>
+            </div>
+
+            {/* Panel de filtros desplegable - Mejorado para móvil */}
+            {showFilters && (
+              <Card className="w-full">
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">
+                        Estado
+                      </label>
                       <Select
                         value={filtroEstado}
                         onValueChange={setFiltroEstado}
                       >
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Todos los estados" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="todos">Todos</SelectItem>
-                          <SelectItem value="Programada">Programada</SelectItem>
-                          <SelectItem value="En curso">En curso</SelectItem>
-                          <SelectItem value="Finalizada">Finalizada</SelectItem>
-                          <SelectItem value="Cancelada">Cancelada</SelectItem>
+                          <SelectItem value="programada">Programada</SelectItem>
+                          <SelectItem value="en_progreso">
+                            En Progreso
+                          </SelectItem>
+                          <SelectItem value="completada">Completada</SelectItem>
+                          <SelectItem value="cancelada">Cancelada</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
-                    <div className="w-40 space-y-1">
-                      <label className="text-sm font-medium">Tipo</label>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">
+                        Tipo
+                      </label>
                       <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Todos los tipos" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="todos">Todos</SelectItem>
-                          <SelectItem value="Regular">Regular</SelectItem>
-                          <SelectItem value="Especial">Especial</SelectItem>
+                          <SelectItem value="culto">Culto</SelectItem>
+                          <SelectItem value="reunion">Reunión</SelectItem>
+                          <SelectItem value="evento">Evento</SelectItem>
+                          <SelectItem value="capacitacion">
+                            Capacitación
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={limpiarFiltros}
-                    >
-                      <X className="mr-2 h-4 w-4" />
-                      Limpiar
-                    </Button>
-                  </div>
-
-                  <div className="mt-3">
-                    <span className="text-sm text-muted-foreground">
-                      Mostrando {actividadesFiltradas.length} de{" "}
-                      {actividades.length} actividades
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Lista de actividades agrupadas por mes */}
-              {gruposActuales.length === 0 ? (
-                <div className="text-center py-8">
-                  <CalendarIcon className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <h3 className="mt-2 text-sm font-semibold">
-                    No hay actividades
-                  </h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {vistaActual === "proximas"
-                      ? "No hay actividades programadas próximamente."
-                      : "No hay actividades en el historial."}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {gruposActuales.map((nombreMes) => (
-                    <div key={nombreMes}>
-                      <h3 className="font-semibold text-lg mb-4 text-primary capitalize">
-                        {nombreMes}
-                      </h3>
-                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {actividadesAgrupadas[nombreMes].map((actividad) => (
-                          <Card
-                            key={actividad.id}
-                            className="hover:shadow-md transition-shadow"
-                          >
-                            <CardHeader className="pb-3">
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <Badge
-                                      className={getEstadoBadgeColor(
-                                        actividad.estado
-                                      )}
-                                    >
-                                      {actividad.estado}
-                                    </Badge>
-                                    <Badge
-                                      className={getTipoBadgeColor(
-                                        actividad.tipoActividad.tipo
-                                      )}
-                                    >
-                                      {actividad.tipoActividad.tipo}
-                                    </Badge>
-                                  </div>
-                                  <CardTitle className="text-lg">
-                                    {actividad.nombre}
-                                  </CardTitle>
-                                  {actividad.descripcion && (
-                                    <CardDescription className="text-sm mt-1">
-                                      {actividad.descripcion}
-                                    </CardDescription>
-                                  )}
-                                </div>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      className="h-8 w-8 p-0"
-                                    >
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        router.push(
-                                          `/actividades/${actividad.id}`
-                                        )
-                                      }
-                                    >
-                                      <Eye className="mr-2 h-4 w-4" />
-                                      Ver detalles
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        router.push(
-                                          `/actividades/${actividad.id}/editar`
-                                        )
-                                      }
-                                    >
-                                      <Edit className="mr-2 h-4 w-4" />
-                                      Editar
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        mostrarDialogEliminar(actividad)
-                                      }
-                                    >
-                                      <Trash2 className="mr-2 h-4 w-4" />
-                                      Eliminar
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        compartirActividad(actividad)
-                                      }
-                                    >
-                                      <Share2 className="mr-2 h-4 w-4" />
-                                      Compartir
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="pt-0">
-                              <div className="flex items-center gap-2 mb-2">
-                                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm text-muted-foreground">
-                                  {formatearFechaCompleta(actividad.fecha)}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2 mb-2">
-                                <Clock className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm text-muted-foreground">
-                                  {actividad.horaInicio
-                                    ? `${formatearHora(
-                                        actividad.horaInicio
-                                      )} - ${formatearHora(actividad.horaFin)}`
-                                    : "Sin horario"}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2 mb-2">
-                                <MapPin className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm text-muted-foreground">
-                                  {actividad.ubicacion || "Sin ubicación"}
-                                  {actividad.googleMapsEmbed && (
-                                    <Badge
-                                      variant="outline"
-                                      className="ml-2 text-xs"
-                                    >
-                                      Maps
-                                    </Badge>
-                                  )}
-                                </span>
-                              </div>
-                              {/* Ministerio Organizador */}
-                              {actividad.ministerio && (
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Users className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-sm text-muted-foreground">
-                                    Organiza: {actividad.ministerio.nombre}
-                                  </span>
-                                </div>
-                              )}
-                              {/* Si no hay ministerio asignado */}
-                              {!actividad.ministerio && (
-                                <div className="flex items-center gap-2">
-                                  <Users className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-sm text-muted-foreground">
-                                    Sin ministerio asignado
-                                  </span>
-                                </div>
-                              )}
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
+                    <div className="sm:col-span-2 lg:col-span-1">
+                      <label className="text-sm font-medium mb-2 block">
+                        Acciones
+                      </label>
+                      <Button
+                        variant="outline"
+                        onClick={limpiarFiltros}
+                        className="w-full"
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Limpiar filtros
+                      </Button>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Loading state */}
+          {loading && (
+            <div className="flex justify-center items-center h-40">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <span className="ml-2">Cargando actividades...</span>
+            </div>
+          )}
+
+          {/* Lista de actividades - Grid responsivo mejorado */}
+          {!loading && (
+            <>
+              {actividadesFiltradas.length === 0 ? (
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <CalendarIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">
+                      No hay actividades
+                    </h3>
+                    <p className="text-muted-foreground mb-4">
+                      {vistaActual === "proximas"
+                        ? "No hay actividades programadas."
+                        : "No hay actividades en el historial."}
+                    </p>
+                    <Button onClick={() => router.push("/actividades/crear")}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Crear primera actividad
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {actividadesPaginadas.map((actividad) => (
+                    <Card
+                      key={actividad.id}
+                      className="group hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500"
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <CardTitle className="text-sm md:text-base font-semibold line-clamp-2">
+                              {actividad.nombre}
+                            </CardTitle>
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              <Badge
+                                variant="secondary"
+                                className={`text-xs ${getEstadoBadgeColor(
+                                  actividad.estado
+                                )}`}
+                              >
+                                {actividad.estado}
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className={`text-xs ${getTipoBadgeColor(
+                                  actividad.tipoActividad.tipo
+                                )}`}
+                              >
+                                {actividad.tipoActividad.nombre}
+                              </Badge>
+                            </div>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  router.push(`/actividades/${actividad.id}`)
+                                }
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Ver detalles
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  router.push(
+                                    `/actividades/${actividad.id}/editar`
+                                  )
+                                }
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => compartirActividad(actividad)}
+                              >
+                                <Share2 className="h-4 w-4 mr-2" />
+                                Compartir
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => mostrarDialogEliminar(actividad)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Eliminar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </CardHeader>
+
+                      <CardContent className="pt-0 space-y-3">
+                        {/* Fecha y hora */}
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <CalendarIcon className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">
+                            {formatearFechaCompleta(actividad.fecha)}
+                          </span>
+                        </div>
+
+                        {(actividad.horaInicio || actividad.horaFin) && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Clock className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate">
+                              {formatearHora(actividad.horaInicio)}
+                              {actividad.horaFin &&
+                                ` - ${formatearHora(actividad.horaFin)}`}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Ubicación */}
+                        {actividad.ubicacion && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <MapPin className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate">
+                              {actividad.ubicacion}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Asistentes */}
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Users className="h-4 w-4 flex-shrink-0" />
+                          <span>
+                            {actividad.historialVisitas?.length || 0} asistentes
+                          </span>
+                        </div>
+
+                        {/* Ministerio */}
+                        {actividad.ministerio && (
+                          <div className="pt-2 border-t">
+                            <Badge variant="outline" className="text-xs">
+                              {actividad.ministerio.nombre}
+                            </Badge>
+                          </div>
+                        )}
+
+                        {/* Descripción truncada */}
+                        {actividad.descripcion && (
+                          <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
+                            {actividad.descripcion}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               )}
 
-              {/* Paginación */}
+              {/* Paginación mejorada para móvil */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-end space-x-2 py-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(currentPage - 1)}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-2" />
-                    Anterior
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                  >
-                    Siguiente
-                    <ChevronRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                <Card className="mt-6">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                      {/* Info de paginación */}
+                      <div className="text-sm text-muted-foreground order-2 sm:order-1">
+                        Mostrando{" "}
+                        <span className="font-medium">
+                          {(currentPage - 1) * itemsPerPage + 1}
+                        </span>{" "}
+                        a{" "}
+                        <span className="font-medium">
+                          {Math.min(
+                            currentPage * itemsPerPage,
+                            actividadesFiltradas.length
+                          )}
+                        </span>{" "}
+                        de{" "}
+                        <span className="font-medium">
+                          {actividadesFiltradas.length}
+                        </span>{" "}
+                        actividades
+                      </div>
 
-        {/* Dialog de confirmación de eliminación */}
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Confirmar Eliminación</DialogTitle>
-              <DialogDescription>
-                ¿Estás seguro de que deseas eliminar la actividad{" "}
-                <strong>{actividadAEliminar?.nombre}</strong>?
-                <br />
-                Esta acción no se puede deshacer.
-                {actividadAEliminar &&
-                  actividadAEliminar.historialVisitas &&
-                  actividadAEliminar.historialVisitas.length > 0 && (
+                      {/* Controles de paginación */}
+                      <div className="flex items-center gap-2 order-1 sm:order-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(currentPage - 1)}
+                          disabled={currentPage <= 1}
+                          className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:px-3 sm:py-2"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                          <span className="hidden sm:inline ml-2">
+                            Anterior
+                          </span>
+                        </Button>
+
+                        {/* Números de página - Simplificado para móvil */}
+                        <div className="flex items-center gap-1">
+                          {[...Array(Math.min(totalPages, 5))].map((_, i) => {
+                            let pageNum;
+                            if (totalPages <= 5) {
+                              pageNum = i + 1;
+                            } else if (currentPage <= 3) {
+                              pageNum = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                              pageNum = totalPages - 4 + i;
+                            } else {
+                              pageNum = currentPage - 2 + i;
+                            }
+
+                            return (
+                              <Button
+                                key={pageNum}
+                                variant={
+                                  currentPage === pageNum
+                                    ? "default"
+                                    : "outline"
+                                }
+                                size="sm"
+                                onClick={() => setCurrentPage(pageNum)}
+                                className="h-8 w-8 p-0 text-xs sm:text-sm"
+                              >
+                                {pageNum}
+                              </Button>
+                            );
+                          })}
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(currentPage + 1)}
+                          disabled={currentPage >= totalPages}
+                          className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:px-3 sm:py-2"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                          <span className="hidden sm:inline ml-2">
+                            Siguiente
+                          </span>
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          )}
+
+          {/* Dialog de eliminación - Sin cambios, ya es responsivo */}
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogContent className="max-w-md mx-4">
+              <DialogHeader>
+                <DialogTitle>¿Eliminar actividad?</DialogTitle>
+                <DialogDescription>
+                  Esta acción no se puede deshacer. Se eliminará permanentemente
+                  la actividad &quot;{actividadAEliminar?.nombre}&quot; y todos
+                  sus datos asociados.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="flex-col sm:flex-row gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setDialogOpen(false)}
+                  disabled={isDeleting}
+                  className="w-full sm:w-auto order-2 sm:order-1"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={confirmarEliminacion}
+                  disabled={isDeleting}
+                  className="w-full sm:w-auto order-1 sm:order-2"
+                >
+                  {isDeleting ? (
                     <>
-                      <br />
-                      <span className="text-red-600">
-                        Esta actividad tiene{" "}
-                        {actividadAEliminar.historialVisitas.length} asistente
-                        {actividadAEliminar.historialVisitas.length !== 1
-                          ? "s"
-                          : ""}{" "}
-                        registrado
-                        {actividadAEliminar.historialVisitas.length !== 1
-                          ? "s"
-                          : ""}
-                        .
-                      </span>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Eliminando...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Eliminar
                     </>
                   )}
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setDialogOpen(false)}
-                disabled={isDeleting}
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={confirmarEliminacion}
-                disabled={isDeleting}
-              >
-                {isDeleting ? "Eliminando..." : "Eliminar"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );
