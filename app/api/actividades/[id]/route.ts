@@ -17,13 +17,17 @@ export async function GET(
     const { id } = await params;
     const actividadId = parseInt(id);
 
+    console.log("🔍 DEBUG API: Buscando actividad ID:", actividadId);
+
     if (isNaN(actividadId)) {
+      console.log("❌ DEBUG API: ID inválido:", id);
       return NextResponse.json(
         { error: "ID de actividad inválido" },
         { status: 400 }
       );
     }
 
+    console.log("📊 DEBUG API: Ejecutando consulta Prisma...");
     const actividad = await prisma.actividad.findUnique({
       where: { id: actividadId },
       include: {
@@ -73,16 +77,23 @@ export async function GET(
       },
     });
 
+    console.log(
+      "📊 DEBUG API: Resultado de consulta:",
+      actividad ? "Encontrada" : "No encontrada"
+    );
+
     if (!actividad) {
+      console.log("❌ DEBUG API: Actividad no encontrada");
       return NextResponse.json(
         { error: "Actividad no encontrada" },
         { status: 404 }
       );
     }
 
+    console.log("✅ DEBUG API: Actividad encontrada:", actividad.nombre);
     return NextResponse.json(actividad);
   } catch (error) {
-    console.error("Error al obtener actividad:", error);
+    console.error("💥 DEBUG API: Error al obtener actividad:", error);
     return NextResponse.json(
       { error: "Error al obtener la actividad" },
       { status: 500 }

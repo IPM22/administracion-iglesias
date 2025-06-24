@@ -226,7 +226,7 @@ function AgradecimientoContent({
         }
 
         // Comportamiento normal - cargar datos reales
-        const response = await fetch(`/api/actividades/${id}`);
+        const response = await fetch(`/api/actividades/${id}/public`);
         if (!response.ok) {
           throw new Error("Error al obtener los datos de la actividad");
         }

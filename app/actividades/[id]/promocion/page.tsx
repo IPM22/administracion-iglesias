@@ -56,22 +56,43 @@ export default function PromocionActividadPage() {
   useEffect(() => {
     const fetchActividad = async () => {
       try {
-        const response = await fetch(`/api/actividades/${actividadId}`);
+        console.log("🔍 DEBUG: Intentando cargar actividad ID:", actividadId);
+        console.log("🌐 DEBUG: URL completa:", window.location.href);
+
+        const response = await fetch(`/api/actividades/${actividadId}/public`);
+        console.log(
+          "📡 DEBUG: Respuesta de la API:",
+          response.status,
+          response.statusText
+        );
+
         if (!response.ok) {
-          throw new Error("Error al obtener los datos de la actividad");
+          const errorText = await response.text();
+          console.error("❌ DEBUG: Error de respuesta:", errorText);
+          throw new Error(`Error ${response.status}: ${errorText}`);
         }
         const data = await response.json();
+        console.log("✅ DEBUG: Datos recibidos:", data);
         setActividad(data);
       } catch (error) {
-        console.error("Error:", error);
-        setError("Error al cargar la actividad");
+        console.error("💥 DEBUG: Error completo:", error);
+        setError(
+          `Error al cargar la actividad: ${
+            error instanceof Error ? error.message : "Error desconocido"
+          }`
+        );
       } finally {
         setLoading(false);
       }
     };
 
     if (actividadId) {
+      console.log("🚀 DEBUG: Iniciando fetch para actividad:", actividadId);
       fetchActividad();
+    } else {
+      console.warn("⚠️ DEBUG: No hay actividadId disponible");
+      setError("ID de actividad no válido");
+      setLoading(false);
     }
   }, [actividadId]);
 
@@ -161,22 +182,46 @@ export default function PromocionActividadPage() {
   if (error || !actividad) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center">
-        <div className="text-center p-8">
+        <div className="text-center p-8 max-w-md">
           <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Heart className="h-12 w-12 text-red-500" />
           </div>
           <h3 className="text-2xl font-bold text-gray-800 mb-2">
             ¡Ups! Algo salió mal
           </h3>
-          <p className="text-gray-600 mb-6">
+          <p className="text-gray-600 mb-4">
             {error || "No pudimos encontrar este evento"}
           </p>
-          <Button
-            onClick={() => window.history.back()}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            Volver atrás
-          </Button>
+          <div className="bg-gray-100 rounded-lg p-4 mb-4 text-left">
+            <p className="text-sm text-gray-600 mb-2">
+              <strong>ID de actividad:</strong> {actividadId}
+            </p>
+            <p className="text-sm text-gray-600 mb-2">
+              <strong>URL actual:</strong>{" "}
+              {typeof window !== "undefined"
+                ? window.location.pathname
+                : "No disponible"}
+            </p>
+            <p className="text-sm text-gray-600">
+              <strong>Detalles del error:</strong>{" "}
+              {error || "Actividad no encontrada"}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Button
+              onClick={() => window.history.back()}
+              className="bg-blue-600 hover:bg-blue-700 w-full"
+            >
+              Volver atrás
+            </Button>
+            <Button
+              onClick={() => window.location.reload()}
+              variant="outline"
+              className="w-full"
+            >
+              Intentar de nuevo
+            </Button>
+          </div>
         </div>
       </div>
     );
