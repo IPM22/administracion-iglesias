@@ -346,43 +346,43 @@ function AgradecimientoContent({
       {/* Elementos decorativos de fondo */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-10 left-10 animate-pulse">
-          <Star className="h-8 w-8 text-yellow-300 opacity-60" />
+          <Star className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-300 opacity-60" />
         </div>
         <div className="absolute top-20 right-20 animate-pulse delay-1000">
-          <Sparkles className="h-6 w-6 text-pink-300 opacity-60" />
+          <Sparkles className="h-4 w-4 sm:h-6 sm:w-6 text-pink-300 opacity-60" />
         </div>
         <div className="absolute bottom-20 left-20 animate-pulse delay-2000">
-          <Heart className="h-10 w-10 text-red-300 opacity-60" />
+          <Heart className="h-8 w-8 sm:h-10 sm:w-10 text-red-300 opacity-60" />
         </div>
         <div className="absolute bottom-10 right-10 animate-pulse delay-500">
-          <Star className="h-6 w-6 text-blue-300 opacity-60" />
+          <Star className="h-4 w-4 sm:h-6 sm:w-6 text-blue-300 opacity-60" />
         </div>
       </div>
 
-      {/* Botones de control */}
-      <div className="absolute top-4 left-4 z-10 flex gap-2">
+      {/* Botones de control - Optimizado para móviles */}
+      <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-10 flex gap-1 sm:gap-2">
         <Button
           onClick={salirVistaCompleta}
           variant="outline"
           size="sm"
-          className="bg-black/20 border-white/20 text-white hover:bg-black/40"
+          className="bg-black/20 border-white/20 text-white hover:bg-black/40 text-xs sm:text-sm px-2 sm:px-3"
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
+          <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
           Salir
         </Button>
         <Button
           onClick={entrarVistaCompleta}
           variant="outline"
           size="sm"
-          className="bg-black/20 border-white/20 text-white hover:bg-black/40"
+          className="bg-black/20 border-white/20 text-white hover:bg-black/40 text-xs sm:text-sm px-2 sm:px-3 hidden sm:flex"
         >
           Pantalla Completa
         </Button>
       </div>
 
-      {/* Hora actual */}
-      <div className="absolute top-4 right-4 z-10 bg-black/20 rounded-lg px-4 py-2">
-        <p className="text-lg font-mono">
+      {/* Hora actual - Optimizado para móviles */}
+      <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 bg-black/20 rounded-lg px-2 py-1 sm:px-4 sm:py-2">
+        <p className="text-sm sm:text-lg font-mono">
           {currentTime.toLocaleTimeString("es-ES", {
             hour: "numeric",
             minute: "2-digit",
@@ -391,33 +391,33 @@ function AgradecimientoContent({
         </p>
       </div>
 
-      {/* Contenido principal */}
-      <div className="container mx-auto px-8 py-12 h-screen flex flex-col">
+      {/* Contenido principal - Optimizado para móviles */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12 h-screen flex flex-col">
         {/* Banner de simulación */}
         {mockParam === "true" && (
-          <div className="mb-4 bg-orange-500/20 border border-orange-400/30 rounded-lg p-3 text-center">
-            <p className="text-orange-200 font-semibold">
+          <div className="mb-3 sm:mb-4 bg-orange-500/20 border border-orange-400/30 rounded-lg p-2 sm:p-3 text-center">
+            <p className="text-orange-200 font-semibold text-sm sm:text-base">
               🧪 MODO SIMULACIÓN - Mostrando 30 visitas de prueba
             </p>
-            <p className="text-orange-300 text-sm">
+            <p className="text-orange-300 text-xs sm:text-sm">
               Para ver datos reales, remueve ?mock=true de la URL
             </p>
           </div>
         )}
 
-        {/* Encabezado */}
-        <div className="text-center mb-6">
-          <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-yellow-400 via-pink-300 to-blue-300 bg-clip-text text-transparent">
+        {/* Encabezado - Optimizado para móviles */}
+        <div className="text-center mb-4 sm:mb-6">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-2 sm:mb-4 bg-gradient-to-r from-yellow-400 via-pink-300 to-blue-300 bg-clip-text text-transparent">
             ¡Gracias por Acompañarnos!
           </h1>
-          <h2 className="text-3xl md:text-4xl font-semibold mb-4">
+          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold mb-3 sm:mb-4">
             {actividad.nombre}
           </h2>
 
-          {/* Contador de asistentes */}
-          <div className="flex items-center justify-center gap-2 text-xl md:text-2xl font-semibold">
-            <Users className="h-7 w-7 md:h-8 md:w-8" />
-            <span>
+          {/* Contador de asistentes - Optimizado para móviles */}
+          <div className="flex items-center justify-center gap-2 text-lg sm:text-xl lg:text-2xl font-semibold">
+            <Users className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8" />
+            <span className="text-sm sm:text-lg lg:text-xl">
               {asistentesActuales.length} persona
               {asistentesActuales.length !== 1 ? "s" : ""} nos acompañó
               {asistentesActuales.length !== 1 ? "ron" : ""}
@@ -425,29 +425,31 @@ function AgradecimientoContent({
           </div>
         </div>
 
-        {/* Lista de asistentes */}
+        {/* Lista de asistentes - Optimizado para móviles */}
         <div className="flex-1 overflow-hidden">
           {asistentesActuales.length === 0 ? (
-            <div className="text-center py-20">
-              <div className="text-6xl mb-4">🎉</div>
-              <p className="text-2xl opacity-80">
+            <div className="text-center py-10 sm:py-20">
+              <div className="text-4xl sm:text-6xl mb-4">🎉</div>
+              <p className="text-lg sm:text-xl lg:text-2xl opacity-80">
                 ¡Fue un placer tenerlos con nosotros!
               </p>
             </div>
           ) : (
             <div className="h-full overflow-y-auto">
-              {/* Diseño optimizado para 20-30 personas */}
+              {/* Diseño optimizado para móviles */}
               <div className="max-w-5xl mx-auto">
                 {/* Indicadores de página y controles si hay múltiples páginas */}
                 {totalPaginas > 1 && (
-                  <div className="flex items-center justify-center gap-4 mb-6">
+                  <div className="flex items-center justify-center gap-2 sm:gap-4 mb-4 sm:mb-6">
                     <div className="flex items-center gap-2">
-                      <span className="text-white/60 text-sm">Página</span>
-                      <span className="text-white font-semibold">
+                      <span className="text-white/60 text-xs sm:text-sm">
+                        Página
+                      </span>
+                      <span className="text-white font-semibold text-sm sm:text-base">
                         {paginaActual + 1} de {totalPaginas}
                       </span>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1 sm:gap-2">
                       {Array.from({ length: totalPaginas }, (_, i) => (
                         <button
                           key={i}
@@ -469,7 +471,7 @@ function AgradecimientoContent({
                 )}
 
                 <div
-                  className="grid grid-cols-1 lg:grid-cols-2 gap-6 transition-all duration-500 ease-in-out"
+                  className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 transition-all duration-500 ease-in-out"
                   onMouseEnter={() => setPausarAutoScroll(true)}
                   onMouseLeave={() => setPausarAutoScroll(false)}
                 >
@@ -482,52 +484,52 @@ function AgradecimientoContent({
                         animationDuration: "700ms",
                       }}
                     >
-                      <CardContent className="p-5 md:p-6">
-                        <div className="flex items-center gap-4">
-                          {/* Avatar y número */}
+                      <CardContent className="p-3 sm:p-4 lg:p-6">
+                        <div className="flex items-center gap-3 sm:gap-4">
+                          {/* Avatar y número - Optimizado para móviles */}
                           <div className="flex-shrink-0 relative">
                             <MiembroAvatar
                               foto={asistente.persona.foto}
                               nombre={`${asistente.persona.nombres} ${asistente.persona.apellidos}`}
                               size="lg"
                             />
-                            <div className="absolute -top-2 -right-2 bg-yellow-400 text-black rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold">
+                            <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 bg-yellow-400 text-black rounded-full w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 flex items-center justify-center text-xs sm:text-sm font-bold">
                               {paginaActual * PERSONAS_POR_PAGINA + index + 1}
                             </div>
                           </div>
 
-                          {/* Información principal */}
+                          {/* Información principal - Optimizado para móviles */}
                           <div className="flex-1 min-w-0">
                             {/* Nombre completo destacado */}
-                            <h3 className="text-2xl md:text-3xl font-bold text-white truncate leading-tight">
+                            <h3 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-white truncate leading-tight">
                               {asistente.persona.nombres}{" "}
                               {asistente.persona.apellidos}
                             </h3>
 
                             {/* Información de quien invitó */}
                             {asistente.persona.personaInvita ? (
-                              <p className="text-yellow-300 font-semibold text-base md:text-lg mt-2">
+                              <p className="text-yellow-300 font-semibold text-sm sm:text-base lg:text-lg mt-1 sm:mt-2">
                                 ✨ Invitado por:{" "}
                                 {asistente.persona.personaInvita.nombres}{" "}
                                 {asistente.persona.personaInvita.apellidos}
                               </p>
                             ) : (
-                              <p className="text-blue-300 font-semibold text-base md:text-lg mt-2">
+                              <p className="text-blue-300 font-semibold text-sm sm:text-base lg:text-lg mt-1 sm:mt-2">
                                 👋 Llegó por su cuenta
                               </p>
                             )}
 
                             {/* Observaciones si existen */}
                             {asistente.observaciones && (
-                              <p className="text-white/80 text-sm md:text-base mt-2 truncate">
+                              <p className="text-white/80 text-xs sm:text-sm lg:text-base mt-1 sm:mt-2 truncate">
                                 📝 {asistente.observaciones}
                               </p>
                             )}
                           </div>
 
-                          {/* Icono decorativo */}
-                          <div className="flex-shrink-0">
-                            <Heart className="h-7 w-7 md:h-8 md:w-8 text-pink-300 opacity-70 group-hover:opacity-100 transition-opacity" />
+                          {/* Icono decorativo - Oculto en móviles muy pequeños */}
+                          <div className="flex-shrink-0 hidden sm:block">
+                            <Heart className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-pink-300 opacity-70 group-hover:opacity-100 transition-opacity" />
                           </div>
                         </div>
                       </CardContent>
@@ -539,14 +541,14 @@ function AgradecimientoContent({
           )}
         </div>
 
-        {/* Mensaje final */}
-        <div className="text-center mt-8">
-          <div className="text-4xl mb-2">💕</div>
-          <p className="text-xl opacity-80">
+        {/* Mensaje final - Optimizado para móviles */}
+        <div className="text-center mt-4 sm:mt-6 lg:mt-8">
+          <div className="text-2xl sm:text-3xl lg:text-4xl mb-2">💕</div>
+          <p className="text-lg sm:text-xl opacity-80">
             ¡Esperamos verlos nuevamente pronto!
           </p>
           {actividad.responsable && (
-            <p className="text-lg opacity-60 mt-2">
+            <p className="text-sm sm:text-base lg:text-lg opacity-60 mt-2">
               Con cariño, {actividad.responsable}
             </p>
           )}
