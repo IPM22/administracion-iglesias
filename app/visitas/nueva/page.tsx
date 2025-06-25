@@ -69,6 +69,13 @@ interface Actividad {
   ubicacion?: string;
   estado: string;
   tipoActividad: TipoActividad;
+  horarios?: Array<{
+    id: number;
+    fecha: string;
+    horaInicio: string;
+    horaFin: string;
+    notas?: string;
+  }>;
 }
 
 interface Persona {
@@ -143,6 +150,7 @@ const formSchema = z.object({
   fechaAsistencia: z.string().optional(),
   tipoActividadId: z.string().optional(),
   actividadId: z.string().optional(),
+  horarioId: z.string().optional(),
   invitadoPorId: z.string().optional(),
   observacionesAsistencia: z.string().optional(),
 });
@@ -163,6 +171,8 @@ export default function NuevaVisitaPage() {
   const [tipoSeleccionado, setTipoSeleccionado] = useState<string>("");
   const [actividadSeleccionada, setActividadSeleccionada] =
     useState<Actividad | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [horarioSeleccionado, setHorarioSeleccionado] = useState<string>("");
   const [agregarAsistencia, setAgregarAsistencia] = useState(false);
 
   const form = useForm<FormValues>({
@@ -186,6 +196,7 @@ export default function NuevaVisitaPage() {
       fechaAsistencia: new Date().toISOString().split("T")[0],
       tipoActividadId: "",
       actividadId: "",
+      horarioId: "",
       invitadoPorId: "",
       observacionesAsistencia: "",
     },
@@ -372,9 +383,15 @@ export default function NuevaVisitaPage() {
           .toISOString()
           .split("T")[0];
         form.setValue("fechaAsistencia", fechaActividad);
+
+        // Limpiar selección de horario cuando cambia la actividad
+        form.setValue("horarioId", "");
+        setHorarioSeleccionado("");
       }
     } else {
       setActividadSeleccionada(null);
+      form.setValue("horarioId", "");
+      setHorarioSeleccionado("");
     }
   }, [form.watch("actividadId"), actividades, form]);
 
@@ -437,8 +454,13 @@ export default function NuevaVisitaPage() {
             },
             body: JSON.stringify({
               fecha: fechaParaRegistro,
-              tipoActividadId: values.tipoActividadId || null,
-              actividadId: values.actividadId || null,
+              tipoActividadId: values.tipoActividadId
+                ? parseInt(values.tipoActividadId)
+                : null,
+              actividadId: values.actividadId
+                ? parseInt(values.actividadId)
+                : null,
+              horarioId: values.horarioId ? parseInt(values.horarioId) : null,
               invitadoPorId: values.invitadoPorId
                 ? parseInt(values.invitadoPorId)
                 : null,
@@ -448,9 +470,21 @@ export default function NuevaVisitaPage() {
         );
 
         if (!historialResponse.ok) {
-          console.warn(
-            "La visita se creó pero hubo un error al registrar la primera asistencia"
+          const errorData = await historialResponse.json();
+          console.error(
+            "Error al registrar primera asistencia:",
+            historialResponse.status,
+            errorData
           );
+          // Mostrar el error específico al usuario
+          setError(
+            `La visita se creó correctamente, pero hubo un error al registrar la primera asistencia: ${
+              errorData.error || "Error desconocido"
+            }`
+          );
+          return; // No redirigir si hay error
+        } else {
+          console.log("✅ Primera asistencia registrada exitosamente");
         }
       }
 
@@ -1137,6 +1171,99 @@ export default function NuevaVisitaPage() {
                           </FormItem>
                         )}
                       />
+
+                      {/* Selector de Horario Específico - Solo si la actividad tiene múltiples horarios */}
+                      {actividadSeleccionada &&
+                        actividadSeleccionada.horarios &&
+                        actividadSeleccionada.horarios.length > 0 && (
+                          <FormField
+                            control={form.control}
+                            name="horarioId"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Horario Específico</FormLabel>
+                                <Select
+                                  onValueChange={(value) => {
+                                    field.onChange(value);
+                                    setHorarioSeleccionado(value);
+                                  }}
+                                  value={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Selecciona el horario al que asistió" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {actividadSeleccionada.horarios
+                                      ?.sort((a, b) => {
+                                        // Ordenar por fecha y luego por hora
+                                        const fechaA = new Date(a.fecha);
+                                        const fechaB = new Date(b.fecha);
+                                        if (
+                                          fechaA.getTime() !== fechaB.getTime()
+                                        ) {
+                                          return (
+                                            fechaA.getTime() - fechaB.getTime()
+                                          );
+                                        }
+                                        // Si es la misma fecha, ordenar por hora
+                                        const horaA = a.horaInicio
+                                          ? parseInt(
+                                              a.horaInicio.split(":")[0]
+                                            ) *
+                                              60 +
+                                            parseInt(a.horaInicio.split(":")[1])
+                                          : 0;
+                                        const horaB = b.horaInicio
+                                          ? parseInt(
+                                              b.horaInicio.split(":")[0]
+                                            ) *
+                                              60 +
+                                            parseInt(b.horaInicio.split(":")[1])
+                                          : 0;
+                                        return horaA - horaB;
+                                      })
+                                      .map((horario) => (
+                                        <SelectItem
+                                          key={horario.id}
+                                          value={horario.id.toString()}
+                                        >
+                                          <div className="flex flex-col">
+                                            <div className="flex items-center gap-2">
+                                              <span className="font-medium">
+                                                {new Date(
+                                                  horario.fecha
+                                                ).toLocaleDateString("es-ES", {
+                                                  weekday: "short",
+                                                  day: "numeric",
+                                                  month: "short",
+                                                })}
+                                              </span>
+                                              <span className="text-primary">
+                                                {horario.horaInicio} -{" "}
+                                                {horario.horaFin}
+                                              </span>
+                                            </div>
+                                            {horario.notas && (
+                                              <span className="text-xs text-muted-foreground">
+                                                {horario.notas}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormDescription>
+                                  Selecciona el horario específico al que la
+                                  persona asistió
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
 
                       {/* Información de fecha automática para actividades especiales */}
                       {actividadSeleccionada && (

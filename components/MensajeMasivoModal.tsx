@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,15 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/hooks/useAuth";
 import {
   MessageSquare,
   Users,
@@ -29,6 +24,9 @@ import {
   Phone,
   Heart,
   AlertTriangle,
+  Edit3,
+  MessageCircle,
+  Smartphone,
 } from "lucide-react";
 
 interface Persona {
@@ -45,6 +43,7 @@ interface MensajeMasivoModalProps {
   onOpenChange: (open: boolean) => void;
   personas: Persona[];
   seccionActual: string;
+  eventoNombre?: string;
 }
 
 interface ResultadoEnvio {
@@ -62,6 +61,21 @@ interface ResultadoEnvio {
   };
   error?: string;
 }
+
+interface TemplateData {
+  key: string;
+  preview: string;
+}
+
+interface DatosPersonalizacion {
+  [key: string]: string;
+  nombreIglesia: string;
+  evento: string;
+  proximoEvento: string;
+  hora: string;
+}
+
+type TemplateKey = keyof typeof templates;
 
 const templates = {
   agradecimientoVisita: {
@@ -82,26 +96,84 @@ const templates = {
     icono: <Users className="h-4 w-4" />,
     variables: ["nombre", "proximoEvento", "hora", "nombreIglesia"],
   },
-};
+} as const;
 
 export function MensajeMasivoModal({
   open,
   onOpenChange,
   personas,
   seccionActual,
+  eventoNombre,
 }: MensajeMasivoModalProps) {
-  const [selectedTemplate, setSelectedTemplate] = useState(
+  // Obtener información de la iglesia del contexto
+  const { iglesiaActiva } = useAuth();
+
+  const [tipoEnvio, setTipoEnvio] = useState<"whatsapp" | "sms">("whatsapp");
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateKey>(
     "agradecimientoVisita"
   );
-  const [datosPersonalizacion, setDatosPersonalizacion] = useState({
-    nombreIglesia: "Iglesia Vida Nueva",
-    evento: "nuestro culto dominical",
-    proximoEvento: "domingo",
-    hora: "10:00 AM",
-  });
+  const [datosPersonalizacion, setDatosPersonalizacion] =
+    useState<DatosPersonalizacion>({
+      nombreIglesia: iglesiaActiva?.nombre || "Mi Iglesia",
+      evento: eventoNombre || "nuestro culto dominical",
+      proximoEvento: "domingo",
+      hora: "10:00 AM",
+    });
+  const [mensajePersonalizado, setMensajePersonalizado] = useState("");
+  const [modoEdicion, setModoEdicion] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState<ResultadoEnvio | null>(null);
   const [vistaResultados, setVistaResultados] = useState(false);
+
+  // Actualizar nombre de iglesia cuando cambie el contexto
+  useEffect(() => {
+    if (iglesiaActiva?.nombre) {
+      setDatosPersonalizacion((prev) => ({
+        ...prev,
+        nombreIglesia: iglesiaActiva.nombre,
+      }));
+    }
+  }, [iglesiaActiva]);
+
+  // Actualizar evento cuando cambie la prop eventoNombre
+  useEffect(() => {
+    if (eventoNombre) {
+      setDatosPersonalizacion((prev) => ({
+        ...prev,
+        evento: eventoNombre,
+      }));
+    }
+  }, [eventoNombre]);
+
+  // Cargar mensaje del template cuando cambie la selección
+  useEffect(() => {
+    const cargarMensaje = async () => {
+      try {
+        const response = await fetch(`/api/${tipoEnvio}/masivo`);
+        if (response.ok) {
+          const data = await response.json();
+          const template = data.templates?.find(
+            (t: TemplateData) => t.key === selectedTemplate
+          );
+          if (template) {
+            // Personalizar el mensaje con los datos actuales
+            let mensaje = template.preview;
+            Object.keys(datosPersonalizacion).forEach((key) => {
+              const regex = new RegExp(`{{${key}}}`, "g");
+              mensaje = mensaje.replace(regex, datosPersonalizacion[key] || "");
+            });
+            setMensajePersonalizado(mensaje);
+          }
+        }
+      } catch (error) {
+        console.error("Error cargando template:", error);
+      }
+    };
+
+    if (selectedTemplate && !modoEdicion) {
+      cargarMensaje();
+    }
+  }, [selectedTemplate, datosPersonalizacion, tipoEnvio, modoEdicion]);
 
   // Filtrar personas según la sección actual
   const personasFiltradas = React.useMemo(() => {
@@ -121,7 +193,10 @@ export function MensajeMasivoModal({
       setEnviando(true);
       setResultado(null);
 
-      const response = await fetch("/api/whatsapp/masivo", {
+      const endpoint =
+        tipoEnvio === "whatsapp" ? "/api/whatsapp/masivo" : "/api/sms/masivo";
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -129,6 +204,8 @@ export function MensajeMasivoModal({
           templateKey: selectedTemplate,
           datosPersonalizacion,
           filtrarSoloConCelular: true,
+          // Si está en modo edición, enviar el mensaje personalizado
+          ...(modoEdicion && { mensajePersonalizado }),
         }),
       });
 
@@ -155,6 +232,7 @@ export function MensajeMasivoModal({
     setVistaResultados(false);
     setResultado(null);
     setEnviando(false);
+    setModoEdicion(false);
   };
 
   const handleClose = () => {
@@ -162,36 +240,51 @@ export function MensajeMasivoModal({
     onOpenChange(false);
   };
 
+  const personalizarMensaje = (template: string) => {
+    let mensaje = template;
+    Object.keys(datosPersonalizacion).forEach((key) => {
+      const regex = new RegExp(`{{${key}}}`, "g");
+      mensaje = mensaje.replace(regex, datosPersonalizacion[key] || "");
+    });
+    return mensaje;
+  };
+
   if (vistaResultados && resultado?.success) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent
+          className="max-h-[80vh] overflow-y-auto bg-background"
+          style={{ maxWidth: "80rem", width: "95vw" }}
+        >
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-foreground">
               <CheckCircle className="h-5 w-5 text-green-600" />
               Mensajes Enviados
             </DialogTitle>
-            <DialogDescription>
-              Resumen del envío masivo de WhatsApp
+            <DialogDescription className="text-muted-foreground">
+              Resumen del envío masivo de{" "}
+              {tipoEnvio === "whatsapp" ? "WhatsApp" : "SMS"}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             {/* Resumen */}
-            <Card>
+            <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-lg">Resumen del Envío</CardTitle>
+                <CardTitle className="text-lg text-card-foreground">
+                  Resumen del Envío
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                       {resultado.resumen?.total}
                     </div>
                     <div className="text-sm text-muted-foreground">Total</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">
+                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                       {resultado.resumen?.exitosos}
                     </div>
                     <div className="text-sm text-muted-foreground">
@@ -199,7 +292,7 @@ export function MensajeMasivoModal({
                     </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-red-600">
+                    <div className="text-2xl font-bold text-red-600 dark:text-red-400">
                       {resultado.resumen?.fallidos}
                     </div>
                     <div className="text-sm text-muted-foreground">
@@ -207,7 +300,7 @@ export function MensajeMasivoModal({
                     </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">
+                    <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                       {resultado.resumen?.porcentajeExito}%
                     </div>
                     <div className="text-sm text-muted-foreground">Éxito</div>
@@ -219,9 +312,9 @@ export function MensajeMasivoModal({
             {/* Mensajes exitosos */}
             {resultado.resultados?.exitosos &&
               resultado.resultados.exitosos.length > 0 && (
-                <Card>
+                <Card className="bg-card border-border">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-green-700">
+                    <CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-400">
                       <CheckCircle className="h-4 w-4" />
                       Mensajes Exitosos ({resultado.resultados.exitosos.length})
                     </CardTitle>
@@ -231,10 +324,15 @@ export function MensajeMasivoModal({
                       {resultado.resultados.exitosos.map((item, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between py-2 border-b border-gray-100"
+                          className="flex items-center justify-between py-2 border-b border-border"
                         >
-                          <span className="font-medium">{item.persona}</span>
-                          <Badge variant="outline" className="text-green-600">
+                          <span className="font-medium text-foreground">
+                            {item.persona}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className="text-green-600 dark:text-green-400 border-green-200 dark:border-green-800"
+                          >
                             <Phone className="h-3 w-3 mr-1" />
                             {item.telefono}
                           </Badge>
@@ -248,9 +346,9 @@ export function MensajeMasivoModal({
             {/* Mensajes fallidos */}
             {resultado.resultados?.fallidos &&
               resultado.resultados.fallidos.length > 0 && (
-                <Card>
+                <Card className="bg-card border-border">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-red-700">
+                    <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-400">
                       <XCircle className="h-4 w-4" />
                       Mensajes Fallidos ({resultado.resultados.fallidos.length})
                     </CardTitle>
@@ -260,12 +358,17 @@ export function MensajeMasivoModal({
                       {resultado.resultados.fallidos.map((item, index) => (
                         <div
                           key={index}
-                          className="py-2 border-b border-gray-100"
+                          className="flex items-center justify-between py-2 border-b border-border"
                         >
-                          <div className="font-medium">{item.persona}</div>
-                          <div className="text-sm text-red-600">
+                          <span className="font-medium text-foreground">
+                            {item.persona}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className="text-red-600 dark:text-red-400 border-red-200 dark:border-red-800"
+                          >
                             {item.error}
-                          </div>
+                          </Badge>
                         </div>
                       ))}
                     </div>
@@ -274,10 +377,12 @@ export function MensajeMasivoModal({
               )}
 
             <div className="flex justify-end gap-2">
-              <Button onClick={resetModal} variant="outline">
-                Enviar Más Mensajes
+              <Button
+                onClick={handleClose}
+                className="bg-primary hover:bg-primary/90"
+              >
+                Cerrar
               </Button>
-              <Button onClick={handleClose}>Cerrar</Button>
             </div>
           </div>
         </DialogContent>
@@ -287,31 +392,61 @@ export function MensajeMasivoModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent
+        className="max-h-[90vh] overflow-y-auto bg-background"
+        style={{ maxWidth: "90rem", width: "95vw" }}
+      >
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            Mensaje Masivo por WhatsApp
+          <DialogTitle className="flex items-center gap-2 text-foreground">
+            <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            Envío Masivo de Mensajes
           </DialogTitle>
-          <DialogDescription>
-            Envía mensajes de agradecimiento a todas las visitas que tengan
-            WhatsApp registrado
+          <DialogDescription className="text-muted-foreground">
+            Envía mensajes personalizados a las personas seleccionadas
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Información de destinatarios */}
-          <Card>
+          {/* Selector de tipo de envío */}
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
+              <CardTitle className="text-lg text-card-foreground">
+                Tipo de Mensaje
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Tabs
+                value={tipoEnvio}
+                onValueChange={(v) => setTipoEnvio(v as "whatsapp" | "sms")}
+              >
+                <TabsList className="grid w-full grid-cols-2 bg-muted">
+                  <TabsTrigger
+                    value="whatsapp"
+                    className="flex items-center gap-2"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    WhatsApp
+                  </TabsTrigger>
+                  <TabsTrigger value="sms" className="flex items-center gap-2">
+                    <Smartphone className="h-4 w-4" />
+                    SMS
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </CardContent>
+          </Card>
+
+          {/* Estadísticas */}
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-lg text-card-foreground">
                 Destinatarios
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-2xl font-bold text-blue-600">
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                     {personasFiltradas.length}
                   </div>
                   <div className="text-sm text-muted-foreground">
@@ -319,18 +454,18 @@ export function MensajeMasivoModal({
                   </div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-green-600">
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                     {personasConCelular.length}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Con WhatsApp
+                    Con número celular
                   </div>
                 </div>
               </div>
 
               {personasConCelular.length === 0 && (
-                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                  <div className="flex items-center gap-2 text-yellow-800">
+                <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                  <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
                     <AlertTriangle className="h-4 w-4" />
                     <span className="text-sm">
                       No hay personas con números de celular registrados para
@@ -343,132 +478,211 @@ export function MensajeMasivoModal({
           </Card>
 
           {/* Selección de template */}
-          <div className="space-y-3">
-            <Label htmlFor="template">Tipo de Mensaje</Label>
-            <Select
-              value={selectedTemplate}
-              onValueChange={setSelectedTemplate}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona un template" />
-              </SelectTrigger>
-              <SelectContent>
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-lg text-card-foreground">
+                Template de Mensaje
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-3">
                 {Object.entries(templates).map(([key, template]) => (
-                  <SelectItem key={key} value={key}>
-                    <div className="flex items-center gap-2">
+                  <div
+                    key={key}
+                    className={`flex-1 p-4 border rounded-lg cursor-pointer transition-all hover:border-primary/50 ${
+                      selectedTemplate === key
+                        ? "border-primary bg-primary/5 dark:bg-primary/10"
+                        : "border-border hover:border-border/80"
+                    }`}
+                    onClick={() => setSelectedTemplate(key as TemplateKey)}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
                       {template.icono}
-                      <div>
-                        <div className="font-medium">{template.nombre}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {template.descripcion}
-                        </div>
-                      </div>
+                      <h4 className="font-medium text-sm text-foreground">
+                        {template.nombre}
+                      </h4>
                     </div>
-                  </SelectItem>
+                    <p className="text-xs text-muted-foreground">
+                      {template.descripcion}
+                    </p>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Campos de personalización */}
-          <div className="space-y-4">
-            <Label>Personalización del Mensaje</Label>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="nombreIglesia">Nombre de la Iglesia</Label>
-                <Input
-                  id="nombreIglesia"
-                  value={datosPersonalizacion.nombreIglesia}
-                  onChange={(e) =>
-                    setDatosPersonalizacion((prev) => ({
-                      ...prev,
-                      nombreIglesia: e.target.value,
-                    }))
-                  }
-                  placeholder="Iglesia Vida Nueva"
-                />
               </div>
+            </CardContent>
+          </Card>
 
-              {templates[
-                selectedTemplate as keyof typeof templates
-              ].variables.includes("evento") && (
-                <div>
-                  <Label htmlFor="evento">Evento/Culto</Label>
+          {/* Datos de personalización */}
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-lg text-card-foreground">
+                Personalización
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-4">
+                {/* Nombre de la Iglesia en fila completa */}
+                <div className="space-y-2">
+                  <Label htmlFor="nombreIglesia" className="text-foreground">
+                    Nombre de la Iglesia
+                  </Label>
                   <Input
+                    id="nombreIglesia"
+                    value={datosPersonalizacion.nombreIglesia}
+                    onChange={(e) =>
+                      setDatosPersonalizacion({
+                        ...datosPersonalizacion,
+                        nombreIglesia: e.target.value,
+                      })
+                    }
+                    placeholder="Mi Iglesia"
+                    className="bg-background border-border text-foreground"
+                  />
+                </div>
+
+                {/* Evento en fila completa para evitar truncamiento */}
+                <div className="space-y-2">
+                  <Label htmlFor="evento" className="text-foreground">
+                    Evento
+                  </Label>
+                  <Textarea
                     id="evento"
                     value={datosPersonalizacion.evento}
                     onChange={(e) =>
-                      setDatosPersonalizacion((prev) => ({
-                        ...prev,
+                      setDatosPersonalizacion({
+                        ...datosPersonalizacion,
                         evento: e.target.value,
-                      }))
+                      })
                     }
                     placeholder="nuestro culto dominical"
+                    className="bg-background border-border text-foreground w-full min-h-[60px] resize-none"
+                    rows={2}
                   />
                 </div>
-              )}
 
-              {templates[
-                selectedTemplate as keyof typeof templates
-              ].variables.includes("proximoEvento") && (
-                <div>
-                  <Label htmlFor="proximoEvento">Próximo Evento</Label>
-                  <Input
-                    id="proximoEvento"
-                    value={datosPersonalizacion.proximoEvento}
-                    onChange={(e) =>
-                      setDatosPersonalizacion((prev) => ({
-                        ...prev,
-                        proximoEvento: e.target.value,
-                      }))
-                    }
-                    placeholder="domingo"
-                  />
-                </div>
-              )}
-
-              {templates[
-                selectedTemplate as keyof typeof templates
-              ].variables.includes("hora") && (
-                <div>
-                  <Label htmlFor="hora">Hora</Label>
-                  <Input
-                    id="hora"
-                    value={datosPersonalizacion.hora}
-                    onChange={(e) =>
-                      setDatosPersonalizacion((prev) => ({
-                        ...prev,
-                        hora: e.target.value,
-                      }))
-                    }
-                    placeholder="10:00 AM"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Error */}
-          {resultado && !resultado.success && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-              <div className="flex items-center gap-2 text-red-800">
-                <XCircle className="h-4 w-4" />
-                <span className="text-sm">{resultado.error}</span>
+                {/* Campos adicionales para invitación en grid */}
+                {selectedTemplate === "invitacionRetorno" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="proximoEvento"
+                        className="text-foreground"
+                      >
+                        Próximo Evento
+                      </Label>
+                      <Input
+                        id="proximoEvento"
+                        value={datosPersonalizacion.proximoEvento}
+                        onChange={(e) =>
+                          setDatosPersonalizacion({
+                            ...datosPersonalizacion,
+                            proximoEvento: e.target.value,
+                          })
+                        }
+                        placeholder="domingo"
+                        className="bg-background border-border text-foreground"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="hora" className="text-foreground">
+                        Hora
+                      </Label>
+                      <Input
+                        id="hora"
+                        value={datosPersonalizacion.hora}
+                        onChange={(e) =>
+                          setDatosPersonalizacion({
+                            ...datosPersonalizacion,
+                            hora: e.target.value,
+                          })
+                        }
+                        placeholder="10:00 AM"
+                        className="bg-background border-border text-foreground"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            </CardContent>
+          </Card>
 
-          {/* Botones */}
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={handleClose}>
+          {/* Vista previa del mensaje */}
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-card-foreground">
+                <Edit3 className="h-4 w-4" />
+                Vista Previa del Mensaje
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setModoEdicion(!modoEdicion)}
+                  className="ml-auto"
+                >
+                  {modoEdicion ? "Vista Previa" : "Editar"}
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {modoEdicion ? (
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="mensajePersonalizado"
+                    className="text-foreground"
+                  >
+                    Editar Mensaje
+                  </Label>
+                  <Textarea
+                    id="mensajePersonalizado"
+                    value={mensajePersonalizado}
+                    onChange={(e) => setMensajePersonalizado(e.target.value)}
+                    rows={8}
+                    className="bg-background border-border text-foreground font-mono text-sm"
+                    placeholder="Escribe tu mensaje personalizado aquí..."
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Puedes usar variables como:{" "}
+                    {templates[selectedTemplate]?.variables
+                      .map((v: string) => `{{${v}}}`)
+                      .join(", ")}
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-muted/50 p-4 rounded-lg border-l-4 border-primary">
+                  <div className="whitespace-pre-wrap text-sm text-foreground font-mono">
+                    {personalizarMensaje(
+                      mensajePersonalizado || "Cargando vista previa..."
+                    )}
+                  </div>
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    📏 Longitud:{" "}
+                    {personalizarMensaje(mensajePersonalizado).length}{" "}
+                    caracteres
+                    {tipoEnvio === "sms" &&
+                      personalizarMensaje(mensajePersonalizado).length >
+                        160 && (
+                        <span className="text-orange-600 dark:text-orange-400 ml-2">
+                          ⚠️ Mensaje largo - se usará versión corta para SMS
+                        </span>
+                      )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Botones de acción */}
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              disabled={enviando}
+              className="border-border hover:bg-muted"
+            >
               Cancelar
             </Button>
             <Button
               onClick={handleEnviar}
               disabled={enviando || personasConCelular.length === 0}
+              className="bg-primary hover:bg-primary/90"
             >
               {enviando ? (
                 <>
@@ -478,7 +692,8 @@ export function MensajeMasivoModal({
               ) : (
                 <>
                   <Send className="h-4 w-4 mr-2" />
-                  Enviar a {personasConCelular.length} personas
+                  Enviar {tipoEnvio === "whatsapp" ? "WhatsApp" : "SMS"} (
+                  {personasConCelular.length})
                 </>
               )}
             </Button>

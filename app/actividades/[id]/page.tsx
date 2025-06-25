@@ -16,8 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -38,15 +36,9 @@ import {
   Monitor,
   MessageCircle,
   Mail,
-  MessageSquare,
-  UserPlus,
-  CheckCircle,
-  XCircle,
-  Send,
-  Loader2,
-  Heart,
   ArrowLeft,
   Edit,
+  Loader2,
 } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
@@ -59,6 +51,7 @@ import { MiembroAvatar } from "@/components/MiembroAvatar";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
+import { MensajeMasivoModal } from "@/components/MensajeMasivoModal";
 
 // Interfaces para tipado
 interface TipoActividad {
@@ -120,16 +113,6 @@ interface Horario {
   notas?: string;
 }
 
-interface ResultadoEnvio {
-  success: boolean;
-  resumen?: {
-    exitosos: number;
-    fallidos: number;
-    total: number;
-  };
-  error?: string;
-}
-
 export default function DetalleActividadPage({
   params,
 }: {
@@ -137,62 +120,27 @@ export default function DetalleActividadPage({
 }) {
   const router = useRouter();
   const { id } = use(params);
-  const [actividad, setActividad] = useState<ActividadDetalle | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actividad, setActividad] = useState<ActividadDetalle | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMensajeOpen, setDialogMensajeOpen] = useState(false);
   const [horarioSeleccionado, setHorarioSeleccionado] =
     useState<Horario | null>(null);
 
-  // Estados para el modal de WhatsApp masivo
-  const [modalWhatsAppOpen, setModalWhatsAppOpen] = useState(false);
-  const [asistentesSeleccionados, setAsistentesSeleccionados] = useState<
-    HistorialVisita[]
+  // Estados para el modal de mensajes masivos (nuevo modal)
+  const [modalMensajesOpen, setModalMensajesOpen] = useState(false);
+  const [personasParaMensajes, setPersonasParaMensajes] = useState<
+    {
+      id: number;
+      nombres: string;
+      apellidos: string;
+      celular?: string;
+      rol: string;
+    }[]
   >([]);
-  const [selectedTemplate, setSelectedTemplate] = useState(
-    "agradecimientoVisita"
-  );
-  const [datosPersonalizacion, setDatosPersonalizacion] = useState({
-    nombreIglesia: "Iglesia Vida Nueva",
-    evento: "",
-    proximoEvento: "domingo",
-    hora: "10:00 AM",
-  });
-  const [enviandoWhatsApp, setEnviandoWhatsApp] = useState(false);
-  const [resultadoEnvio, setResultadoEnvio] = useState<ResultadoEnvio | null>(
-    null
-  );
-  const [vistaResultados, setVistaResultados] = useState(false);
-
-  // Estados para SMS
-  const [tipoMensaje, setTipoMensaje] = useState<"WhatsApp" | "SMS">(
-    "WhatsApp"
-  );
-  const [enviandoSMS, setEnviandoSMS] = useState(false);
-
-  // Templates disponibles para WhatsApp
-  const templates = {
-    agradecimientoVisita: {
-      nombre: "Agradecimiento por Visita",
-      descripcion: "Mensaje personalizado para agradecer la participación",
-      icono: <Heart className="h-4 w-4" />,
-      variables: ["nombre", "evento", "nombreIglesia"],
-    },
-    agradecimientoGeneral: {
-      nombre: "Agradecimiento General",
-      descripcion: "Mensaje general de agradecimiento",
-      icono: <MessageSquare className="h-4 w-4" />,
-      variables: ["nombre", "nombreIglesia"],
-    },
-    invitacionRetorno: {
-      nombre: "Invitación a Regresar",
-      descripcion: "Invitación amable para futuros eventos",
-      icono: <UserPlus className="h-4 w-4" />,
-      variables: ["nombre", "proximoEvento", "hora", "nombreIglesia"],
-    },
-  };
 
   useEffect(() => {
     const fetchActividad = async () => {
@@ -213,16 +161,6 @@ export default function DetalleActividadPage({
 
     fetchActividad();
   }, [id]);
-
-  // Actualizar datos de personalización cuando se carga la actividad
-  useEffect(() => {
-    if (actividad) {
-      setDatosPersonalizacion((prev) => ({
-        ...prev,
-        evento: actividad.nombre,
-      }));
-    }
-  }, [actividad]);
 
   const formatearFecha = (fecha: string) => {
     return new Date(fecha).toLocaleDateString("es-ES", {
@@ -550,173 +488,44 @@ export default function DetalleActividadPage({
     window.open(url, "_blank", "fullscreen=yes,scrollbars=yes,resizable=yes");
   };
 
-  // Función para abrir diálogo de mensajes masivos
-  const abrirMensajesMasivos = (horario: Horario | null, tipo = "WhatsApp") => {
-    setHorarioSeleccionado(horario);
-    setTipoMensaje(tipo as "WhatsApp" | "SMS");
-
-    // Determinar asistentes según el horario
-    const asistentes = horario
-      ? actividad?.historialVisitas.filter((h) => h.horarioId === horario.id) ||
-        []
-      : actividad?.historialVisitas.filter((h) => !h.horarioId) || [];
-
-    setAsistentesSeleccionados(asistentes);
-    setModalWhatsAppOpen(true);
-  };
-
-  // Función de envío masivo con Twilio
-  const enviarMensajeMasivoWhatsApp = async () => {
+  // Función para abrir diálogo de mensajes masivos usando el nuevo modal
+  const abrirMensajesMasivos = async (horario: Horario | null) => {
     if (!actividad) return;
 
     try {
-      setEnviandoWhatsApp(true);
-      setResultadoEnvio(null);
+      // Determinar asistentes según el horario
+      const asistentes = horario
+        ? actividad.historialVisitas.filter((h) => h.horarioId === horario.id)
+        : actividad.historialVisitas.filter((h) => !h.horarioId);
 
       // Obtener datos completos de las personas
       const personasCompletas = await Promise.all(
-        asistentesSeleccionados.map(async (asistente) => {
+        asistentes.map(async (asistente) => {
           const response = await fetch(`/api/personas/${asistente.persona.id}`);
           if (response.ok) {
             const data = await response.json();
-            return data.persona || data;
+            const persona = data.persona || data;
+            return {
+              id: persona.id,
+              nombres: persona.nombres,
+              apellidos: persona.apellidos,
+              celular: persona.celular,
+              rol: "VISITA", // Asumimos que son visitas en este contexto
+            };
           }
           return null;
         })
       );
 
-      // Filtrar personas con celular
-      const personasConCelular = personasCompletas.filter((persona) => {
-        return persona && persona.celular && persona.celular.trim() !== "";
-      });
+      // Filtrar personas válidas
+      const personasValidas = personasCompletas.filter((p) => p !== null);
 
-      if (personasConCelular.length === 0) {
-        toast.error("No se encontraron asistentes con números de celular");
-        return;
-      }
-
-      console.log(
-        `Enviando WhatsApp masivo a ${personasConCelular.length} personas`
-      );
-      console.log("Template:", selectedTemplate);
-      console.log("Datos de personalización:", datosPersonalizacion);
-
-      // Enviar mensajes masivos usando la API de Twilio
-      const response = await fetch("/api/whatsapp/masivo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          personas: personasConCelular,
-          templateKey: selectedTemplate,
-          datosPersonalizacion,
-          filtrarSoloConCelular: true,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setResultadoEnvio(data);
-        setVistaResultados(true);
-        toast.success(
-          `Mensajes enviados exitosamente a ${data.resumen.exitosos} personas`
-        );
-      } else {
-        setResultadoEnvio({ success: false, error: data.error });
-        toast.error(`Error al enviar mensajes: ${data.error}`);
-      }
+      setPersonasParaMensajes(personasValidas);
+      setModalMensajesOpen(true);
     } catch (error) {
-      console.error("Error enviando mensajes:", error);
-      setResultadoEnvio({
-        success: false,
-        error: "Error de conexión al enviar mensajes",
-      });
-      toast.error("Error de conexión al enviar mensajes");
-    } finally {
-      setEnviandoWhatsApp(false);
+      console.error("Error preparando mensajes masivos:", error);
+      toast.error("Error al preparar el envío de mensajes");
     }
-  };
-
-  // Función de envío masivo SMS
-  const enviarMensajeMasivoSMS = async () => {
-    if (!actividad) return;
-
-    try {
-      setEnviandoSMS(true);
-      setResultadoEnvio(null);
-
-      // Obtener datos completos de las personas
-      const personasCompletas = await Promise.all(
-        asistentesSeleccionados.map(async (asistente) => {
-          const response = await fetch(`/api/personas/${asistente.persona.id}`);
-          if (response.ok) {
-            const data = await response.json();
-            return data.persona || data;
-          }
-          return null;
-        })
-      );
-
-      // Filtrar personas con celular
-      const personasConCelular = personasCompletas.filter((persona) => {
-        return persona && persona.celular && persona.celular.trim() !== "";
-      });
-
-      if (personasConCelular.length === 0) {
-        toast.error("No se encontraron asistentes con números de celular");
-        return;
-      }
-
-      console.log(
-        `Enviando SMS masivo a ${personasConCelular.length} personas`
-      );
-      console.log("Template:", selectedTemplate);
-      console.log("Datos de personalización:", datosPersonalizacion);
-
-      // Enviar mensajes masivos usando la API de SMS
-      const response = await fetch("/api/sms/masivo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          personas: personasConCelular,
-          templateKey: selectedTemplate,
-          datosPersonalizacion,
-          filtrarSoloConCelular: true,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setResultadoEnvio(data);
-        setVistaResultados(true);
-        toast.success(
-          `SMS enviados exitosamente a ${data.resumen.exitosos} personas`
-        );
-      } else {
-        setResultadoEnvio({ success: false, error: data.error });
-        toast.error(`Error al enviar SMS: ${data.error}`);
-      }
-    } catch (error) {
-      console.error("Error enviando SMS:", error);
-      setResultadoEnvio({
-        success: false,
-        error: "Error de conexión al enviar SMS",
-      });
-      toast.error("Error de conexión al enviar SMS");
-    } finally {
-      setEnviandoSMS(false);
-    }
-  };
-
-  // Función para cerrar el modal y resetear estados
-  const cerrarModalWhatsApp = () => {
-    setModalWhatsAppOpen(false);
-    setVistaResultados(false);
-    setResultadoEnvio(null);
-    setEnviandoWhatsApp(false);
-    setEnviandoSMS(false);
-    setAsistentesSeleccionados([]);
   };
 
   // Función para generar correos electrónicos
@@ -1352,7 +1161,7 @@ export default function DetalleActividadPage({
                         variant="outline"
                         className="w-full h-auto py-4 flex flex-col gap-2 bg-blue-50 border-blue-200 hover:bg-blue-100"
                         onClick={() => {
-                          abrirMensajesMasivos(horarioSeleccionado, "SMS");
+                          abrirMensajesMasivos(horarioSeleccionado);
                           setDialogMensajeOpen(false);
                         }}
                       >
@@ -1399,229 +1208,14 @@ export default function DetalleActividadPage({
           </DialogContent>
         </Dialog>
 
-        {/* Modal de Mensaje Masivo WhatsApp */}
-        <Dialog open={modalWhatsAppOpen} onOpenChange={cerrarModalWhatsApp}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                {tipoMensaje === "WhatsApp" ? (
-                  <MessageCircle className="h-5 w-5 text-green-600" />
-                ) : (
-                  <div className="h-5 w-5 flex items-center justify-center text-blue-600">
-                    💬
-                  </div>
-                )}
-                Mensaje Masivo por {tipoMensaje}
-              </DialogTitle>
-              <DialogDescription>
-                Envío masivo usando Twilio a {asistentesSeleccionados.length}{" "}
-                asistentes
-              </DialogDescription>
-            </DialogHeader>
-
-            {!vistaResultados ? (
-              <div className="space-y-6">
-                {/* Selección de Template */}
-                <div>
-                  <Label className="text-base font-medium">
-                    Template de Mensaje
-                  </Label>
-                  <div className="grid gap-3 mt-2">
-                    {Object.entries(templates).map(([key, template]) => (
-                      <div
-                        key={key}
-                        className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                          selectedTemplate === key
-                            ? "border-green-500 bg-green-50"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                        onClick={() => setSelectedTemplate(key)}
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          {template.icono}
-                          <span className="font-medium">{template.nombre}</span>
-                        </div>
-                        <p className="text-sm text-gray-600">
-                          {template.descripcion}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Variables: {template.variables.join(", ")}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Personalización */}
-                <div>
-                  <Label className="text-base font-medium">
-                    Personalización
-                  </Label>
-                  <div className="grid gap-4 mt-2">
-                    <div>
-                      <Label htmlFor="nombreIglesia">
-                        Nombre de la Iglesia
-                      </Label>
-                      <Input
-                        id="nombreIglesia"
-                        value={datosPersonalizacion.nombreIglesia}
-                        onChange={(e) =>
-                          setDatosPersonalizacion({
-                            ...datosPersonalizacion,
-                            nombreIglesia: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="evento">Evento/Actividad</Label>
-                      <Input
-                        id="evento"
-                        value={datosPersonalizacion.evento}
-                        onChange={(e) =>
-                          setDatosPersonalizacion({
-                            ...datosPersonalizacion,
-                            evento: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-
-                    {selectedTemplate === "invitacionRetorno" && (
-                      <>
-                        <div>
-                          <Label htmlFor="proximoEvento">Próximo Evento</Label>
-                          <Input
-                            id="proximoEvento"
-                            value={datosPersonalizacion.proximoEvento}
-                            onChange={(e) =>
-                              setDatosPersonalizacion({
-                                ...datosPersonalizacion,
-                                proximoEvento: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="hora">Hora</Label>
-                          <Input
-                            id="hora"
-                            value={datosPersonalizacion.hora}
-                            onChange={(e) =>
-                              setDatosPersonalizacion({
-                                ...datosPersonalizacion,
-                                hora: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Preview de destinatarios */}
-                <div>
-                  <Label className="text-base font-medium">
-                    Destinatarios ({asistentesSeleccionados.length})
-                  </Label>
-                  <div className="mt-2 max-h-32 overflow-y-auto border rounded-md p-2">
-                    {asistentesSeleccionados.map((asistente) => (
-                      <div key={asistente.id} className="text-sm py-1">
-                        {asistente.persona.nombres}{" "}
-                        {asistente.persona.apellidos}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              /* Vista de Resultados */
-              <div className="space-y-6">
-                {resultadoEnvio?.success ? (
-                  <div className="text-center">
-                    <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-green-700">
-                      ¡Mensajes enviados exitosamente!
-                    </h3>
-                    <div className="grid grid-cols-3 gap-4 mt-6">
-                      <div className="text-center p-4 bg-green-50 rounded-lg">
-                        <div className="text-2xl font-bold text-green-600">
-                          {resultadoEnvio.resumen?.exitosos || 0}
-                        </div>
-                        <div className="text-sm text-green-700">Exitosos</div>
-                      </div>
-                      <div className="text-center p-4 bg-red-50 rounded-lg">
-                        <div className="text-2xl font-bold text-red-600">
-                          {resultadoEnvio.resumen?.fallidos || 0}
-                        </div>
-                        <div className="text-sm text-red-700">Fallidos</div>
-                      </div>
-                      <div className="text-center p-4 bg-blue-50 rounded-lg">
-                        <div className="text-2xl font-bold text-blue-600">
-                          {resultadoEnvio.resumen?.total || 0}
-                        </div>
-                        <div className="text-sm text-blue-700">Total</div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-red-700">
-                      Error al enviar mensajes
-                    </h3>
-                    <p className="text-red-600 mt-2">
-                      {resultadoEnvio?.error || "Error desconocido"}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <DialogFooter>
-              {!vistaResultados ? (
-                <div className="flex gap-2 w-full">
-                  <Button variant="outline" onClick={cerrarModalWhatsApp}>
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={
-                      tipoMensaje === "WhatsApp"
-                        ? enviarMensajeMasivoWhatsApp
-                        : enviarMensajeMasivoSMS
-                    }
-                    disabled={
-                      tipoMensaje === "WhatsApp"
-                        ? enviandoWhatsApp
-                        : enviandoSMS
-                    }
-                    className="flex-1"
-                  >
-                    {(
-                      tipoMensaje === "WhatsApp"
-                        ? enviandoWhatsApp
-                        : enviandoSMS
-                    ) ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Enviando...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="mr-2 h-4 w-4" />
-                        Enviar {tipoMensaje}
-                      </>
-                    )}
-                  </Button>
-                </div>
-              ) : (
-                <Button onClick={cerrarModalWhatsApp}>Cerrar</Button>
-              )}
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Nuevo Modal de Mensajes Masivos Mejorado */}
+        <MensajeMasivoModal
+          open={modalMensajesOpen}
+          onOpenChange={setModalMensajesOpen}
+          personas={personasParaMensajes}
+          seccionActual="visitas"
+          eventoNombre={actividad?.nombre}
+        />
       </SidebarInset>
     </SidebarProvider>
   );

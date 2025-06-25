@@ -33,6 +33,9 @@ export async function POST(request) {
       );
     }
 
+    console.log(`📊 Personas totales: ${personas.length}`);
+    console.log(`📱 Personas con celular: ${personasAEnviar.length}`);
+
     console.log(
       `Iniciando envío masivo SMS a ${personasAEnviar.length} personas`
     );
@@ -66,9 +69,12 @@ export async function POST(request) {
       },
     });
   } catch (error) {
-    console.error("Error en envío masivo SMS:", error);
+    console.error("❌ Error en envío masivo SMS:", error);
     return NextResponse.json(
-      { error: "Error interno del servidor", details: error.message },
+      {
+        error: "Error al enviar mensajes masivos",
+        details: error.message,
+      },
       { status: 500 }
     );
   }

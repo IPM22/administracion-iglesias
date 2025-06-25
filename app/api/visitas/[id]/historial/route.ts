@@ -14,7 +14,8 @@ function parseString(value: unknown): string | undefined {
 
 // Helper function para manejar números
 function parseNumber(value: unknown): number | undefined {
-  if (!value || value === "") return undefined;
+  if (!value || value === "" || value === null) return undefined;
+  if (typeof value === "number") return value;
   const num = parseInt(value as string);
   return isNaN(num) ? undefined : num;
 }
@@ -173,11 +174,23 @@ export async function POST(
       fechaEspecifica,
       tipoActividadId,
       actividadId,
+      horarioId,
       observaciones,
     } = body;
 
+    console.log("📝 Datos recibidos para historial de visita:", {
+      visitaId,
+      fecha,
+      fechaEspecifica,
+      tipoActividadId,
+      actividadId,
+      horarioId,
+      observaciones,
+    });
+
     // Validaciones básicas
     if (!fecha) {
+      console.error("❌ Error: fecha es requerida");
       return NextResponse.json(
         { error: "La fecha es requerida" },
         { status: 400 }
@@ -185,6 +198,7 @@ export async function POST(
     }
 
     if (!tipoActividadId && !actividadId) {
+      console.error("❌ Error: debe especificar tipoActividadId o actividadId");
       return NextResponse.json(
         {
           error:
@@ -203,21 +217,36 @@ export async function POST(
     });
 
     if (!personaExiste) {
+      console.error("❌ Error: Persona no encontrada", {
+        visitaId,
+        iglesiaId: usuarioIglesia.iglesiaId,
+      });
       return NextResponse.json(
         { error: "Persona no encontrada" },
         { status: 404 }
       );
     }
 
+    console.log("✅ Persona encontrada:", {
+      id: personaExiste.id,
+      nombres: personaExiste.nombres,
+      apellidos: personaExiste.apellidos,
+    });
+
+    const datosParaCrear = {
+      personaId: visitaId,
+      fecha: new Date(fecha),
+      fechaEspecifica: fechaEspecifica ? new Date(fechaEspecifica) : null,
+      tipoActividadId: parseNumber(tipoActividadId),
+      actividadId: parseNumber(actividadId),
+      horarioId: parseNumber(horarioId),
+      notas: parseString(observaciones),
+    };
+
+    console.log("📝 Datos procesados para crear historial:", datosParaCrear);
+
     const nuevoHistorial = await prisma.historialVisita.create({
-      data: {
-        personaId: visitaId,
-        fecha: new Date(fecha),
-        fechaEspecifica: fechaEspecifica ? new Date(fechaEspecifica) : null,
-        tipoActividadId: parseNumber(tipoActividadId),
-        actividadId: parseNumber(actividadId),
-        notas: parseString(observaciones),
-      },
+      data: datosParaCrear,
       include: {
         tipoActividad: true,
         actividad: {
@@ -241,6 +270,11 @@ export async function POST(
       },
     });
 
+    console.log("✅ Historial creado exitosamente:", {
+      id: nuevoHistorial.id,
+      personaId: nuevoHistorial.personaId,
+    });
+
     // Verificar si la visita debe cambiar de estado a RECURRENTE
     // Contar el total de visitas (incluyendo la que acabamos de crear)
     const totalVisitas = await prisma.historialVisita.count({
@@ -248,6 +282,8 @@ export async function POST(
         personaId: visitaId,
       },
     });
+
+    console.log("📊 Total de visitas para esta persona:", totalVisitas);
 
     // Si tiene más de 2 visitas y su estado actual es NUEVA, cambiar a RECURRENTE
     if (totalVisitas > 2 && personaExiste.estado === "NUEVA") {

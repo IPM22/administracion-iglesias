@@ -744,8 +744,13 @@ function ComunidadNuevaContent() {
             },
             body: JSON.stringify({
               fecha: fechaParaRegistro,
-              tipoActividadId: values.tipoActividadId || null,
-              actividadId: values.actividadId || null,
+              tipoActividadId: values.tipoActividadId
+                ? parseInt(values.tipoActividadId)
+                : null,
+              actividadId: values.actividadId
+                ? parseInt(values.actividadId)
+                : null,
+              horarioId: values.horarioId ? parseInt(values.horarioId) : null,
               invitadoPorId: values.invitadoPorAsistenciaId
                 ? parseInt(values.invitadoPorAsistenciaId)
                 : null,
@@ -755,13 +760,30 @@ function ComunidadNuevaContent() {
         );
 
         if (!historialResponse.ok) {
-          console.warn(
-            "La visita se creó pero hubo un error al registrar la primera asistencia"
+          const errorData = await historialResponse.json();
+          console.error(
+            "Error al registrar primera asistencia:",
+            historialResponse.status,
+            errorData
           );
+          // Mostrar el error específico al usuario
+          setError(
+            `La visita se creó correctamente, pero hubo un error al registrar la primera asistencia: ${
+              errorData.error || "Error desconocido"
+            }`
+          );
+          return; // No redirigir si hay error
+        } else {
+          console.log("✅ Primera asistencia registrada exitosamente");
         }
       }
 
-      router.push("/comunidad");
+      // Redirigir según el tipo con el parámetro correcto
+      if (tipo === "visita") {
+        router.push("/comunidad?tipo=visita");
+      } else {
+        router.push("/comunidad");
+      }
     } catch (error) {
       console.error("Error:", error);
       setError(
