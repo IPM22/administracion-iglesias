@@ -16,6 +16,7 @@ import {
   Mail,
   Heart,
   Star,
+  CalendarPlus,
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
@@ -81,11 +82,11 @@ export default function PromocionActividadClient() {
         const data = await response.json();
         console.log("✅ DEBUG: Datos recibidos:", data);
         setActividad(data);
-      } catch (error) {
-        console.error("💥 DEBUG: Error completo:", error);
+      } catch (_error) {
+        console.error("💥 DEBUG: Error completo:", _error);
         setError(
           `Error al cargar la actividad: ${
-            error instanceof Error ? error.message : "Error desconocido"
+            _error instanceof Error ? _error.message : "Error desconocido"
           }`
         );
       } finally {
@@ -159,6 +160,91 @@ export default function PromocionActividadClient() {
         actividad.ubicacion
       )}`;
       window.open(wazeUrl, "_blank");
+    }
+  };
+
+  // Función para agregar al calendario
+  const agregarAlCalendario = () => {
+    if (!actividad) return;
+
+    const formatearFechaCalendario = (fecha: string, hora?: string) => {
+      const fechaObj = new Date(fecha);
+      if (hora) {
+        const [hours, minutes] = hora.split(":");
+        fechaObj.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      }
+      return fechaObj.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+    };
+
+    const fechaInicio = formatearFechaCalendario(
+      actividad.fecha,
+      actividad.horaInicio
+    );
+    const fechaFin = formatearFechaCalendario(
+      actividad.fecha,
+      actividad.horaFin || actividad.horaInicio
+    );
+
+    const detalles = [
+      actividad.descripcion || "",
+      actividad.ubicacion ? `Ubicación: ${actividad.ubicacion}` : "",
+      `Organizado por: ${actividad.ministerio?.nombre || "Iglesia Central"}`,
+      `Más información: ${window.location.href}`,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
+      actividad.nombre
+    )}&dates=${fechaInicio}/${fechaFin}&details=${encodeURIComponent(
+      detalles
+    )}&location=${encodeURIComponent(
+      actividad.ubicacion || ""
+    )}&sf=true&output=xml`;
+
+    // Para dispositivos móviles, intentar abrir la app de calendario nativa
+    if (
+      /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      )
+    ) {
+      try {
+        // Crear evento ICS para descargar
+        const icsContent = [
+          "BEGIN:VCALENDAR",
+          "VERSION:2.0",
+          "PRODID:-//Sistema Iglesia//ES",
+          "BEGIN:VEVENT",
+          `UID:actividad-${actividad.id}@iglesia.com`,
+          `DTSTART:${fechaInicio}`,
+          `DTEND:${fechaFin}`,
+          `SUMMARY:${actividad.nombre}`,
+          `DESCRIPTION:${detalles.replace(/\n/g, "\\n")}`,
+          actividad.ubicacion ? `LOCATION:${actividad.ubicacion}` : "",
+          "END:VEVENT",
+          "END:VCALENDAR",
+        ]
+          .filter(Boolean)
+          .join("\r\n");
+
+        const blob = new Blob([icsContent], {
+          type: "text/calendar;charset=utf-8",
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${actividad.nombre.replace(/[^a-z0-9]/gi, "-")}.ics`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } catch {
+        // Si falla, usar Google Calendar como fallback
+        window.open(googleCalendarUrl, "_blank");
+      }
+    } else {
+      // En escritorio, abrir Google Calendar
+      window.open(googleCalendarUrl, "_blank");
     }
   };
 
@@ -283,6 +369,10 @@ export default function PromocionActividadClient() {
                 fill
                 className="object-cover"
                 priority
+                onError={(e) => {
+                  console.error("Error cargando banner:", actividad.banner);
+                  e.currentTarget.style.display = "none";
+                }}
               />
               {/* Overlay mejorado - Menos opaco para ver mejor la imagen */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
@@ -684,10 +774,18 @@ export default function PromocionActividadClient() {
                   <div className="pt-2">
                     <Button
                       onClick={shareActivity}
-                      className="w-full bg-white text-blue-600 hover:bg-gray-100 hover:text-blue-700 font-semibold py-2 sm:py-3 text-sm sm:text-base shadow-lg border border-white"
+                      className="w-full bg-white text-blue-600 hover:bg-gray-100 hover:text-blue-700 font-semibold py-2 sm:py-3 text-sm sm:text-base shadow-lg border border-white mb-3"
                     >
                       <Share2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                       Compartir Evento
+                    </Button>
+
+                    <Button
+                      onClick={agregarAlCalendario}
+                      className="w-full bg-green-600 text-white hover:bg-green-700 font-semibold py-2 sm:py-3 text-sm sm:text-base shadow-lg"
+                    >
+                      <CalendarPlus className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                      Agregar al Calendario
                     </Button>
                   </div>
                 </CardContent>

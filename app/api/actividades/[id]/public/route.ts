@@ -10,6 +10,7 @@ export async function GET(
     const actividadId = parseInt(id);
 
     console.log("🔍 DEBUG API PUBLIC: Buscando actividad ID:", actividadId);
+    console.log("🌐 DEBUG API PUBLIC: URL de request:", request.url);
 
     if (isNaN(actividadId)) {
       console.log("❌ DEBUG API PUBLIC: ID inválido:", id);
@@ -79,7 +80,10 @@ export async function GET(
     );
 
     if (!actividad) {
-      console.log("❌ DEBUG API PUBLIC: Actividad no encontrada");
+      console.log(
+        "❌ DEBUG API PUBLIC: Actividad no encontrada para ID:",
+        actividadId
+      );
       return NextResponse.json(
         { error: "Actividad no encontrada" },
         { status: 404 }
@@ -87,11 +91,36 @@ export async function GET(
     }
 
     console.log("✅ DEBUG API PUBLIC: Actividad encontrada:", actividad.nombre);
-    return NextResponse.json(actividad);
+    console.log(
+      "🖼️ DEBUG API PUBLIC: Banner URL:",
+      actividad.banner || "Sin banner"
+    );
+    console.log("📅 DEBUG API PUBLIC: Fecha:", actividad.fecha);
+    console.log(
+      "🏢 DEBUG API PUBLIC: Ministerio:",
+      actividad.ministerio?.nombre || "Sin ministerio"
+    );
+
+    // Asegurar que devolvemos datos consistentes
+    const response = {
+      ...actividad,
+      // Asegurar que el banner sea una string válida o null
+      banner:
+        actividad.banner && actividad.banner.trim() !== ""
+          ? actividad.banner
+          : null,
+    };
+
+    console.log("📤 DEBUG API PUBLIC: Respuesta final preparada");
+    return NextResponse.json(response);
   } catch (error) {
     console.error("💥 DEBUG API PUBLIC: Error al obtener actividad:", error);
+    console.error(
+      "💥 DEBUG API PUBLIC: Stack trace:",
+      error instanceof Error ? error.stack : "No stack trace"
+    );
     return NextResponse.json(
-      { error: "Error al obtener la actividad" },
+      { error: "Error interno del servidor al obtener la actividad" },
       { status: 500 }
     );
   }

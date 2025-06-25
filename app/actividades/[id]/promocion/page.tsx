@@ -33,17 +33,31 @@ interface ActividadData {
 async function getActividadData(id: string): Promise<ActividadData | null> {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    console.log("🔍 METADATA: Intentando obtener datos para actividad ID:", id);
+    console.log("🌐 METADATA: URL base:", baseUrl);
+
     const response = await fetch(`${baseUrl}/api/actividades/${id}/public`, {
       cache: "no-store", // Siempre obtener datos frescos para metadata
     });
 
+    console.log("📡 METADATA: Status de respuesta:", response.status);
+
     if (!response.ok) {
+      console.error(
+        "❌ METADATA: Error en respuesta:",
+        response.status,
+        response.statusText
+      );
       return null;
     }
 
-    return await response.json();
+    const data = await response.json();
+    console.log("✅ METADATA: Datos obtenidos:", data?.nombre || "Sin nombre");
+    console.log("🖼️ METADATA: Banner URL:", data?.banner || "Sin banner");
+
+    return data;
   } catch (error) {
-    console.error("Error fetching activity data for metadata:", error);
+    console.error("💥 METADATA: Error fetching activity data:", error);
     return null;
   }
 }
@@ -54,14 +68,34 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
+  console.log("🚀 METADATA: Generando metadata para actividad ID:", id);
+
   const actividad = await getActividadData(id);
 
   if (!actividad) {
+    console.warn(
+      "⚠️ METADATA: No se encontró la actividad, usando metadata de fallback"
+    );
     return {
-      title: "Evento no encontrado",
-      description: "El evento que buscas no está disponible.",
+      title: "Evento no encontrado | Iglesia Central",
+      description:
+        "El evento que buscas no está disponible actualmente. Verifica el enlace o contacta con la iglesia para más información.",
+      openGraph: {
+        title: "Evento no encontrado",
+        description: "El evento que buscas no está disponible actualmente.",
+        type: "website",
+        locale: "es_ES",
+        siteName: "Sistema de Administración de Iglesias",
+      },
+      twitter: {
+        card: "summary",
+        title: "Evento no encontrado",
+        description: "El evento que buscas no está disponible actualmente.",
+      },
     };
   }
+
+  console.log("📝 METADATA: Generando metadata para:", actividad.nombre);
 
   const formatearFecha = (fecha: string) => {
     return new Date(fecha).toLocaleDateString("es-ES", {
@@ -121,8 +155,15 @@ export async function generateMetadata({
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
   const pageUrl = `${baseUrl}/actividades/${id}/promocion`;
 
-  return {
-    title: `${actividad.nombre} | Evento Iglesia`,
+  // Validar URL del banner
+  const bannerUrl =
+    actividad.banner && actividad.banner.trim() !== ""
+      ? actividad.banner
+      : null;
+  console.log("🖼️ METADATA: Banner URL final:", bannerUrl || "No hay banner");
+
+  const metadata: Metadata = {
+    title: `${actividad.nombre} | Evento Iglesia Central`,
     description: descripcionCompleta,
     keywords: [
       actividad.nombre,
@@ -143,10 +184,10 @@ export async function generateMetadata({
       siteName: "Sistema de Administración de Iglesias",
       type: "website",
       locale: "es_ES",
-      ...(actividad.banner && {
+      ...(bannerUrl && {
         images: [
           {
-            url: actividad.banner,
+            url: bannerUrl,
             width: 1200,
             height: 630,
             alt: `Banner del evento: ${actividad.nombre}`,
@@ -157,11 +198,11 @@ export async function generateMetadata({
 
     // Twitter Card metadata
     twitter: {
-      card: actividad.banner ? "summary_large_image" : "summary",
+      card: bannerUrl ? "summary_large_image" : "summary",
       title: actividad.nombre,
       description: descripcionCompleta,
-      ...(actividad.banner && {
-        images: [actividad.banner],
+      ...(bannerUrl && {
+        images: [bannerUrl],
       }),
     },
 
@@ -176,8 +217,8 @@ export async function generateMetadata({
       // Para WhatsApp específicamente
       "whatsapp:title": actividad.nombre,
       "whatsapp:description": descripcionCompleta,
-      ...(actividad.banner && {
-        "whatsapp:image": actividad.banner,
+      ...(bannerUrl && {
+        "whatsapp:image": bannerUrl,
       }),
 
       // Schema.org structured data como JSON-LD
@@ -204,12 +245,15 @@ export async function generateMetadata({
         },
         eventStatus: "https://schema.org/EventScheduled",
         eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-        ...(actividad.banner && {
-          image: actividad.banner,
+        ...(bannerUrl && {
+          image: bannerUrl,
         }),
       }),
     },
   };
+
+  console.log("✅ METADATA: Metadata generada exitosamente");
+  return metadata;
 }
 
 export default function PromocionActividadPage() {
