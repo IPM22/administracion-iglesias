@@ -52,6 +52,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
 import { MensajeMasivoModal } from "@/components/MensajeMasivoModal";
+import { formatDate } from "@/lib/date-utils";
 
 // Interfaces para tipado
 interface TipoActividad {
@@ -163,12 +164,14 @@ export default function DetalleActividadPage({
   }, [id]);
 
   const formatearFecha = (fecha: string) => {
-    return new Date(fecha).toLocaleDateString("es-ES", {
+    const resultado = formatDate(fecha, {
       weekday: "long",
       day: "numeric",
       month: "long",
       year: "numeric",
     });
+
+    return resultado;
   };
 
   const formatearHora = (hora?: string) => {
@@ -352,7 +355,7 @@ export default function DetalleActividadPage({
     const datos = asistentes.map((asistente, index) => ({
       "#": index + 1,
       Nombre: `${asistente.persona.nombres} ${asistente.persona.apellidos}`,
-      "Fecha de Visita": new Date(asistente.fecha).toLocaleDateString("es-ES"),
+      "Fecha de Visita": formatearFecha(asistente.fecha),
       "Invitado por": asistente.invitadoPor
         ? `${asistente.invitadoPor.nombres} ${asistente.invitadoPor.apellidos}`
         : "No especificado",

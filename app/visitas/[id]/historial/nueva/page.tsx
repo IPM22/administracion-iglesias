@@ -49,6 +49,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { ModeToggle } from "../../../../../components/mode-toggle";
 import PersonaSelector from "../../../../../components/PersonaSelector";
+import { formatDateForInput } from "@/lib/date-utils";
 
 interface TipoActividad {
   id: number;
@@ -258,7 +259,7 @@ export default function NuevaEntradaHistorialPage({
         setActividades([]);
         // Si cambia a tipo regular, restaurar la fecha actual
         if (tipoActividad?.tipo === "Regular") {
-          form.setValue("fecha", new Date().toISOString().split("T")[0]);
+          form.setValue("fecha", formatDateForInput(new Date().toISOString()));
         }
       }
     };
@@ -278,9 +279,7 @@ export default function NuevaEntradaHistorialPage({
       if (actividadSeleccionada) {
         setActividadSeleccionada(actividadSeleccionada);
         // Usar la fecha de la actividad específica
-        const fechaActividad = new Date(actividadSeleccionada.fecha)
-          .toISOString()
-          .split("T")[0];
+        const fechaActividad = formatDateForInput(actividadSeleccionada.fecha);
         form.setValue("fecha", fechaActividad);
       }
     } else {
@@ -458,7 +457,7 @@ export default function NuevaEntradaHistorialPage({
                               if (tipoActividad?.tipo === "Regular") {
                                 form.setValue(
                                   "fecha",
-                                  new Date().toISOString().split("T")[0]
+                                  formatDateForInput(new Date().toISOString())
                                 );
                               } else {
                                 form.setValue("fecha", undefined);
@@ -535,11 +534,9 @@ export default function NuevaEntradaHistorialPage({
                                 );
                                 if (actividad) {
                                   setActividadSeleccionada(actividad);
-                                  const fechaActividad = new Date(
+                                  const fechaActividad = formatDateForInput(
                                     actividad.fecha
-                                  )
-                                    .toISOString()
-                                    .split("T")[0];
+                                  );
                                   form.setValue("fecha", fechaActividad);
                                 }
                               } else {

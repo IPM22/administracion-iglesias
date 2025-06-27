@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { FormDescription, FormItem, FormLabel } from "@/components/ui/form";
+import { formatDate } from "@/lib/date-utils";
+import dayjs from "dayjs";
 
 interface DiasActividadSelectorProps {
   fechaInicio: string;
@@ -24,15 +26,15 @@ export function DiasActividadSelector({
   // Generar array de fechas entre inicio y fin
   const generarFechas = () => {
     const fechas: Date[] = [];
-    const inicio = new Date(fechaInicio);
-    const fin = new Date(fechaFin);
+    const inicio = dayjs(fechaInicio);
+    const fin = dayjs(fechaFin);
 
     for (
-      let fecha = new Date(inicio);
-      fecha <= fin;
-      fecha.setDate(fecha.getDate() + 1)
+      let fecha = inicio;
+      fecha.diff(fin, "day") <= 0;
+      fecha = fecha.add(1, "day")
     ) {
-      fechas.push(new Date(fecha));
+      fechas.push(fecha.toDate());
     }
 
     return fechas;
@@ -41,7 +43,7 @@ export function DiasActividadSelector({
   const fechasDisponibles = generarFechas();
 
   const formatearFecha = (fecha: Date) => {
-    return fecha.toLocaleDateString("es-ES", {
+    return formatDate(fecha, {
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -49,7 +51,7 @@ export function DiasActividadSelector({
   };
 
   const formatearFechaISO = (fecha: Date) => {
-    return fecha.toISOString().split("T")[0];
+    return dayjs(fecha).format("YYYY-MM-DD");
   };
 
   const manejarCambioFecha = (fechaISO: string, checked: boolean) => {

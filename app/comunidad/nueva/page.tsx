@@ -59,6 +59,8 @@ import { CloudinaryUploader } from "../../../components/CloudinaryUploader";
 import { PhoneInput } from "../../../components/PhoneInput";
 import { ModeToggle } from "../../../components/mode-toggle";
 import PersonaSelector from "../../../components/PersonaSelector";
+import { formatDate } from "@/lib/date-utils";
+import dayjs from "dayjs";
 
 // Interfaces para primera asistencia
 interface TipoActividad {
@@ -1695,9 +1697,7 @@ function ComunidadNuevaContent() {
                               específica:
                             </p>
                             <p className="font-medium mt-1">
-                              {new Date(
-                                actividadSeleccionada.fecha
-                              ).toLocaleDateString("es-ES", {
+                              {formatDate(actividadSeleccionada.fecha, {
                                 year: "numeric",
                                 month: "long",
                                 day: "numeric",
@@ -1737,16 +1737,13 @@ function ComunidadNuevaContent() {
                                     <SelectContent>
                                       {actividadSeleccionada.horarios
                                         ?.sort((a, b) => {
-                                          // Ordenar por fecha y luego por hora
-                                          const fechaA = new Date(a.fecha);
-                                          const fechaB = new Date(b.fecha);
-                                          if (
-                                            fechaA.getTime() !==
-                                            fechaB.getTime()
-                                          ) {
+                                          // Ordenar por fecha y luego por hora usando dayjs
+                                          const fechaA = dayjs(a.fecha);
+                                          const fechaB = dayjs(b.fecha);
+                                          if (!fechaA.isSame(fechaB, "day")) {
                                             return (
-                                              fechaA.getTime() -
-                                              fechaB.getTime()
+                                              fechaA.valueOf() -
+                                              fechaB.valueOf()
                                             );
                                           }
                                           // Si es la misma fecha, ordenar por hora

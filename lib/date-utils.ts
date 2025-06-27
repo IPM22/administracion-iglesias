@@ -1,10 +1,14 @@
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import localizedFormat from "dayjs/plugin/localizedFormat";
+import "dayjs/locale/es";
 
 // Configurar plugins de dayjs
 dayjs.extend(utc);
 dayjs.extend(timezone);
+dayjs.extend(localizedFormat);
+dayjs.locale("es");
 
 /**
  * Utilidades para manejo correcto de fechas usando Day.js
@@ -24,8 +28,8 @@ export function formatDateForInput(dateString?: string | null): string {
       return "";
     }
 
-    // Usar dayjs para parsear la fecha
-    const date = dayjs(dateString);
+    // Usar dayjs para parsear la fecha como local (sin zona horaria)
+    const date = dayjs(dateString).startOf("day");
 
     // Verificar que la fecha es válida
     if (!date.isValid()) {
@@ -74,12 +78,45 @@ export function formatDate(
   if (!dateString) return "—";
 
   try {
-    const date = dayjs(dateString);
+    // LOG TEMPORAL: Verificar que se esté usando la función corregida
+    console.log("🔧 FUNCIÓN CORREGIDA formatDate - Input:", dateString);
+
+    // Usar dayjs para parsear la fecha como local (sin zona horaria)
+    const date = dayjs(dateString).startOf("day");
 
     if (!date.isValid()) return "—";
 
-    // Usar toDate() para convertir a Date nativo y usar toLocaleDateString
-    return date.toDate().toLocaleDateString("es-ES", options);
+    // Construir el formato según las opciones usando dayjs directamente
+    // Esto evita los problemas de zona horaria de toLocaleDateString
+    let formatStr = "";
+
+    if (options.weekday) {
+      if (options.weekday === "long") formatStr += "dddd, ";
+      else if (options.weekday === "short") formatStr += "ddd, ";
+    }
+
+    if (options.day) {
+      formatStr += "D";
+    }
+
+    if (options.month) {
+      if (options.month === "long") formatStr += " [de] MMMM";
+      else if (options.month === "short") formatStr += " MMM";
+      else if (options.month === "numeric") formatStr += "/M";
+    }
+
+    if (options.year) {
+      if (options.month === "numeric") formatStr += "/YYYY";
+      else formatStr += " [de] YYYY";
+    }
+
+    // Formatear usando dayjs directamente
+    const result = date.format(formatStr);
+
+    // LOG TEMPORAL: Verificar el resultado
+    console.log("🔧 FUNCIÓN CORREGIDA formatDate - Output:", result);
+
+    return result;
   } catch {
     return "—";
   }
@@ -146,8 +183,8 @@ export function parseDateForAPI(dateString?: string): Date | undefined {
     // Limpiar la fecha de cualquier espacio extra
     const cleanDate = dateString.trim();
 
-    // Usar dayjs para parsear la fecha
-    const date = dayjs(cleanDate);
+    // Usar dayjs para parsear la fecha como local (sin zona horaria)
+    const date = dayjs(cleanDate).startOf("day");
 
     if (!date.isValid()) {
       console.warn("📅 parseDateForAPI: Fecha inválida:", cleanDate);
@@ -184,7 +221,7 @@ export function formatDateShort(dateString?: string | Date | null): string {
   if (!dateString) return "—";
 
   try {
-    const date = dayjs(dateString);
+    const date = dayjs(dateString).startOf("day");
 
     if (!date.isValid()) return "—";
 
@@ -219,30 +256,26 @@ export function formatTime12Hour(timeString?: string): string {
 }
 
 /**
- * Formatea una fecha completa en español con formato dd-mm-yyyy
+ * Formatea una fecha completa con día de la semana
  * @param dateString Fecha en formato string o Date
- * @returns Fecha formateada en español
+ * @returns Fecha formateada completa
  */
 export function formatDateComplete(dateString?: string | Date | null): string {
   if (!dateString) return "—";
 
   try {
-    const date = dayjs(dateString);
+    const date = dayjs(dateString).startOf("day");
 
     if (!date.isValid()) return "—";
 
-    return date.toDate().toLocaleDateString("es-ES", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
+    return date.format("dddd, D [de] MMMM [de] YYYY");
   } catch {
     return "—";
   }
 }
 
 /**
- * Formatea fecha y hora juntas
+ * Formatea una fecha y hora en formato corto
  * @param dateString Fecha en formato string o Date
  * @param timeString Hora en formato HH:mm (opcional)
  * @returns Fecha y hora formateadas
@@ -251,12 +284,29 @@ export function formatDateTimeShort(
   dateString?: string | Date | null,
   timeString?: string
 ): string {
-  const formattedDate = formatDateShort(dateString);
+  if (!dateString) return "—";
 
-  if (timeString) {
-    const formattedTime = formatTime12Hour(timeString);
-    return `${formattedDate} • ${formattedTime}`;
+  try {
+    const date = dayjs(dateString).startOf("day");
+
+    if (!date.isValid()) return "—";
+
+    let result = date.format("DD/MM/YYYY");
+
+    if (timeString) {
+      try {
+        const [hours, minutes] = timeString.split(":");
+        const timeDate = dayjs()
+          .hour(parseInt(hours))
+          .minute(parseInt(minutes));
+        result += ` ${timeDate.format("HH:mm")}`;
+      } catch {
+        result += ` ${timeString}`;
+      }
+    }
+
+    return result;
+  } catch {
+    return "—";
   }
-
-  return formattedDate;
 }

@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
+import { formatDate } from "@/lib/date-utils";
+import dayjs from "dayjs";
 
 interface TipoActividad {
   id: number;
@@ -105,7 +107,7 @@ export default function PromocionActividadClient() {
   }, [actividadId]);
 
   const formatearFecha = (fecha: string) => {
-    return new Date(fecha).toLocaleDateString("es-ES", {
+    return formatDate(fecha, {
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -168,12 +170,16 @@ export default function PromocionActividadClient() {
     if (!actividad) return;
 
     const formatearFechaCalendario = (fecha: string, hora?: string) => {
-      const fechaObj = new Date(fecha);
+      let fechaDayjs = dayjs(fecha);
       if (hora) {
         const [hours, minutes] = hora.split(":");
-        fechaObj.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        fechaDayjs = fechaDayjs
+          .hour(parseInt(hours))
+          .minute(parseInt(minutes))
+          .second(0)
+          .millisecond(0);
       }
-      return fechaObj.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+      return fechaDayjs.format("YYYYMMDDTHHmmss") + "Z";
     };
 
     const fechaInicio = formatearFechaCalendario(

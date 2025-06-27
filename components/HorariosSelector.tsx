@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormDescription, FormItem, FormLabel } from "@/components/ui/form";
 import { Trash2, Plus, Clock } from "lucide-react";
+import { formatDate, formatDateForInput } from "@/lib/date-utils";
+import dayjs from "dayjs";
 
 interface Horario {
   id?: number;
@@ -31,7 +33,7 @@ export function HorariosSelector({
 }: HorariosSelectorProps) {
   const agregarHorario = () => {
     const nuevoHorario: Horario = {
-      fecha: fechaInicio || new Date().toISOString().split("T")[0],
+      fecha: fechaInicio || formatDateForInput(new Date().toISOString()),
       horaInicio: "",
       horaFin: "",
       notas: "",
@@ -58,7 +60,7 @@ export function HorariosSelector({
   };
 
   const formatearFecha = (fecha: string) => {
-    return new Date(fecha).toLocaleDateString("es-ES", {
+    return formatDate(fecha, {
       weekday: "long",
       year: "numeric",
       month: "long",
@@ -70,11 +72,15 @@ export function HorariosSelector({
     if (!esRangoFechas) return true;
     if (!fechaInicio || !fechaFin) return true;
 
-    const fechaSeleccionada = new Date(fecha);
-    const inicio = new Date(fechaInicio);
-    const fin = new Date(fechaFin);
+    const fechaSeleccionada = dayjs(fecha);
+    const inicio = dayjs(fechaInicio);
+    const fin = dayjs(fechaFin);
 
-    return fechaSeleccionada >= inicio && fechaSeleccionada <= fin;
+    return (
+      (fechaSeleccionada.isAfter(inicio) ||
+        fechaSeleccionada.isSame(inicio, "day")) &&
+      (fechaSeleccionada.isBefore(fin) || fechaSeleccionada.isSame(fin, "day"))
+    );
   };
 
   return (

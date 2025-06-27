@@ -63,6 +63,12 @@ import { useEffect, useState } from "react";
 import { ModeToggle } from "../../components/mode-toggle";
 import jsPDF from "jspdf";
 import { useAuth } from "@/hooks/useAuth";
+import { formatDate } from "@/lib/date-utils";
+import dayjs from "dayjs";
+import "dayjs/locale/es";
+
+// Configurar dayjs en español
+dayjs.locale("es");
 
 // Interfaces
 interface TipoActividad {
@@ -259,13 +265,14 @@ export default function ActividadesPage() {
     // SIMPLIFICADO: Solo filtrar por vista si NO es calendario
     if (vistaActual === "proximas") {
       console.log("🔍 Mostrando actividades próximas (fechas futuras)...");
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
+      const hoy = dayjs().startOf("day");
 
       resultado = resultado.filter((actividad) => {
         try {
-          const fechaActividad = new Date(actividad.fecha);
-          return fechaActividad >= hoy;
+          const fechaActividad = dayjs(actividad.fecha);
+          return (
+            fechaActividad.isAfter(hoy) || fechaActividad.isSame(hoy, "day")
+          );
         } catch {
           console.warn(
             `⚠️ Fecha inválida para "${actividad.nombre}": ${actividad.fecha}`
@@ -276,13 +283,12 @@ export default function ActividadesPage() {
       console.log(`📊 Actividades próximas: ${resultado.length}`);
     } else if (vistaActual === "historico") {
       console.log("🔍 Mostrando actividades históricas (fechas pasadas)...");
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
+      const hoy = dayjs().startOf("day");
 
       resultado = resultado.filter((actividad) => {
         try {
-          const fechaActividad = new Date(actividad.fecha);
-          return fechaActividad < hoy;
+          const fechaActividad = dayjs(actividad.fecha);
+          return fechaActividad.isBefore(hoy);
         } catch {
           console.warn(
             `⚠️ Fecha inválida para "${actividad.nombre}": ${actividad.fecha}`
@@ -359,13 +365,21 @@ export default function ActividadesPage() {
     try {
       resultado.sort((a, b) => {
         try {
-          const fechaA = new Date(a.fecha).getTime();
-          const fechaB = new Date(b.fecha).getTime();
+          const fechaA = dayjs(a.fecha);
+          const fechaB = dayjs(b.fecha);
 
           if (vistaActual === "proximas") {
-            return fechaA - fechaB; // Más próximas primero
+            return fechaA.isBefore(fechaB)
+              ? -1
+              : fechaA.isAfter(fechaB)
+              ? 1
+              : 0; // Más próximas primero
           } else {
-            return fechaB - fechaA; // Más recientes primero
+            return fechaB.isBefore(fechaA)
+              ? -1
+              : fechaB.isAfter(fechaA)
+              ? 1
+              : 0; // Más recientes primero
           }
         } catch (error) {
           console.warn("Error ordenando fechas:", error);
@@ -405,16 +419,17 @@ export default function ActividadesPage() {
           `📅 Procesando actividad: "${actividad.nombre}" - fecha: ${actividad.fecha}`
         );
 
-        const fecha = new Date(actividad.fecha);
+        // Usar dayjs para evitar problemas de zona horaria
+        const fecha = dayjs(actividad.fecha);
 
         // Verificar que la fecha es válida
-        if (isNaN(fecha.getTime())) {
+        if (!fecha.isValid()) {
           console.warn(
             `⚠️ Fecha inválida para "${actividad.nombre}": ${actividad.fecha}, usando año actual`
           );
           // Usar año actual como fallback
-          const añoActual = new Date().getFullYear();
-          const mesActual = new Date().getMonth();
+          const añoActual = dayjs().year();
+          const mesActual = dayjs().month();
 
           const claveAño = añoActual.toString();
           if (!grupos[claveAño]) {
@@ -425,20 +440,18 @@ export default function ActividadesPage() {
           if (!mesData) {
             mesData = {
               mes: mesActual,
-              nombreMes: new Date(añoActual, mesActual).toLocaleDateString(
-                "es-ES",
-                { month: "long" }
-              ),
+              nombreMes: dayjs().month(mesActual).format("MMMM"),
               actividades: [],
             };
             grupos[claveAño].meses.push(mesData);
           }
 
           mesData.actividades.push(actividad);
+          return;
         }
 
-        const año = fecha.getFullYear();
-        const mes = fecha.getMonth(); // 0-11
+        const año = fecha.year();
+        const mes = fecha.month(); // 0-11
 
         console.log(`📅 Fecha válida: año=${año}, mes=${mes}`);
 
@@ -452,7 +465,7 @@ export default function ActividadesPage() {
         if (!mesData) {
           mesData = {
             mes,
-            nombreMes: fecha.toLocaleDateString("es-ES", { month: "long" }),
+            nombreMes: fecha.format("MMMM"),
             actividades: [],
           };
           grupos[claveAño].meses.push(mesData);
@@ -503,15 +516,16 @@ export default function ActividadesPage() {
             ...mes,
             actividades: mes.actividades.sort((a, b) => {
               try {
-                const fechaA = new Date(a.fecha).getTime();
-                const fechaB = new Date(b.fecha).getTime();
+                // Usar dayjs para ordenamiento también
+                const fechaA = dayjs(a.fecha);
+                const fechaB = dayjs(b.fecha);
 
                 // Si alguna fecha es inválida, usar orden alfabético
-                if (isNaN(fechaA) || isNaN(fechaB)) {
+                if (!fechaA.isValid() || !fechaB.isValid()) {
                   return a.nombre.localeCompare(b.nombre);
                 }
 
-                return fechaB - fechaA; // Más recientes primero
+                return fechaB.valueOf() - fechaA.valueOf(); // Más recientes primero
               } catch (sortingError) {
                 console.warn("Error ordenando actividades:", sortingError);
                 return a.nombre.localeCompare(b.nombre);
@@ -598,13 +612,15 @@ export default function ActividadesPage() {
   // Funciones de utilidad para fechas corregidas
   const formatearFechaCompleta = (fecha: string) => {
     try {
-      const date = new Date(fecha + "T00:00:00");
-      return date.toLocaleDateString("es-ES", {
+      // Usar las utilidades de fecha existentes para evitar problemas de zona horaria
+      const resultado = formatDate(fecha, {
         weekday: "long",
         day: "numeric",
         month: "long",
         year: "numeric",
       });
+
+      return resultado;
     } catch (error) {
       console.error("Error formateando fecha completa:", error);
       return fecha; // Retornar fecha original si hay error
@@ -613,8 +629,8 @@ export default function ActividadesPage() {
 
   const formatearFechaCorta = (fecha: string) => {
     try {
-      const date = new Date(fecha + "T00:00:00");
-      return date.toLocaleDateString("es-ES", {
+      // Usar las utilidades de fecha existentes para evitar problemas de zona horaria
+      return formatDate(fecha, {
         day: "numeric",
         month: "short",
         year: "numeric",
@@ -652,25 +668,24 @@ export default function ActividadesPage() {
       console.log("📄 Iniciando exportación PDF mejorada...");
 
       // Filtrar actividades por rango de fechas - CORREGIDO
-      const fechaInicioDate = new Date(fechaInicio);
-      const fechaFinDate = new Date(fechaFin);
-      fechaFinDate.setHours(23, 59, 59, 999);
+      const fechaInicioDate = dayjs(fechaInicio).startOf("day");
+      const fechaFinDate = dayjs(fechaFin).endOf("day");
 
       const actividadesParaExportar = actividades
         .filter((actividad) => {
           try {
-            const fechaActividad = new Date(actividad.fecha);
+            const fechaActividad = dayjs(actividad.fecha);
             return (
-              fechaActividad >= fechaInicioDate &&
-              fechaActividad <= fechaFinDate
+              (fechaActividad.isAfter(fechaInicioDate) ||
+                fechaActividad.isSame(fechaInicioDate, "day")) &&
+              (fechaActividad.isBefore(fechaFinDate) ||
+                fechaActividad.isSame(fechaFinDate, "day"))
             );
           } catch {
             return false;
           }
         })
-        .sort(
-          (a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
-        );
+        .sort((a, b) => dayjs(a.fecha).valueOf() - dayjs(b.fecha).valueOf());
 
       if (actividadesParaExportar.length === 0) {
         alert(
@@ -846,14 +861,7 @@ export default function ActividadesPage() {
         // Fecha formateada correctamente (centrada verticalmente)
         const centroFilaY = yPosition + alturaFila / 2 + 2;
         try {
-          const fechaFormateada = new Date(actividad.fecha).toLocaleDateString(
-            "es-ES",
-            {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-            }
-          );
+          const fechaFormateada = dayjs(actividad.fecha).format("DD/MM/YYYY");
           pdf.text(fechaFormateada, 120, centroFilaY);
         } catch {
           pdf.text(actividad.fecha, 120, centroFilaY);

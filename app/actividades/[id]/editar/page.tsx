@@ -54,6 +54,8 @@ import MinisterioSelector from "../../../../components/MinisterioSelector";
 import { GoogleMapsEmbed } from "@/components/GoogleMapsEmbed";
 import { HorariosSelector } from "../../../../components/HorariosSelector";
 import { UseIglesiaLocationButton } from "@/components/ActividadFormHelpers";
+import { formatDateForInput } from "@/lib/date-utils";
+import dayjs from "dayjs";
 
 interface TipoActividad {
   id: number;
@@ -226,16 +228,14 @@ export default function EditarActividadPage({
         }
 
         // Formatear fecha para input date
-        const fechaFormateada = new Date(actividadData.fecha)
-          .toISOString()
-          .split("T")[0];
+        const fechaFormateada = formatDateForInput(actividadData.fecha);
 
         // Formatear fechas de inicio y fin si existen
         const fechaInicioFormateada = actividadData.fechaInicio
-          ? new Date(actividadData.fechaInicio).toISOString().split("T")[0]
+          ? formatDateForInput(actividadData.fechaInicio)
           : "";
         const fechaFinFormateada = actividadData.fechaFin
-          ? new Date(actividadData.fechaFin).toISOString().split("T")[0]
+          ? formatDateForInput(actividadData.fechaFin)
           : "";
 
         // Cargar datos en el formulario
@@ -268,7 +268,7 @@ export default function EditarActividadPage({
               notas?: string;
             }) => ({
               id: h.id,
-              fecha: new Date(h.fecha).toISOString().split("T")[0],
+              fecha: formatDateForInput(h.fecha),
               horaInicio: h.horaInicio || "",
               horaFin: h.horaFin || "",
               notas: h.notas || "",
@@ -318,7 +318,7 @@ export default function EditarActividadPage({
         return;
       }
 
-      if (new Date(values.fechaFin) < new Date(values.fechaInicio)) {
+      if (dayjs(values.fechaFin).isBefore(dayjs(values.fechaInicio))) {
         setError(
           "La fecha de fin debe ser posterior o igual a la fecha de inicio"
         );

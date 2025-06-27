@@ -1,4 +1,5 @@
 import { z } from "zod";
+import dayjs from "dayjs";
 
 export const actividadSchema = z
   .object({
@@ -37,7 +38,11 @@ export const actividadSchema = z
   .refine(
     (data) => {
       if (data.esRangoFechas && data.fechaInicio && data.fechaFin) {
-        return new Date(data.fechaFin) >= new Date(data.fechaInicio);
+        const fechaFin = dayjs(data.fechaFin);
+        const fechaInicio = dayjs(data.fechaInicio);
+        return (
+          fechaFin.isAfter(fechaInicio) || fechaFin.isSame(fechaInicio, "day")
+        );
       }
       return true;
     },
