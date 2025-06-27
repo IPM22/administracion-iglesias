@@ -53,6 +53,7 @@ import { CloudinaryUploader } from "../../../../components/CloudinaryUploader";
 import MinisterioSelector from "../../../../components/MinisterioSelector";
 import { GoogleMapsEmbed } from "@/components/GoogleMapsEmbed";
 import { HorariosSelector } from "../../../../components/HorariosSelector";
+import { UseIglesiaLocationButton } from "@/components/ActividadFormHelpers";
 
 interface TipoActividad {
   id: number;
@@ -715,20 +716,33 @@ export default function EditarActividadPage({
                       <FormItem>
                         <FormLabel>Ubicación y Google Maps</FormLabel>
                         <FormControl>
-                          <GoogleMapsEmbed
-                            onLocationChange={(location: {
-                              direccion: string;
-                              googleMapsEmbed?: string;
-                            }) => {
-                              field.onChange(location.direccion);
-                              form.setValue(
-                                "googleMapsEmbed",
-                                location.googleMapsEmbed
-                              );
-                            }}
-                            direccion={field.value || ""}
-                            googleMapsEmbed={form.getValues("googleMapsEmbed")}
-                          />
+                          <div className="space-y-4">
+                            <UseIglesiaLocationButton
+                              onLocationSet={(data) => {
+                                field.onChange(data.direccion);
+                                form.setValue(
+                                  "googleMapsEmbed",
+                                  data.googleMapsEmbed
+                                );
+                              }}
+                            />
+                            <GoogleMapsEmbed
+                              onLocationChange={(location: {
+                                direccion: string;
+                                googleMapsEmbed?: string;
+                              }) => {
+                                field.onChange(location.direccion);
+                                form.setValue(
+                                  "googleMapsEmbed",
+                                  location.googleMapsEmbed
+                                );
+                              }}
+                              direccion={field.value || ""}
+                              googleMapsEmbed={form.getValues(
+                                "googleMapsEmbed"
+                              )}
+                            />
+                          </div>
                         </FormControl>
                         <FormDescription>
                           Opcional - Dirección física del evento con embed de

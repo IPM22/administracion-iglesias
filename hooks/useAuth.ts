@@ -26,6 +26,16 @@ interface UsuarioCompleto {
   }[];
 }
 
+// Configuración del caché
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos en milisegundos
+const SESSION_STORAGE_KEY = "usuario_session_cache";
+
+interface UsuarioCacheData {
+  usuario: UsuarioCompleto;
+  timestamp: number;
+  sessionId: string;
+}
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [usuarioCompleto, setUsuarioCompleto] =
@@ -37,7 +47,7 @@ export function useAuth() {
   const cargandoUsuario = useRef(false);
   const ultimoUsuarioId = useRef<string | null>(null);
   const cacheTimestamp = useRef<number>(0);
-  const CACHE_DURATION = 30000; // 30 segundos de caché
+  const sessionId = useRef<string>("");
 
   // Zustand store
   const {
@@ -49,6 +59,88 @@ export function useAuth() {
   } = useIglesiaStore();
 
   const supabase = createClient();
+
+  // Generar ID de sesión único al inicializar
+  useEffect(() => {
+    if (!sessionId.current) {
+      sessionId.current = `${Date.now()}_${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
+    }
+  }, []);
+
+  // Función para verificar si el caché es válido
+  const esCacheValido = (cacheData: UsuarioCacheData): boolean => {
+    const ahora = Date.now();
+    const edadCache = ahora - cacheData.timestamp;
+
+    // Verificar si el caché no ha expirado y pertenece a la misma sesión
+    return (
+      edadCache < CACHE_DURATION && cacheData.sessionId === sessionId.current
+    );
+  };
+
+  // Función para cargar desde caché
+  const cargarDesdeCache = (): UsuarioCompleto | null => {
+    try {
+      const cacheDataStr = sessionStorage.getItem(SESSION_STORAGE_KEY);
+      if (!cacheDataStr) return null;
+
+      const cacheData: UsuarioCacheData = JSON.parse(cacheDataStr);
+
+      if (esCacheValido(cacheData)) {
+        console.log("✅ Cargando usuario desde caché de sesión");
+        cacheTimestamp.current = cacheData.timestamp;
+        return cacheData.usuario;
+      } else {
+        console.log("⏰ Caché de usuario expirado, se requiere nueva consulta");
+        sessionStorage.removeItem(SESSION_STORAGE_KEY);
+        return null;
+      }
+    } catch (error) {
+      console.error("Error cargando desde caché:", error);
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      return null;
+    }
+  };
+
+  // Función para guardar en caché
+  const guardarEnCache = (usuario: UsuarioCompleto) => {
+    try {
+      const ahora = Date.now();
+      const cacheData: UsuarioCacheData = {
+        usuario,
+        timestamp: ahora,
+        sessionId: sessionId.current,
+      };
+
+      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(cacheData));
+      cacheTimestamp.current = ahora;
+      console.log("💾 Usuario guardado en caché de sesión");
+    } catch (error) {
+      console.error("Error guardando en caché:", error);
+    }
+  };
+
+  // Función para limpiar caché
+  const limpiarCache = () => {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    cacheTimestamp.current = 0;
+    console.log("🗑️ Caché de usuario limpiado");
+  };
+
+  // Función de diagnóstico para verificar conectividad
+  const verificarConectividad = async (): Promise<boolean> => {
+    try {
+      const response = await fetch("/api/health", {
+        method: "GET",
+        signal: AbortSignal.timeout(5000),
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  };
 
   const cargarIglesiaDesdeStorage = (): IglesiaActiva | null => {
     try {
@@ -67,23 +159,61 @@ export function useAuth() {
     authUser: User,
     forzarRecarga = false
   ) => {
-    // Verificar si ya estamos cargando el mismo usuario
+    // Evitar múltiples cargas simultáneas del mismo usuario
     if (
       cargandoUsuario.current &&
       ultimoUsuarioId.current === authUser.id &&
       !forzarRecarga
     ) {
+      console.log("⏭️ Carga de usuario ya en progreso, saltando...");
       return;
     }
 
-    // Verificar caché (si no es recarga forzada)
+    // Intentar cargar desde caché primero (solo si no es recarga forzada)
+    if (!forzarRecarga) {
+      const usuarioEnCache = cargarDesdeCache();
+      if (usuarioEnCache && usuarioEnCache.id === authUser.id) {
+        setUsuarioCompleto(usuarioEnCache);
+        setInitializing(false);
+
+        // Verificar iglesia activa desde el caché
+        if (!iglesiaActiva) {
+          const iglesiaDesdeStorage = cargarIglesiaDesdeStorage();
+          if (iglesiaDesdeStorage) {
+            const iglesiaValida = usuarioEnCache.iglesias.find(
+              (ui: {
+                estado: string;
+                iglesia: { id: number; nombre: string; logoUrl?: string };
+                rol: string;
+              }) =>
+                ui.estado === "ACTIVO" &&
+                ui.iglesia.id === iglesiaDesdeStorage.id
+            );
+
+            if (iglesiaValida) {
+              setIglesiaActiva(iglesiaDesdeStorage);
+            } else {
+              localStorage.removeItem("iglesiaActiva");
+              establecerPrimeraIglesiaActiva(usuarioEnCache);
+            }
+          } else {
+            establecerPrimeraIglesiaActiva(usuarioEnCache);
+          }
+        }
+        return;
+      }
+    }
+
     const ahora = Date.now();
+
+    // Si no es recarga forzada y el caché aún es válido, no recargar
     if (
       !forzarRecarga &&
+      ahora - cacheTimestamp.current < CACHE_DURATION &&
       ultimoUsuarioId.current === authUser.id &&
-      usuarioCompleto &&
-      ahora - cacheTimestamp.current < CACHE_DURATION
+      usuarioCompleto
     ) {
+      console.log("⚡ Usuario ya cargado y caché válido, saltando consulta");
       setInitializing(false);
       return;
     }
@@ -92,10 +222,13 @@ export function useAuth() {
     ultimoUsuarioId.current = authUser.id;
 
     try {
+      console.log("🔄 Consultando datos del usuario desde la API");
       const response = await fetch(`/api/usuarios/${authUser.id}`, {
         headers: {
           "Content-Type": "application/json",
         },
+        // Agregar timeout para evitar esperas indefinidas
+        signal: AbortSignal.timeout(10000), // 10 segundos
       });
 
       // Verificar si la respuesta es realmente JSON
@@ -108,7 +241,9 @@ export function useAuth() {
       if (response.ok) {
         const usuario = await response.json();
         setUsuarioCompleto(usuario);
-        cacheTimestamp.current = ahora;
+
+        // Guardar en caché
+        guardarEnCache(usuario);
 
         // Si ya hay una iglesia en Zustand, verificar que sea válida
         if (iglesiaActiva) {
@@ -150,24 +285,52 @@ export function useAuth() {
           }
         }
       } else if (response.status === 404) {
+        // Usuario no existe, crear automáticamente
         await crearUsuarioAutomaticamente(authUser);
       } else if (response.status === 401) {
-        // Usuario no autenticado, limpiar estado
+        // Usuario no autenticado, limpiar estado y caché
         console.warn("Usuario no autenticado, limpiando estado");
         setUsuarioCompleto(null);
         limpiarIglesia();
+        limpiarCache();
       } else {
         throw new Error(`Error del servidor: ${response.status}`);
       }
     } catch (error) {
       console.error("Error cargando usuario completo:", error);
 
-      // En caso de error, limpiar el estado para evitar bucles infinitos
-      if (error instanceof TypeError && error.message.includes("fetch")) {
+      // Verificar conectividad antes de mostrar errores
+      const tieneConectividad = await verificarConectividad();
+      if (!tieneConectividad) {
         console.error(
-          "Error de conectividad, el servidor puede no estar disponible"
+          "❌ Sin conectividad al servidor. Verificar que Next.js esté funcionando en puerto 3000"
         );
       }
+
+      // Manejo específico de diferentes tipos de errores
+      if (error instanceof TypeError) {
+        if (error.message.includes("Failed to fetch")) {
+          console.error(
+            "❌ Error de conectividad: No se puede conectar al servidor"
+          );
+          console.error(
+            "🔍 Verificar que el servidor esté ejecutándose en el puerto correcto"
+          );
+        } else if (error.message.includes("fetch")) {
+          console.error("❌ Error de red al hacer fetch");
+        }
+      } else if (error instanceof DOMException) {
+        if (error.name === "AbortError") {
+          console.error("❌ Timeout: La petición tardó más de 10 segundos");
+        }
+      } else if (error instanceof Error) {
+        console.error("❌ Error específico:", error.message);
+      }
+
+      // Limpiar el estado para evitar bucles infinitos
+      setUsuarioCompleto(null);
+      limpiarIglesia();
+      limpiarCache();
     } finally {
       setInitializing(false);
       cargandoUsuario.current = false;
@@ -225,6 +388,10 @@ export function useAuth() {
 
   const cambiarIglesia = (iglesia: IglesiaActiva) => {
     setIglesiaActiva(iglesia);
+
+    // Limpiar caché al cambiar de iglesia para forzar nueva carga de datos específicos
+    limpiarCache();
+
     window.location.reload(); // Recargar para refrescar datos
   };
 
@@ -235,6 +402,7 @@ export function useAuth() {
         cargarUsuarioCompleto(session.user);
       } else {
         limpiarIglesia();
+        limpiarCache();
         setInitializing(false);
       }
       setLoading(false);
@@ -243,14 +411,28 @@ export function useAuth() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log(`🔐 Auth state change: ${event}`);
+
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        setInitializing(true);
-        cargarUsuarioCompleto(session.user);
+        // Solo cargar si el usuario ha cambiado o si es el primer login
+        const usuarioHaCambiado = ultimoUsuarioId.current !== session.user.id;
+        const esPrimerLogin =
+          event === "SIGNED_IN" || event === "TOKEN_REFRESHED";
+
+        if (usuarioHaCambiado || esPrimerLogin) {
+          setInitializing(true);
+          await cargarUsuarioCompleto(session.user);
+        }
       } else {
-        setUsuarioCompleto(null);
-        limpiarIglesia();
+        // Solo limpiar en logout real, no en refresh de tokens
+        if (event === "SIGNED_OUT") {
+          console.log("🚪 Usuario cerró sesión, limpiando estado");
+          setUsuarioCompleto(null);
+          limpiarIglesia();
+          limpiarCache();
+        }
         setInitializing(false);
       }
 
@@ -298,16 +480,22 @@ export function useAuth() {
   };
 
   const signOut = async () => {
+    await supabase.auth.signOut();
+    setUsuarioCompleto(null);
+    limpiarIglesia();
+    // Limpiar caché al cerrar sesión
+    limpiarCache();
     localStorage.removeItem("iglesiaActiva");
-    return await supabase.auth.signOut();
   };
 
   const resetPassword = async (email: string) => {
-    return await supabase.auth.resetPasswordForEmail(email);
+    await supabase.auth.resetPasswordForEmail(email);
   };
 
   const refetch = async () => {
     if (user) {
+      // Forzar recarga limpiando caché
+      limpiarCache();
       await cargarUsuarioCompleto(user, true);
     }
   };
@@ -327,5 +515,6 @@ export function useAuth() {
     seleccionarIglesia,
     cargarUsuarioCompleto,
     refetch,
+    limpiarIglesia,
   };
 }

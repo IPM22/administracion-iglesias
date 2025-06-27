@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { CloudinaryUploader } from "@/components/CloudinaryUploader";
+import { GoogleMapsEmbed } from "@/components/GoogleMapsEmbed";
 import {
   User,
   Building2,
@@ -32,6 +33,9 @@ import {
   Phone,
   MapPin,
   Globe,
+  Clock,
+  Calendar,
+  Copy,
 } from "lucide-react";
 
 type TabValue = "perfil" | "iglesia" | "usuarios" | "solicitudes";
@@ -92,6 +96,13 @@ export default function ConfiguracionPage() {
     descripcion: "",
     logoUrl: iglesiaActiva?.logoUrl || "",
     sitioWeb: "",
+    googleMapsEmbed: "",
+    ubicacionReferencia: "",
+    horariosCultos: "",
+    horarioOficina: "",
+    numeroWhatsapp: "",
+    mensajePromocion: "¡Te esperamos en nuestra iglesia! 🙏",
+    configNotificaciones: true,
   });
 
   const esAdmin =
@@ -119,9 +130,46 @@ export default function ConfiguracionPage() {
         descripcion: "",
         logoUrl: iglesiaActiva.logoUrl || "",
         sitioWeb: "",
+        googleMapsEmbed: "",
+        ubicacionReferencia: "",
+        horariosCultos: "",
+        horarioOficina: "",
+        numeroWhatsapp: "",
+        mensajePromocion: "¡Te esperamos en nuestra iglesia! 🙏",
+        configNotificaciones: true,
       });
+
+      // Cargar datos completos de la iglesia
+      cargarDatosCompletos();
     }
   }, [iglesiaActiva]);
+
+  // Cargar datos completos de la iglesia
+  const cargarDatosCompletos = async () => {
+    if (!iglesiaActiva?.id) return;
+
+    try {
+      const response = await fetch(`/api/iglesias/${iglesiaActiva.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        // Actualizar con datos completos si existen
+        setIglesiaData((prev) => ({
+          ...prev,
+          direccion: data.direccion || "",
+          telefono: data.telefono || "",
+          correo: data.correo || "",
+          descripcion: data.descripcion || "",
+          sitioWeb: data.sitioWeb || "",
+          // Si hay configuración guardada, cargarla
+          ...(data.configuracion && typeof data.configuracion === "object"
+            ? data.configuracion
+            : {}),
+        }));
+      }
+    } catch (error) {
+      console.error("Error cargando datos completos:", error);
+    }
+  };
 
   // Cargar solicitudes cuando se cambie al tab de solicitudes
   useEffect(() => {
@@ -208,13 +256,34 @@ export default function ConfiguracionPage() {
     if (!iglesiaActiva?.id) return;
 
     setIsLoading(true);
+
     try {
+      // Preparar los datos de configuración extendida
+      const configuracionExtendida = {
+        googleMapsEmbed: iglesiaData.googleMapsEmbed,
+        ubicacionReferencia: iglesiaData.ubicacionReferencia,
+        horariosCultos: iglesiaData.horariosCultos,
+        horarioOficina: iglesiaData.horarioOficina,
+        numeroWhatsapp: iglesiaData.numeroWhatsapp,
+        mensajePromocion: iglesiaData.mensajePromocion,
+        configNotificaciones: iglesiaData.configNotificaciones,
+      };
+
       const response = await fetch(`/api/iglesias/${iglesiaActiva.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(iglesiaData),
+        body: JSON.stringify({
+          nombre: iglesiaData.nombre,
+          direccion: iglesiaData.direccion,
+          telefono: iglesiaData.telefono,
+          correo: iglesiaData.correo,
+          descripcion: iglesiaData.descripcion,
+          logoUrl: iglesiaData.logoUrl,
+          sitioWeb: iglesiaData.sitioWeb,
+          configuracion: configuracionExtendida,
+        }),
       });
 
       if (response.ok) {
@@ -229,6 +298,17 @@ export default function ConfiguracionPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Funciones de utilidad para ubicación
+  const copiarMensajePromocion = () => {
+    const mensaje = `${iglesiaData.mensajePromocion}\n\n📍 ${
+      iglesiaData.direccion
+    }\n📞 ${iglesiaData.numeroWhatsapp || iglesiaData.telefono}\n🌐 ${
+      iglesiaData.sitioWeb
+    }`;
+    navigator.clipboard.writeText(mensaje);
+    toast.success("Mensaje promocional copiado");
   };
 
   const handleResponderSolicitud = async (
@@ -343,15 +423,15 @@ export default function ConfiguracionPage() {
   ];
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center gap-2">
-        <Settings className="h-6 w-6" />
-        <h1 className="text-3xl font-bold">Configuración</h1>
+    <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">
+      <div className="flex items-center gap-3">
+        <Settings className="h-7 w-7 text-primary" />
+        <h1 className="text-3xl font-bold tracking-tight">Configuración</h1>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* Navigation */}
-        <div className="flex flex-wrap gap-2 border-b">
+        <div className="flex flex-wrap gap-2 border-b border-border/40 pb-2">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -360,12 +440,15 @@ export default function ConfiguracionPage() {
                 variant={activeTab === tab.value ? "default" : "ghost"}
                 disabled={tab.disabled}
                 onClick={() => setActiveTab(tab.value as TabValue)}
-                className="flex items-center gap-2 relative"
+                className="flex items-center gap-2 relative h-11 px-4 py-2"
               >
                 <Icon className="h-4 w-4" />
                 {tab.label}
                 {tab.badge && (
-                  <Badge variant="destructive" className="text-xs ml-1">
+                  <Badge
+                    variant="destructive"
+                    className="text-xs ml-1 h-5 px-1.5"
+                  >
                     {tab.badge}
                   </Badge>
                 )}
@@ -376,18 +459,18 @@ export default function ConfiguracionPage() {
 
         {/* Perfil Tab */}
         {activeTab === "perfil" && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
+          <Card className="shadow-sm">
+            <CardHeader className="pb-6">
+              <CardTitle className="flex items-center gap-3">
+                <User className="h-5 w-5 text-primary" />
                 Información Personal
               </CardTitle>
               <CardDescription>
                 Actualiza tu información personal y preferencias de cuenta
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center gap-6">
+            <CardContent className="space-y-8">
+              <div className="flex items-center gap-6 p-4 bg-muted/50 rounded-lg">
                 <div className="space-y-2">
                   <CloudinaryUploader
                     value={perfilData.avatar}
@@ -399,15 +482,15 @@ export default function ConfiguracionPage() {
                     }
                   />
                 </div>
-                <div className="space-y-1">
-                  <h3 className="font-semibold">
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-lg">
                     {perfilData.nombres} {perfilData.apellidos}
                   </h3>
                   <p className="text-sm text-muted-foreground">
                     {usuarioCompleto?.email}
                   </p>
                   <Badge variant="secondary" className="text-xs">
-                    {iglesiaActiva?.rol || "MIEMBRO"}
+                    {getRolDisplayName(iglesiaActiva?.rol || "MIEMBRO")}
                   </Badge>
                 </div>
               </div>
@@ -415,18 +498,23 @@ export default function ConfiguracionPage() {
               <Separator />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="nombres">Nombres</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="nombres" className="text-sm font-medium">
+                    Nombres
+                  </Label>
                   <Input
                     id="nombres"
                     value={perfilData.nombres}
                     onChange={(e) =>
                       setPerfilData({ ...perfilData, nombres: e.target.value })
                     }
+                    className="h-11"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="apellidos">Apellidos</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="apellidos" className="text-sm font-medium">
+                    Apellidos
+                  </Label>
                   <Input
                     id="apellidos"
                     value={perfilData.apellidos}
@@ -436,28 +524,37 @@ export default function ConfiguracionPage() {
                         apellidos: e.target.value,
                       })
                     }
+                    className="h-11"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="telefono">Teléfono</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="telefono" className="text-sm font-medium">
+                    Teléfono
+                  </Label>
                   <Input
                     id="telefono"
                     value={perfilData.telefono}
                     onChange={(e) =>
                       setPerfilData({ ...perfilData, telefono: e.target.value })
                     }
+                    className="h-11"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input value={usuarioCompleto?.email || ""} disabled />
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Email</Label>
+                  <Input
+                    value={usuarioCompleto?.email || ""}
+                    disabled
+                    className="h-11"
+                  />
                 </div>
               </div>
 
               <Button
                 onClick={handleGuardarPerfil}
                 disabled={isLoading}
-                className="w-full"
+                className="w-full h-11"
+                size="lg"
               >
                 <Save className="h-4 w-4 mr-2" />
                 {isLoading ? "Guardando..." : "Guardar Cambios"}
@@ -468,151 +565,384 @@ export default function ConfiguracionPage() {
 
         {/* Iglesia Tab */}
         {activeTab === "iglesia" && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
-                Información de la Iglesia
-              </CardTitle>
-              <CardDescription>
-                Configura los datos generales de tu congregación
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center gap-6">
-                <div className="space-y-2">
-                  <CloudinaryUploader
-                    value={iglesiaData.logoUrl}
-                    onChange={(url) =>
-                      setIglesiaData({ ...iglesiaData, logoUrl: url })
-                    }
-                    onRemove={() =>
-                      setIglesiaData({ ...iglesiaData, logoUrl: "" })
-                    }
-                  />
+          <div className="space-y-6">
+            {/* Información Básica */}
+            <Card className="shadow-sm">
+              <CardHeader className="pb-6">
+                <CardTitle className="flex items-center gap-3">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  Información Básica
+                </CardTitle>
+                <CardDescription>
+                  Configura los datos generales de tu congregación
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-8">
+                <div className="flex items-center gap-6 p-4 bg-muted/50 rounded-lg">
+                  <div className="space-y-2">
+                    <CloudinaryUploader
+                      value={iglesiaData.logoUrl}
+                      onChange={(url) =>
+                        setIglesiaData({ ...iglesiaData, logoUrl: url })
+                      }
+                      onRemove={() =>
+                        setIglesiaData({ ...iglesiaData, logoUrl: "" })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-semibold text-lg">
+                      {iglesiaData.nombre}
+                    </h3>
+                    <Badge variant="outline" className="text-xs">
+                      <Shield className="h-3 w-3 mr-1" />
+                      Administrador
+                    </Badge>
+                    {iglesiaData.logoUrl && (
+                      <p className="text-xs text-muted-foreground">
+                        Logo disponible para usar en actividades y promociones
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <h3 className="font-semibold">{iglesiaData.nombre}</h3>
-                  <Badge variant="outline" className="text-xs">
-                    <Shield className="h-3 w-3 mr-1" />
-                    Administrador
-                  </Badge>
-                </div>
-              </div>
 
-              <Separator />
+                <Separator />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="nombre-iglesia">Nombre de la Iglesia</Label>
-                  <Input
-                    id="nombre-iglesia"
-                    value={iglesiaData.nombre}
-                    onChange={(e) =>
-                      setIglesiaData({ ...iglesiaData, nombre: e.target.value })
-                    }
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <Label
+                      htmlFor="nombre-iglesia"
+                      className="text-sm font-medium"
+                    >
+                      Nombre de la Iglesia
+                    </Label>
+                    <Input
+                      id="nombre-iglesia"
+                      value={iglesiaData.nombre}
+                      onChange={(e) =>
+                        setIglesiaData({
+                          ...iglesiaData,
+                          nombre: e.target.value,
+                        })
+                      }
+                      className="h-11"
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <Label
+                      htmlFor="email-iglesia"
+                      className="text-sm font-medium"
+                    >
+                      <Mail className="h-4 w-4 inline mr-2" />
+                      Email
+                    </Label>
+                    <Input
+                      id="email-iglesia"
+                      type="email"
+                      value={iglesiaData.correo}
+                      onChange={(e) =>
+                        setIglesiaData({
+                          ...iglesiaData,
+                          correo: e.target.value,
+                        })
+                      }
+                      className="h-11"
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <Label
+                      htmlFor="telefono-iglesia"
+                      className="text-sm font-medium"
+                    >
+                      <Phone className="h-4 w-4 inline mr-2" />
+                      Teléfono Principal
+                    </Label>
+                    <Input
+                      id="telefono-iglesia"
+                      value={iglesiaData.telefono}
+                      onChange={(e) =>
+                        setIglesiaData({
+                          ...iglesiaData,
+                          telefono: e.target.value,
+                        })
+                      }
+                      className="h-11"
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <Label htmlFor="sitio-web" className="text-sm font-medium">
+                      <Globe className="h-4 w-4 inline mr-2" />
+                      Sitio Web
+                    </Label>
+                    <Input
+                      id="sitio-web"
+                      type="url"
+                      placeholder="https://..."
+                      value={iglesiaData.sitioWeb}
+                      onChange={(e) =>
+                        setIglesiaData({
+                          ...iglesiaData,
+                          sitioWeb: e.target.value,
+                        })
+                      }
+                      className="h-11"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="telefono-iglesia">
-                    <Phone className="h-4 w-4 inline mr-1" />
-                    Teléfono
+
+                <div className="space-y-3">
+                  <Label htmlFor="descripcion" className="text-sm font-medium">
+                    Descripción
                   </Label>
-                  <Input
-                    id="telefono-iglesia"
-                    value={iglesiaData.telefono}
+                  <Textarea
+                    id="descripcion"
+                    placeholder="Descripción de la iglesia..."
+                    value={iglesiaData.descripcion}
                     onChange={(e) =>
                       setIglesiaData({
                         ...iglesiaData,
-                        telefono: e.target.value,
+                        descripcion: e.target.value,
                       })
                     }
+                    className="min-h-24"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email-iglesia">
-                    <Mail className="h-4 w-4 inline mr-1" />
-                    Email
+              </CardContent>
+            </Card>
+
+            {/* Ubicación y Contacto */}
+            <Card className="shadow-sm">
+              <CardHeader className="pb-6">
+                <CardTitle className="flex items-center gap-3">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  Ubicación y Contacto
+                </CardTitle>
+                <CardDescription>
+                  Información de ubicación que se usará en actividades y eventos
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <GoogleMapsEmbed
+                  direccion={iglesiaData.direccion}
+                  googleMapsEmbed={iglesiaData.googleMapsEmbed}
+                  onLocationChange={(data) => {
+                    setIglesiaData({
+                      ...iglesiaData,
+                      direccion: data.direccion,
+                      googleMapsEmbed: data.googleMapsEmbed || "",
+                    });
+                  }}
+                />
+
+                <div className="space-y-3">
+                  <Label
+                    htmlFor="ubicacion-referencia"
+                    className="text-sm font-medium"
+                  >
+                    Referencias de Ubicación
                   </Label>
                   <Input
-                    id="email-iglesia"
-                    type="email"
-                    value={iglesiaData.correo}
-                    onChange={(e) =>
-                      setIglesiaData({ ...iglesiaData, correo: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="sitio-web">
-                    <Globe className="h-4 w-4 inline mr-1" />
-                    Sitio Web
-                  </Label>
-                  <Input
-                    id="sitio-web"
-                    type="url"
-                    placeholder="https://..."
-                    value={iglesiaData.sitioWeb}
+                    id="ubicacion-referencia"
+                    value={iglesiaData.ubicacionReferencia}
                     onChange={(e) =>
                       setIglesiaData({
                         ...iglesiaData,
-                        sitioWeb: e.target.value,
+                        ubicacionReferencia: e.target.value,
                       })
                     }
+                    placeholder="Cerca del centro comercial, frente al parque..."
+                    className="h-11"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Estas referencias ayudarán a los visitantes a encontrar
+                    mejor la ubicación
+                  </p>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="direccion">
-                  <MapPin className="h-4 w-4 inline mr-1" />
-                  Dirección
-                </Label>
-                <Input
-                  id="direccion"
-                  value={iglesiaData.direccion}
-                  onChange={(e) =>
-                    setIglesiaData({
-                      ...iglesiaData,
-                      direccion: e.target.value,
-                    })
-                  }
-                />
-              </div>
+                <div className="space-y-3">
+                  <Label htmlFor="whatsapp" className="text-sm font-medium">
+                    <Phone className="h-4 w-4 inline mr-2" />
+                    WhatsApp para Promoción
+                  </Label>
+                  <Input
+                    id="whatsapp"
+                    value={iglesiaData.numeroWhatsapp}
+                    onChange={(e) =>
+                      setIglesiaData({
+                        ...iglesiaData,
+                        numeroWhatsapp: e.target.value,
+                      })
+                    }
+                    placeholder="+52 55 1234 5678"
+                    className="h-11"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Este número se usará para promocionar actividades
+                  </p>
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="descripcion">Descripción</Label>
-                <Textarea
-                  id="descripcion"
-                  placeholder="Descripción de la iglesia..."
-                  value={iglesiaData.descripcion}
-                  onChange={(e) =>
-                    setIglesiaData({
-                      ...iglesiaData,
-                      descripcion: e.target.value,
-                    })
-                  }
-                />
-              </div>
+                {iglesiaData.googleMapsEmbed && (
+                  <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border">
+                    <div className="flex items-center gap-2 mb-2">
+                      <MapPin className="h-4 w-4 text-blue-600" />
+                      <p className="text-sm font-medium text-blue-800 dark:text-blue-400">
+                        ✅ Embed de Google Maps configurado
+                      </p>
+                    </div>
+                    <p className="text-xs text-blue-600 dark:text-blue-500">
+                      Esta ubicación se reutilizará automáticamente al crear
+                      nuevas actividades
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        window.open(iglesiaData.googleMapsEmbed, "_blank")
+                      }
+                      className="mt-2 text-blue-600 border-blue-200 hover:bg-blue-50"
+                    >
+                      <MapPin className="h-3 w-3 mr-1" />
+                      Ver en Google Maps
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-              <Button
-                onClick={handleGuardarIglesia}
-                disabled={isLoading}
-                className="w-full"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {isLoading ? "Guardando..." : "Guardar Configuración"}
-              </Button>
-            </CardContent>
-          </Card>
+            {/* Horarios */}
+            <Card className="shadow-sm">
+              <CardHeader className="pb-6">
+                <CardTitle className="flex items-center gap-3">
+                  <Clock className="h-5 w-5 text-primary" />
+                  Horarios
+                </CardTitle>
+                <CardDescription>
+                  Información de horarios para compartir con los miembros
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <Label
+                      htmlFor="horarios-cultos"
+                      className="text-sm font-medium"
+                    >
+                      <Calendar className="h-4 w-4 inline mr-2" />
+                      Horarios de Cultos
+                    </Label>
+                    <Textarea
+                      id="horarios-cultos"
+                      value={iglesiaData.horariosCultos}
+                      onChange={(e) =>
+                        setIglesiaData({
+                          ...iglesiaData,
+                          horariosCultos: e.target.value,
+                        })
+                      }
+                      placeholder="Domingo: 10:00 AM y 6:00 PM&#10;Miércoles: 7:00 PM&#10;Viernes: 7:30 PM"
+                      className="min-h-24"
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <Label
+                      htmlFor="horario-oficina"
+                      className="text-sm font-medium"
+                    >
+                      <Clock className="h-4 w-4 inline mr-2" />
+                      Horario de Oficina
+                    </Label>
+                    <Textarea
+                      id="horario-oficina"
+                      value={iglesiaData.horarioOficina}
+                      onChange={(e) =>
+                        setIglesiaData({
+                          ...iglesiaData,
+                          horarioOficina: e.target.value,
+                        })
+                      }
+                      placeholder="Lunes a Viernes: 9:00 AM - 5:00 PM&#10;Sábado: 9:00 AM - 1:00 PM"
+                      className="min-h-24"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Promoción */}
+            <Card className="shadow-sm">
+              <CardHeader className="pb-6">
+                <CardTitle className="flex items-center gap-3">
+                  <Mail className="h-5 w-5 text-primary" />
+                  Promoción y Mensajería
+                </CardTitle>
+                <CardDescription>
+                  Configura mensajes predeterminados para promocionar
+                  actividades
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-3">
+                  <Label
+                    htmlFor="mensaje-promocion"
+                    className="text-sm font-medium"
+                  >
+                    Mensaje Promocional Base
+                  </Label>
+                  <Textarea
+                    id="mensaje-promocion"
+                    value={iglesiaData.mensajePromocion}
+                    onChange={(e) =>
+                      setIglesiaData({
+                        ...iglesiaData,
+                        mensajePromocion: e.target.value,
+                      })
+                    }
+                    placeholder="¡Te esperamos en nuestra iglesia! 🙏"
+                    className="min-h-20"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Este mensaje se usará como base para promocionar actividades
+                  </p>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={copiarMensajePromocion}
+                  className="w-full"
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copiar Mensaje Completo de Promoción
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Botón de Guardar */}
+            <Card className="shadow-sm">
+              <CardContent className="pt-6">
+                <Button
+                  onClick={handleGuardarIglesia}
+                  disabled={isLoading}
+                  className="w-full h-12"
+                  size="lg"
+                >
+                  <Save className="h-5 w-5 mr-2" />
+                  {isLoading
+                    ? "Guardando..."
+                    : "Guardar Configuración de la Iglesia"}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {/* Usuarios Tab */}
         {activeTab === "usuarios" && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
+          <Card className="shadow-sm">
+            <CardHeader className="pb-6">
+              <CardTitle className="flex items-center gap-3">
+                <Users className="h-5 w-5 text-primary" />
                 Gestión de Usuarios
                 {usuarios.length > 0 && (
                   <Badge variant="secondary" className="ml-2">
@@ -624,18 +954,18 @@ export default function ConfiguracionPage() {
                 Administra los usuarios de tu congregación
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-6">
               {loadingUsuarios ? (
-                <div className="text-center py-8">
+                <div className="text-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                  <p className="text-sm text-muted-foreground mt-2">
+                  <p className="text-sm text-muted-foreground mt-4">
                     Cargando usuarios...
                   </p>
                 </div>
               ) : usuarios.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <h3 className="font-semibold mb-2">Sin Usuarios</h3>
+                <div className="text-center py-12 text-muted-foreground">
+                  <Users className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                  <h3 className="font-semibold mb-2 text-lg">Sin Usuarios</h3>
                   <p className="text-sm">
                     No hay usuarios activos en esta congregación
                   </p>
@@ -645,18 +975,18 @@ export default function ConfiguracionPage() {
                   {usuarios.map((usuarioIglesia) => (
                     <div
                       key={usuarioIglesia.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
+                      className="flex items-center justify-between p-6 border border-border/50 rounded-lg hover:border-border transition-colors"
                     >
                       <div className="flex items-center gap-4">
-                        <Avatar>
+                        <Avatar className="h-12 w-12">
                           <AvatarImage src={usuarioIglesia.usuario.avatar} />
-                          <AvatarFallback>
+                          <AvatarFallback className="text-sm font-medium">
                             {usuarioIglesia.usuario.nombres.charAt(0)}
                             {usuarioIglesia.usuario.apellidos.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
-                          <h4 className="font-semibold">
+                        <div className="space-y-1">
+                          <h4 className="font-semibold text-base">
                             {usuarioIglesia.usuario.nombres}{" "}
                             {usuarioIglesia.usuario.apellidos}
                           </h4>
@@ -664,8 +994,9 @@ export default function ConfiguracionPage() {
                             {usuarioIglesia.usuario.email}
                           </p>
                           {usuarioIglesia.usuario.telefono && (
-                            <p className="text-sm text-muted-foreground">
-                              📱 {usuarioIglesia.usuario.telefono}
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {usuarioIglesia.usuario.telefono}
                             </p>
                           )}
                           <p className="text-xs text-muted-foreground">
@@ -676,8 +1007,11 @@ export default function ConfiguracionPage() {
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={getRolBadgeVariant(usuarioIglesia.rol)}>
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          variant={getRolBadgeVariant(usuarioIglesia.rol)}
+                          className="px-3 py-1"
+                        >
                           {getRolDisplayName(usuarioIglesia.rol)}
                         </Badge>
                         {usuarioIglesia.usuario.id !== usuarioCompleto?.id && (
@@ -689,7 +1023,7 @@ export default function ConfiguracionPage() {
                                 e.target.value
                               )
                             }
-                            className="text-xs border rounded px-2 py-1"
+                            className="text-sm border border-border rounded-md px-3 py-2 bg-background"
                           >
                             <option value="MIEMBRO">Miembro</option>
                             <option value="SECRETARIO">Secretario</option>
@@ -712,10 +1046,10 @@ export default function ConfiguracionPage() {
 
         {/* Solicitudes Tab */}
         {activeTab === "solicitudes" && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserPlus className="h-5 w-5" />
+          <Card className="shadow-sm">
+            <CardHeader className="pb-6">
+              <CardTitle className="flex items-center gap-3">
+                <UserPlus className="h-5 w-5 text-primary" />
                 Solicitudes de Acceso
                 {solicitudes.length > 0 && (
                   <Badge variant="destructive" className="ml-2">
@@ -727,18 +1061,18 @@ export default function ConfiguracionPage() {
                 Revisa y gestiona las solicitudes de acceso a la congregación
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-6">
               {loadingSolicitudes ? (
-                <div className="text-center py-8">
+                <div className="text-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                  <p className="text-sm text-muted-foreground mt-2">
+                  <p className="text-sm text-muted-foreground mt-4">
                     Cargando solicitudes...
                   </p>
                 </div>
               ) : solicitudes.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <UserPlus className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <h3 className="font-semibold mb-2">
+                <div className="text-center py-12 text-muted-foreground">
+                  <UserPlus className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                  <h3 className="font-semibold mb-2 text-lg">
                     Sin Solicitudes Pendientes
                   </h3>
                   <p className="text-sm">
@@ -750,18 +1084,18 @@ export default function ConfiguracionPage() {
                   {solicitudes.map((solicitud) => (
                     <div
                       key={solicitud.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
+                      className="flex items-center justify-between p-6 border border-border/50 rounded-lg hover:border-border transition-colors"
                     >
                       <div className="flex items-center gap-4">
-                        <Avatar>
+                        <Avatar className="h-12 w-12">
                           <AvatarImage src={solicitud.usuario.avatar} />
-                          <AvatarFallback>
+                          <AvatarFallback className="text-sm font-medium">
                             {solicitud.usuario.nombres.charAt(0)}
                             {solicitud.usuario.apellidos.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
-                          <h4 className="font-semibold">
+                        <div className="space-y-1">
+                          <h4 className="font-semibold text-base">
                             {solicitud.usuario.nombres}{" "}
                             {solicitud.usuario.apellidos}
                           </h4>
@@ -769,7 +1103,7 @@ export default function ConfiguracionPage() {
                             {solicitud.usuario.email}
                           </p>
                           {solicitud.permisos?.mensaje && (
-                            <p className="text-sm text-muted-foreground italic">
+                            <p className="text-sm text-muted-foreground italic bg-muted/50 rounded px-2 py-1 mt-2">
                               &ldquo;{solicitud.permisos.mensaje}&rdquo;
                             </p>
                           )}
@@ -779,16 +1113,16 @@ export default function ConfiguracionPage() {
                           </p>
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-3">
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() =>
                             handleResponderSolicitud(solicitud.id, "ACTIVO")
                           }
-                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                          className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
                         >
-                          <Check className="h-4 w-4" />
+                          <Check className="h-4 w-4 mr-2" />
                           Aprobar
                         </Button>
                         <Button
@@ -797,9 +1131,9 @@ export default function ConfiguracionPage() {
                           onClick={() =>
                             handleResponderSolicitud(solicitud.id, "RECHAZADO")
                           }
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
                         >
-                          <X className="h-4 w-4" />
+                          <X className="h-4 w-4 mr-2" />
                           Rechazar
                         </Button>
                       </div>

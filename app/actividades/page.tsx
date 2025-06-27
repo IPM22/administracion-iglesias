@@ -465,7 +465,7 @@ export default function ActividadesPage() {
               </p>
             </div>
             <Button
-              onClick={() => router.push("/actividades/crear")}
+              onClick={() => router.push("/actividades/nueva")}
               className="w-full sm:w-auto"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -610,7 +610,7 @@ export default function ActividadesPage() {
                         ? "No hay actividades programadas."
                         : "No hay actividades en el historial."}
                     </p>
-                    <Button onClick={() => router.push("/actividades/crear")}>
+                    <Button onClick={() => router.push("/actividades/nueva")}>
                       <Plus className="h-4 w-4 mr-2" />
                       Crear primera actividad
                     </Button>

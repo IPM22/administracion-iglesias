@@ -22,7 +22,7 @@ export async function GET(
 
     console.log("📊 DEBUG API PUBLIC: Ejecutando consulta Prisma...");
 
-    // Consulta simplificada solo con la información necesaria para páginas públicas
+    // Consulta con la información necesaria para páginas públicas de agradecimiento
     const actividad = await prisma.actividad.findUnique({
       where: { id: actividadId },
       select: {
@@ -40,6 +40,8 @@ export async function GET(
         responsable: true,
         estado: true,
         banner: true,
+        createdAt: true,
+        updatedAt: true,
         tipoActividad: {
           select: {
             id: true,
@@ -65,10 +67,33 @@ export async function GET(
             fecha: "asc",
           },
         },
-        // Para páginas públicas, limitamos el historial de visitas a estadísticas básicas
-        _count: {
+        // Para la vista de agradecimiento, incluimos el historial de visitas
+        // pero solo con información básica (nombres y quien invitó)
+        historialVisitas: {
           select: {
-            historialVisitas: true,
+            id: true,
+            fecha: true,
+            horarioId: true,
+            notas: true,
+            persona: {
+              select: {
+                id: true,
+                nombres: true,
+                apellidos: true,
+                foto: true,
+                // Información de quien invitó (para mostrar en agradecimiento)
+                personaInvita: {
+                  select: {
+                    id: true,
+                    nombres: true,
+                    apellidos: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            fecha: "desc",
           },
         },
       },
@@ -99,6 +124,11 @@ export async function GET(
     console.log(
       "🏢 DEBUG API PUBLIC: Ministerio:",
       actividad.ministerio?.nombre || "Sin ministerio"
+    );
+    console.log(
+      "👥 DEBUG API PUBLIC: Historial de visitas:",
+      actividad.historialVisitas.length,
+      "registros"
     );
 
     // Asegurar que devolvemos datos consistentes

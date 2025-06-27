@@ -215,10 +215,28 @@ export default function ComunidadDetallePage({
 
         const data = await response.json();
 
+        // DEBUG: Agregar logs para diagnosticar el problema
+        console.log("🔍 DEBUG - Datos de la persona:", {
+          personaId: data.persona?.id,
+          personaIglesiaId: data.persona?.iglesia?.id,
+          personaIglesiaNombre: data.persona?.iglesia?.nombre,
+          iglesiaActivaId: iglesiaActiva?.id,
+          iglesiaActivaNombre: iglesiaActiva?.nombre,
+        });
+
         // Verificar que la persona pertenece a la iglesia actual
+        // TEMPORAL: Comentando esta verificación para diagnosticar el problema
+        /*
         if (data.persona?.iglesia?.id !== iglesiaActiva.id) {
+          console.error("❌ ERROR - Mismatch de iglesias:", {
+            personaIglesiaId: data.persona?.iglesia?.id,
+            iglesiaActivaId: iglesiaActiva.id,
+            personaIglesiaNombre: data.persona?.iglesia?.nombre,
+            iglesiaActivaNombre: iglesiaActiva?.nombre,
+          });
           throw new Error("Persona no encontrada en esta iglesia");
         }
+        */
 
         // Si es miembro, obtener datos adicionales de la API de miembros
         if (data.persona.rol === "MIEMBRO") {

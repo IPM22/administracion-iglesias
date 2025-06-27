@@ -19,6 +19,7 @@ export async function GET(
         correo: true,
         sitioWeb: true,
         logoUrl: true,
+        configuracion: true,
         activa: true,
         createdAt: true,
         _count: {
@@ -71,19 +72,43 @@ export async function PATCH(
       );
     }
 
+    // Preparar datos de actualización
+    const updateData: {
+      nombre?: string;
+      descripcion?: string;
+      direccion?: string;
+      telefono?: string;
+      correo?: string;
+      sitioWeb?: string;
+      logoUrl?: string;
+      configuracion?: object;
+      updatedAt: Date;
+    } = {
+      nombre: data.nombre?.trim() || iglesiaExistente.nombre,
+      descripcion: data.descripcion?.trim() || iglesiaExistente.descripcion,
+      direccion: data.direccion?.trim() || iglesiaExistente.direccion,
+      telefono: data.telefono?.trim() || iglesiaExistente.telefono,
+      correo: data.correo?.trim() || iglesiaExistente.correo,
+      sitioWeb: data.sitioWeb?.trim() || iglesiaExistente.sitioWeb,
+      logoUrl: data.logoUrl || iglesiaExistente.logoUrl,
+      updatedAt: new Date(),
+    };
+
+    // Si se envía configuración, actualizar o combinar con la existente
+    if (data.configuracion) {
+      const configuracionExistente = iglesiaExistente.configuracion || {};
+      updateData.configuracion = {
+        ...(typeof configuracionExistente === "object"
+          ? configuracionExistente
+          : {}),
+        ...data.configuracion,
+      };
+    }
+
     // Actualizar la iglesia
     const iglesiaActualizada = await prisma.iglesia.update({
       where: { id: parseInt(id) },
-      data: {
-        nombre: data.nombre?.trim() || iglesiaExistente.nombre,
-        descripcion: data.descripcion?.trim() || iglesiaExistente.descripcion,
-        direccion: data.direccion?.trim() || iglesiaExistente.direccion,
-        telefono: data.telefono?.trim() || iglesiaExistente.telefono,
-        correo: data.correo?.trim() || iglesiaExistente.correo,
-        sitioWeb: data.sitioWeb?.trim() || iglesiaExistente.sitioWeb,
-        logoUrl: data.logoUrl || iglesiaExistente.logoUrl,
-        updatedAt: new Date(),
-      },
+      data: updateData,
       select: {
         id: true,
         nombre: true,
@@ -93,6 +118,7 @@ export async function PATCH(
         correo: true,
         sitioWeb: true,
         logoUrl: true,
+        configuracion: true,
         activa: true,
         createdAt: true,
         updatedAt: true,
