@@ -984,7 +984,9 @@ export default function DetalleActividadPage({
                               key={historial.id}
                               className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted/80 transition-colors cursor-pointer"
                               onClick={() =>
-                                router.push(`/visitas/${historial.persona.id}`)
+                                router.push(
+                                  `/comunidad/${historial.persona.id}`
+                                )
                               }
                             >
                               <div className="flex items-center gap-3">

@@ -419,8 +419,8 @@ function AgradecimientoContent({
             <Users className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8" />
             <span className="text-sm sm:text-lg lg:text-xl">
               {asistentesActuales.length} persona
-              {asistentesActuales.length !== 1 ? "s" : ""} nos acompañó
-              {asistentesActuales.length !== 1 ? "ron" : ""}
+              {asistentesActuales.length !== 1 ? "s" : ""} nos{" "}
+              {asistentesActuales.length === 1 ? "acompañó" : "acompañaron"}
             </span>
           </div>
         </div>
