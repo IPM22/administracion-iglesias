@@ -8,7 +8,15 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
-    "consolidar-familias": "ts-node scripts/consolidar-familias.ts"
+    "consolidar-familias": "ts-node scripts/consolidar-familias.ts",
+    "backup": "node scripts/backup-database.js",
+    "backup:create": "node scripts/backup-database.js create",
+    "backup:list": "node scripts/backup-database.js list",
+    "backup:restore": "node scripts/backup-database.js restore",
+    "backup:prisma": "node scripts/backup-prisma.js",
+    "backup:prisma:create": "node scripts/backup-prisma.js create",
+    "backup:prisma:list": "node scripts/backup-prisma.js list",
+    "backup:prisma:restore": "node scripts/backup-prisma.js restore"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
@@ -35,6 +43,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "dayjs": "^1.11.13",
+    "dotenv": "^17.0.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.1",
     "leaflet": "^1.9.4",
