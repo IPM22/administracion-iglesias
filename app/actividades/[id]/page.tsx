@@ -52,7 +52,30 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
 import { MensajeMasivoModal } from "@/components/MensajeMasivoModal";
-import { formatDate } from "@/lib/date-utils";
+import { formatDate, formatActivityDate } from "@/lib/date-utils";
+
+// Función para formatear teléfonos para mostrar
+const formatPhoneForDisplay = (phone: string | null | undefined): string => {
+  if (!phone) return "";
+
+  // Remover todo lo que no sea número
+  const numbers = phone.replace(/\D/g, "");
+
+  // Si no tiene números, retornar vacío
+  if (numbers.length === 0) return "";
+
+  // Aplicar formato XXX-XXX-XXXX
+  if (numbers.length <= 3) {
+    return numbers;
+  } else if (numbers.length <= 6) {
+    return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+  } else {
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(
+      6,
+      10
+    )}`;
+  }
+};
 
 // Interfaces para tipado
 interface TipoActividad {
@@ -70,11 +93,13 @@ interface HistorialVisita {
     nombres: string;
     apellidos: string;
     foto?: string;
-  };
-  invitadoPor?: {
-    id: number;
-    nombres: string;
-    apellidos: string;
+    telefono?: string;
+    celular?: string;
+    personaInvita?: {
+      id: number;
+      nombres: string;
+      apellidos: string;
+    };
   };
   observaciones?: string;
 }
@@ -151,6 +176,8 @@ export default function DetalleActividadPage({
           throw new Error("Error al obtener los datos de la actividad");
         }
         const data = await response.json();
+        console.log("📊 Datos de actividad recibidos:", data);
+        console.log("📊 Historial de visitas:", data.historialVisitas);
         setActividad(data);
       } catch (error) {
         console.error("Error:", error);
@@ -164,14 +191,12 @@ export default function DetalleActividadPage({
   }, [id]);
 
   const formatearFecha = (fecha: string) => {
-    const resultado = formatDate(fecha, {
+    return formatActivityDate(fecha, {
       weekday: "long",
       day: "numeric",
       month: "long",
       year: "numeric",
     });
-
-    return resultado;
   };
 
   const formatearHora = (hora?: string) => {
@@ -356,9 +381,10 @@ export default function DetalleActividadPage({
       "#": index + 1,
       Nombre: `${asistente.persona.nombres} ${asistente.persona.apellidos}`,
       "Fecha de Visita": formatearFecha(asistente.fecha),
-      "Invitado por": asistente.invitadoPor
-        ? `${asistente.invitadoPor.nombres} ${asistente.invitadoPor.apellidos}`
+      "Invitado por": asistente.persona.personaInvita
+        ? `${asistente.persona.personaInvita.nombres} ${asistente.persona.personaInvita.apellidos}`
         : "No especificado",
+      "Teléfono": asistente.persona.celular || asistente.persona.telefono || "No especificado",
       Observaciones: asistente.observaciones || "Sin observaciones",
     }));
 
@@ -436,14 +462,23 @@ export default function DetalleActividadPage({
         yPosition
       );
 
-      if (asistente.invitadoPor) {
+      if (asistente.persona.personaInvita) {
         yPosition += 7;
         pdf.setFontSize(10);
         pdf.text(
-          `   Invitado por: ${asistente.invitadoPor.nombres} ${asistente.invitadoPor.apellidos}`,
+          `   Invitado por: ${asistente.persona.personaInvita.nombres} ${asistente.persona.personaInvita.apellidos}`,
           25,
           yPosition
         );
+        pdf.setFontSize(12);
+      }
+
+      // Agregar información de teléfono
+      const telefono = asistente.persona.celular || asistente.persona.telefono;
+      if (telefono) {
+        yPosition += 7;
+        pdf.setFontSize(10);
+        pdf.text(`   Teléfono: ${telefono}`, 25, yPosition);
         pdf.setFontSize(12);
       }
 
@@ -844,9 +879,7 @@ export default function DetalleActividadPage({
                           {grupo.horario ? (
                             <div className="text-center w-full">
                               <div className="font-medium text-xs leading-tight mb-1 truncate">
-                                {new Date(
-                                  grupo.horario.fecha
-                                ).toLocaleDateString("es-ES", {
+                                {formatActivityDate(grupo.horario.fecha, {
                                   day: "2-digit",
                                   month: "short",
                                 })}
@@ -1000,21 +1033,39 @@ export default function DetalleActividadPage({
                                     {historial.persona.nombres}{" "}
                                     {historial.persona.apellidos}
                                   </p>
-                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <span>
-                                      {new Date(
-                                        historial.fecha
-                                      ).toLocaleDateString()}
-                                    </span>
-                                    {historial.invitadoPor && (
-                                      <>
-                                        <span>•</span>
+                                  <div className="space-y-1">
+                                    {/* Fecha de asistencia */}
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                      <span>📅</span>
+                                      <span>
+                                        {formatActivityDate(historial.fecha, {
+                                          day: "2-digit",
+                                          month: "2-digit",
+                                          year: "numeric",
+                                        })}
+                                      </span>
+                                    </div>
+                                    
+                                    {/* Persona que invitó */}
+                                    {historial.persona.personaInvita && (
+                                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <span>👤</span>
                                         <span>
                                           Invitado por:{" "}
-                                          {historial.invitadoPor.nombres}{" "}
-                                          {historial.invitadoPor.apellidos}
+                                          {historial.persona.personaInvita.nombres}{" "}
+                                          {historial.persona.personaInvita.apellidos}
                                         </span>
-                                      </>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Información de contacto */}
+                                    {(historial.persona.telefono || historial.persona.celular) && (
+                                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <span>📞</span>
+                                        <span>
+                                          {formatPhoneForDisplay(historial.persona.celular || historial.persona.telefono)}
+                                        </span>
+                                      </div>
                                     )}
                                   </div>
                                   {historial.observaciones && (

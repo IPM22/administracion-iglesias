@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormDescription, FormItem, FormLabel } from "@/components/ui/form";
 import { Trash2, Plus, Clock } from "lucide-react";
-import { formatDate, formatDateForInput } from "@/lib/date-utils";
+import { formatDate, formatDateForInput, formatActivityDate } from "@/lib/date-utils";
 import dayjs from "dayjs";
 
 interface Horario {
@@ -60,7 +60,7 @@ export function HorariosSelector({
   };
 
   const formatearFecha = (fecha: string) => {
-    return formatDate(fecha, {
+    return formatActivityDate(fecha, {
       weekday: "long",
       year: "numeric",
       month: "long",

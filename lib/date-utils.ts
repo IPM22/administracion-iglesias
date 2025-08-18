@@ -310,3 +310,73 @@ export function formatDateTimeShort(
     return "—";
   }
 }
+
+/**
+ * Formatea una fecha de actividad corrigiendo problemas de zona horaria
+ * Agrega +1 día para compensar la conversión UTC a hora local
+ * @param dateString Fecha en formato string o Date
+ * @param options Opciones de formateo
+ * @returns Fecha formateada corregida
+ */
+export function formatActivityDate(
+  dateString?: string | Date | null,
+  options: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }
+): string {
+  if (!dateString) return "—";
+
+  try {
+    // Agregar +1 día para compensar problemas de zona horaria
+    const fechaCorregida = new Date(dateString);
+    fechaCorregida.setDate(fechaCorregida.getDate() + 1);
+    
+    // Usar dayjs para parsear la fecha corregida
+    const date = dayjs(fechaCorregida).startOf("day");
+
+    if (!date.isValid()) return "—";
+
+    // Construir el formato según las opciones usando dayjs directamente
+    let formatStr = "";
+
+    if (options.weekday) {
+      if (options.weekday === "long") formatStr += "dddd, ";
+      else if (options.weekday === "short") formatStr += "ddd, ";
+    }
+
+    if (options.day) {
+      if (options.day === "2-digit") formatStr += "DD";
+      else formatStr += "D";
+    }
+
+    if (options.month) {
+      if (options.month === "long") formatStr += " [de] MMMM";
+      else if (options.month === "short") formatStr += " MMM";
+      else if (options.month === "numeric") formatStr += "/M";
+      else if (options.month === "2-digit") formatStr += "/MM";
+    }
+
+    if (options.year) {
+      if (options.month === "numeric" || options.month === "2-digit") formatStr += "/YYYY";
+      else formatStr += " [de] YYYY";
+    }
+
+    // Formatear usando dayjs directamente
+    const result = date.format(formatStr);
+    
+    // Log para debug
+    console.log("🔧 formatActivityDate:", {
+      input: dateString,
+      corrected: fechaCorregida.toISOString(),
+      formatStr,
+      result
+    });
+    
+    return result;
+  } catch (error) {
+    console.error("❌ Error en formatActivityDate:", error);
+    return "—";
+  }
+}

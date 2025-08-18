@@ -294,7 +294,11 @@ export default function DashboardPage() {
   }
 
   const formatearFecha = (fecha: string) => {
-    return new Date(fecha).toLocaleDateString("es-ES", {
+    // Agregar +1 día para compensar problemas de zona horaria
+    const fechaCorregida = new Date(fecha);
+    fechaCorregida.setDate(fechaCorregida.getDate() + 1);
+    
+    return fechaCorregida.toLocaleDateString("es-ES", {
       month: "short",
       day: "numeric",
     });

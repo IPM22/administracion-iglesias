@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
-import { formatDate } from "@/lib/date-utils";
+import { formatDate, formatActivityDate } from "@/lib/date-utils";
 import dayjs from "dayjs";
 
 interface TipoActividad {
@@ -107,7 +107,7 @@ export default function PromocionActividadClient() {
   }, [actividadId]);
 
   const formatearFecha = (fecha: string) => {
-    return formatDate(fecha, {
+    return formatActivityDate(fecha, {
       weekday: "long",
       day: "numeric",
       month: "long",

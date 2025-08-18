@@ -63,7 +63,7 @@ import { useEffect, useState } from "react";
 import { ModeToggle } from "../../components/mode-toggle";
 import jsPDF from "jspdf";
 import { useAuth } from "@/hooks/useAuth";
-import { formatDate } from "@/lib/date-utils";
+import { formatDate, formatActivityDate } from "@/lib/date-utils";
 import dayjs from "dayjs";
 import "dayjs/locale/es";
 
@@ -612,15 +612,12 @@ export default function ActividadesPage() {
   // Funciones de utilidad para fechas corregidas
   const formatearFechaCompleta = (fecha: string) => {
     try {
-      // Usar las utilidades de fecha existentes para evitar problemas de zona horaria
-      const resultado = formatDate(fecha, {
+      return formatActivityDate(fecha, {
         weekday: "long",
         day: "numeric",
         month: "long",
         year: "numeric",
       });
-
-      return resultado;
     } catch (error) {
       console.error("Error formateando fecha completa:", error);
       return fecha; // Retornar fecha original si hay error
@@ -629,8 +626,7 @@ export default function ActividadesPage() {
 
   const formatearFechaCorta = (fecha: string) => {
     try {
-      // Usar las utilidades de fecha existentes para evitar problemas de zona horaria
-      return formatDate(fecha, {
+      return formatActivityDate(fecha, {
         day: "numeric",
         month: "short",
         year: "numeric",

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { FormDescription, FormItem, FormLabel } from "@/components/ui/form";
-import { formatDate } from "@/lib/date-utils";
+import { formatDate, formatActivityDate } from "@/lib/date-utils";
 import dayjs from "dayjs";
 
 interface DiasActividadSelectorProps {
@@ -43,7 +43,7 @@ export function DiasActividadSelector({
   const fechasDisponibles = generarFechas();
 
   const formatearFecha = (fecha: Date) => {
-    return formatDate(fecha, {
+    return formatActivityDate(fecha, {
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -128,7 +128,11 @@ export function DiasActividadSelector({
                     {formatearFecha(fecha)}
                   </FormLabel>
                   <FormDescription className="text-xs">
-                    {fecha.toLocaleDateString("es-ES")}
+                    {formatActivityDate(fecha, {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })}
                   </FormDescription>
                 </div>
               </FormItem>
