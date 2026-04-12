@@ -70,7 +70,7 @@ const formatPhoneForDisplay = (phone: string | null | undefined): string => {
   } else {
     return `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(
       6,
-      10
+      10,
     )}`;
   }
 };
@@ -186,7 +186,7 @@ function MiembroDetalleContent({
       setLoading(true);
       try {
         console.log(
-          `🔄 Cargando detalles del miembro ${id} para iglesia: ${iglesiaActiva?.nombre} (ID: ${iglesiaActiva?.id})`
+          `🔄 Cargando detalles del miembro ${id} para iglesia: ${iglesiaActiva?.nombre} (ID: ${iglesiaActiva?.id})`,
         );
 
         // Llamar directamente a la API para evitar bucles infinitos
@@ -212,11 +212,11 @@ function MiembroDetalleContent({
           console.log("🔍 DEBUG - Primer familiar:", data.familiares[0]);
           console.log(
             "🔍 DEBUG - Tipo del primer familiar:",
-            typeof data.familiares[0]
+            typeof data.familiares[0],
           );
           console.log(
             "🔍 DEBUG - Keys del primer familiar:",
-            Object.keys(data.familiares[0])
+            Object.keys(data.familiares[0]),
           );
         }
         setMiembro(data);
@@ -518,7 +518,7 @@ function MiembroDetalleContent({
                       size="sm"
                       onClick={() =>
                         router.push(
-                          `/miembros/${iglesiaActiva?.id}/ministerios`
+                          `/miembros/${iglesiaActiva?.id}/ministerios`,
                         )
                       }
                     >
@@ -537,7 +537,7 @@ function MiembroDetalleContent({
                         variant="outline"
                         onClick={() =>
                           router.push(
-                            `/miembros/${iglesiaActiva?.id}/ministerios/nuevo`
+                            `/miembros/${iglesiaActiva?.id}/ministerios/nuevo`,
                           )
                         }
                       >
@@ -655,7 +655,7 @@ function MiembroDetalleContent({
                         variant="outline"
                         onClick={() =>
                           router.push(
-                            `/miembros/${iglesiaActiva?.id}/familia/agregar`
+                            `/miembros/${iglesiaActiva?.id}/familia/agregar`,
                           )
                         }
                       >
@@ -671,7 +671,7 @@ function MiembroDetalleContent({
                           // Validar que familiar.familiar existe y tiene las propiedades correctas
                           if (!familiarRel.familiar) {
                             console.error(
-                              "❌ ERROR: familiarRel.familiar es null/undefined"
+                              "❌ ERROR: familiarRel.familiar es null/undefined",
                             );
                             return null;
                           }
@@ -683,7 +683,7 @@ function MiembroDetalleContent({
                           ) {
                             console.error(
                               "❌ ERROR: familiarRel.familiar no tiene nombres/apellidos correctos:",
-                              familiarRel.familiar
+                              familiarRel.familiar,
                             );
                             return null;
                           }
@@ -694,7 +694,7 @@ function MiembroDetalleContent({
                               className="flex items-center justify-between p-4 bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-950/20 dark:to-rose-950/20 rounded-lg hover:shadow-md transition-all duration-200 cursor-pointer border"
                               onClick={() =>
                                 router.push(
-                                  `/miembros/${familiarRel.familiar.id}`
+                                  `/miembros/${familiarRel.familiar.id}`,
                                 )
                               }
                             >
@@ -712,7 +712,7 @@ function MiembroDetalleContent({
                                   <div className="flex items-center gap-2">
                                     <span
                                       className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getRelacionColor(
-                                        familiarRel.tipoRelacion
+                                        familiarRel.tipoRelacion,
                                       )}`}
                                     >
                                       {familiarRel.tipoRelacion}
@@ -739,8 +739,8 @@ function MiembroDetalleContent({
                                     {familiarRel.fuente === "directa"
                                       ? "Directo"
                                       : familiarRel.fuente === "inversa"
-                                      ? "Referencia"
-                                      : "Familia"}
+                                        ? "Referencia"
+                                        : "Familia"}
                                   </span>
                                 )}
                               </div>
@@ -755,7 +755,7 @@ function MiembroDetalleContent({
                             size="sm"
                             onClick={() =>
                               router.push(
-                                `/miembros/${iglesiaActiva?.id}/familia`
+                                `/miembros/${iglesiaActiva?.id}/familia`,
                               )
                             }
                             className="text-muted-foreground hover:text-primary"
@@ -821,7 +821,7 @@ function MiembroDetalleContent({
                                 {visita.totalVisitas !== 1 ? "s" : ""}
                                 {visita.fechaPrimeraVisita &&
                                   ` • Desde ${formatDate(
-                                    visita.fechaPrimeraVisita
+                                    visita.fechaPrimeraVisita,
                                   )}`}
                               </p>
                             </div>
@@ -949,7 +949,7 @@ function MiembroDetalleContent({
                             {calcularAniosTranscurridos(miembro.fechaIngreso)}{" "}
                             año
                             {calcularAniosTranscurridos(
-                              miembro.fechaIngreso
+                              miembro.fechaIngreso,
                             ) !== 1
                               ? "s"
                               : ""}{" "}
@@ -977,11 +977,11 @@ function MiembroDetalleContent({
                             null && (
                             <p className="text-xs text-muted-foreground">
                               {calcularAniosTranscurridos(
-                                miembro.fechaBautismo
+                                miembro.fechaBautismo,
                               )}{" "}
                               año
                               {calcularAniosTranscurridos(
-                                miembro.fechaBautismo
+                                miembro.fechaBautismo,
                               ) !== 1
                                 ? "s"
                                 : ""}{" "}
@@ -1042,7 +1042,7 @@ function MiembroDetalleContent({
                     className="w-full justify-start"
                     onClick={() =>
                       router.push(
-                        `/miembros/${iglesiaActiva?.id}/ministerios/nuevo`
+                        `/miembros/${iglesiaActiva?.id}/ministerios/nuevo`,
                       )
                     }
                   >
@@ -1054,7 +1054,7 @@ function MiembroDetalleContent({
                     className="w-full justify-start"
                     onClick={() =>
                       router.push(
-                        `/miembros/${iglesiaActiva?.id}/familia/agregar`
+                        `/miembros/${iglesiaActiva?.id}/familia/agregar`,
                       )
                     }
                   >
@@ -1066,7 +1066,7 @@ function MiembroDetalleContent({
                     className="w-full justify-start"
                     onClick={() =>
                       router.push(
-                        `/visitas/nueva?invitadoPor=${iglesiaActiva?.id}`
+                        `/visitas/nueva?invitadoPor=${iglesiaActiva?.id}`,
                       )
                     }
                   >
@@ -1106,7 +1106,7 @@ function MiembroDetalleContent({
                     onClick={() => {
                       setMinisteriosDialogOpen(false);
                       router.push(
-                        `/miembros/${iglesiaActiva?.id}/ministerios/nuevo`
+                        `/miembros/${iglesiaActiva?.id}/ministerios/nuevo`,
                       );
                     }}
                   >

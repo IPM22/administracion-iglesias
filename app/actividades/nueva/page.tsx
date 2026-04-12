@@ -97,7 +97,7 @@ const formSchema = z
     {
       message: "Debe proporcionar una fecha o un rango de fechas válido",
       path: ["fecha"],
-    }
+    },
   )
   .refine(
     (data) => {
@@ -111,7 +111,7 @@ const formSchema = z
       message:
         "La fecha de fin debe ser posterior o igual a la fecha de inicio",
       path: ["fechaFin"],
-    }
+    },
   );
 
 type FormValues = z.infer<typeof formSchema>;
@@ -159,7 +159,7 @@ export default function NuevaActividadPage() {
         console.log(
           "📋 Respuesta tipos de actividad:",
           tiposResponse.status,
-          tiposResponse.statusText
+          tiposResponse.statusText,
         );
 
         if (!tiposResponse.ok) {
@@ -177,7 +177,7 @@ export default function NuevaActividadPage() {
         console.log(
           "⛪ Respuesta ministerios:",
           ministeriosResponse.status,
-          ministeriosResponse.statusText
+          ministeriosResponse.statusText,
         );
 
         if (!ministeriosResponse.ok) {
@@ -241,7 +241,7 @@ export default function NuevaActividadPage() {
     } catch (error) {
       console.error("Error:", error);
       setError(
-        error instanceof Error ? error.message : "Error al crear la actividad"
+        error instanceof Error ? error.message : "Error al crear la actividad",
       );
     } finally {
       setSaving(false);
@@ -584,7 +584,7 @@ export default function NuevaActividadPage() {
                                     field.onChange(data.direccion);
                                     form.setValue(
                                       "googleMapsEmbed",
-                                      data.googleMapsEmbed
+                                      data.googleMapsEmbed,
                                     );
                                   }}
                                 />
@@ -596,12 +596,12 @@ export default function NuevaActividadPage() {
                                     field.onChange(location.direccion);
                                     form.setValue(
                                       "googleMapsEmbed",
-                                      location.googleMapsEmbed
+                                      location.googleMapsEmbed,
                                     );
                                   }}
                                   direccion={field.value || ""}
                                   googleMapsEmbed={form.getValues(
-                                    "googleMapsEmbed"
+                                    "googleMapsEmbed",
                                   )}
                                 />
                               </div>

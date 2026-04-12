@@ -353,7 +353,9 @@ export function UseIglesiaLocationButton({
             <p className="text-sm font-medium text-green-800 dark:text-green-300">
               📍 Usar ubicación de la iglesia
             </p>
-            <p className="text-xs text-green-600 dark:text-green-400 mt-1">{direccion}</p>
+            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+              {direccion}
+            </p>
             {googleMapsEmbed && (
               <Badge
                 variant="outline"

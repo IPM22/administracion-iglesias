@@ -136,7 +136,7 @@ export default function HistorialVisitaPage({
   // Función para mostrar dialog de confirmación
   const mostrarDialogEliminar = (
     historialId: number,
-    nombreActividad: string
+    nombreActividad: string,
   ) => {
     setRegistroAEliminar({ id: historialId, nombre: nombreActividad });
     setDialogOpen(true);
@@ -158,7 +158,7 @@ export default function HistorialVisitaPage({
         `/api/visitas/${id}/historial?historialId=${registroAEliminar.id}`,
         {
           method: "DELETE",
-        }
+        },
       );
 
       if (!response.ok) {
@@ -173,7 +173,9 @@ export default function HistorialVisitaPage({
     } catch (error) {
       console.error("Error al eliminar:", error);
       setError(
-        error instanceof Error ? error.message : "Error al eliminar el registro"
+        error instanceof Error
+          ? error.message
+          : "Error al eliminar el registro",
       );
     } finally {
       setEliminando(null);
@@ -459,7 +461,7 @@ export default function HistorialVisitaPage({
                               item.id,
                               item.actividad?.nombre ||
                                 item.tipoActividad?.nombre ||
-                                "Actividad"
+                                "Actividad",
                             )
                           }
                           disabled={eliminando === item.id}
@@ -497,7 +499,7 @@ export default function HistorialVisitaPage({
                     <div className="text-2xl font-bold text-green-600">
                       {
                         historial.filter(
-                          (h) => h.tipoActividad?.tipo === "Regular"
+                          (h) => h.tipoActividad?.tipo === "Regular",
                         ).length
                       }
                     </div>
@@ -515,7 +517,7 @@ export default function HistorialVisitaPage({
                       {
                         historial.filter(
                           (h) =>
-                            h.tipoActividad?.tipo === "Especial" || h.actividad
+                            h.tipoActividad?.tipo === "Especial" || h.actividad,
                         ).length
                       }
                     </div>

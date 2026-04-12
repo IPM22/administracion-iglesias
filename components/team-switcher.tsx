@@ -48,7 +48,7 @@ export function TeamSwitcher({
 
   const handleIglesiaChange = (iglesiaId: number) => {
     const iglesia = iglesiasDisponibles.find(
-      (ui) => ui.iglesia.id === iglesiaId
+      (ui) => ui.iglesia.id === iglesiaId,
     );
     if (iglesia) {
       cambiarIglesia({

@@ -145,7 +145,7 @@ export default function GestionPersonasMinisterioPage({
   const [personaSeleccionada, setPersonaSeleccionada] =
     useState<MinisterioPersona | null>(null);
   const [personaParaAgregar, setPersonaParaAgregar] = useState<Persona | null>(
-    null
+    null,
   );
 
   const formAgregar = useForm<PersonaFormValues>({
@@ -285,7 +285,7 @@ export default function GestionPersonasMinisterioPage({
             "Content-Type": "application/json",
           },
           body: JSON.stringify(data),
-        }
+        },
       );
 
       const result = await response.json();
@@ -296,7 +296,7 @@ export default function GestionPersonasMinisterioPage({
 
       // Actualizar la lista
       setPersonasMinisterio((prev) =>
-        prev.map((p) => (p.id === result.id ? result : p))
+        prev.map((p) => (p.id === result.id ? result : p)),
       );
       setDialogEditar(false);
       setPersonaSeleccionada(null);
@@ -317,7 +317,7 @@ export default function GestionPersonasMinisterioPage({
   const removerPersona = async (persona: MinisterioPersona) => {
     if (
       !confirm(
-        `¿Estás seguro de remover a ${persona.persona.nombres} ${persona.persona.apellidos} del ministerio?`
+        `¿Estás seguro de remover a ${persona.persona.nombres} ${persona.persona.apellidos} del ministerio?`,
       )
     ) {
       return;
@@ -326,7 +326,7 @@ export default function GestionPersonasMinisterioPage({
     try {
       const response = await fetch(
         `/api/ministerios/${id}/miembros/${persona.persona.id}`,
-        { method: "DELETE" }
+        { method: "DELETE" },
       );
 
       if (!response.ok) {
@@ -339,13 +339,13 @@ export default function GestionPersonasMinisterioPage({
         prev.map((p) =>
           p.id === persona.id
             ? { ...p, estado: "Inactivo", fechaFin: new Date().toISOString() }
-            : p
-        )
+            : p,
+        ),
       );
     } catch (error) {
       console.error("Error:", error);
       alert(
-        error instanceof Error ? error.message : "Error al remover la persona"
+        error instanceof Error ? error.message : "Error al remover la persona",
       );
     }
   };
@@ -364,8 +364,8 @@ export default function GestionPersonasMinisterioPage({
   const personasDisponibles = todasLasPersonas.filter(
     (persona) =>
       !personasMinisterio.some(
-        (pm) => pm.persona.id === persona.id && pm.estado === "Activo"
-      )
+        (pm) => pm.persona.id === persona.id && pm.estado === "Activo",
+      ),
   );
 
   // Filtrar personas por búsqueda
@@ -376,12 +376,12 @@ export default function GestionPersonasMinisterioPage({
         .toLowerCase()
         .includes(busqueda.toLowerCase()) ||
       (persona.rol &&
-        persona.rol.toLowerCase().includes(busqueda.toLowerCase()))
+        persona.rol.toLowerCase().includes(busqueda.toLowerCase())),
   );
 
   // Obtener el líder actual
   const liderActual = personasMinisterio.find(
-    (p) => p.esLider && p.estado === "Activo"
+    (p) => p.esLider && p.estado === "Activo",
   );
 
   if (loading) {

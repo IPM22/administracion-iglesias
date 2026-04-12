@@ -41,7 +41,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Calendar, UserPlus, Plus, X, Search, History, User } from "lucide-react";
+import {
+  ArrowLeft,
+  Calendar,
+  UserPlus,
+  Plus,
+  X,
+  Search,
+  History,
+  User,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm, type ControllerRenderProps } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -61,7 +70,11 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { toLocaleDateShort, toLocaleDateMedium, toLocaleDateLong } from "@/lib/date-utils";
+import {
+  toLocaleDateShort,
+  toLocaleDateMedium,
+  toLocaleDateLong,
+} from "@/lib/date-utils";
 
 // Interfaces para tipado
 interface TipoActividad {
@@ -199,8 +212,12 @@ export default function NuevaVisitaPage() {
   const [agregarAsistencia, setAgregarAsistencia] = useState(false);
 
   // Estados para detección de duplicados
-  const [visitasCoincidentes, setVisitasCoincidentes] = useState<VisitaBusqueda[]>([]);
-  const [visitaExistente, setVisitaExistente] = useState<VisitaBusqueda | null>(null);
+  const [visitasCoincidentes, setVisitasCoincidentes] = useState<
+    VisitaBusqueda[]
+  >([]);
+  const [visitaExistente, setVisitaExistente] = useState<VisitaBusqueda | null>(
+    null,
+  );
   const [buscandoDuplicados, setBuscandoDuplicados] = useState(false);
   const [dialogDuplicado, setDialogDuplicado] = useState(false);
   const [historialGuardando, setHistorialGuardando] = useState(false);
@@ -294,7 +311,7 @@ export default function NuevaVisitaPage() {
                 celular: visita.celular,
                 tipo: "visita" as const,
                 estado: visita.estado || "Nueva",
-              })
+              }),
             );
 
             personasFinales.push(...visitasConTipo);
@@ -362,7 +379,7 @@ export default function NuevaVisitaPage() {
       }
 
       const tipoActividad = tiposActividad.find(
-        (tipo) => tipo.id.toString() === tipoSeleccionado
+        (tipo) => tipo.id.toString() === tipoSeleccionado,
       );
 
       if (tipoActividad?.tipo === "Especial") {
@@ -372,11 +389,11 @@ export default function NuevaVisitaPage() {
             const data = await response.json();
             const actividadesFiltradas = data.filter(
               (act: Actividad) =>
-                act.tipoActividad.id.toString() === tipoSeleccionado
+                act.tipoActividad.id.toString() === tipoSeleccionado,
             );
             actividadesFiltradas.sort(
               (a: Actividad, b: Actividad) =>
-                new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+                new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
             );
             setActividades(actividadesFiltradas);
           }
@@ -388,7 +405,7 @@ export default function NuevaVisitaPage() {
         if (tipoActividad?.tipo === "Regular") {
           form.setValue(
             "fechaAsistencia",
-            new Date().toISOString().split("T")[0]
+            new Date().toISOString().split("T")[0],
           );
         }
       }
@@ -404,7 +421,7 @@ export default function NuevaVisitaPage() {
   useEffect(() => {
     if (actividadIdWatched && actividades.length > 0) {
       const actividadSeleccionada = actividades.find(
-        (act) => act.id.toString() === actividadIdWatched
+        (act) => act.id.toString() === actividadIdWatched,
       );
 
       if (actividadSeleccionada) {
@@ -428,7 +445,7 @@ export default function NuevaVisitaPage() {
   // Función para determinar si se debe mostrar el campo de fecha
   const deberMostrarCampoFecha = () => {
     const tipoActividad = tiposActividad.find(
-      (tipo) => tipo.id.toString() === tipoSeleccionado
+      (tipo) => tipo.id.toString() === tipoSeleccionado,
     );
     return tipoActividad?.tipo === "Regular";
   };
@@ -449,7 +466,9 @@ export default function NuevaVisitaPage() {
     setBuscandoDuplicados(true);
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/visitas/buscar?q=${encodeURIComponent(query)}`);
+        const res = await fetch(
+          `/api/visitas/buscar?q=${encodeURIComponent(query)}`,
+        );
         if (res.ok) {
           const data = await res.json();
           setVisitasCoincidentes(data);
@@ -482,10 +501,14 @@ export default function NuevaVisitaPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fecha: fechaParaRegistro,
-          tipoActividadId: values.tipoActividadId ? parseInt(values.tipoActividadId) : null,
+          tipoActividadId: values.tipoActividadId
+            ? parseInt(values.tipoActividadId)
+            : null,
           actividadId: values.actividadId ? parseInt(values.actividadId) : null,
           horarioId: values.horarioId ? parseInt(values.horarioId) : null,
-          invitadoPorId: values.invitadoPorId ? parseInt(values.invitadoPorId) : null,
+          invitadoPorId: values.invitadoPorId
+            ? parseInt(values.invitadoPorId)
+            : null,
           observaciones: values.observacionesAsistencia || null,
         }),
       });
@@ -565,7 +588,7 @@ export default function NuevaVisitaPage() {
                 : null,
               observaciones: values.observacionesAsistencia || null,
             }),
-          }
+          },
         );
 
         if (!historialResponse.ok) {
@@ -573,13 +596,13 @@ export default function NuevaVisitaPage() {
           console.error(
             "Error al registrar primera asistencia:",
             historialResponse.status,
-            errorData
+            errorData,
           );
           // Mostrar el error específico al usuario
           setError(
             `La visita se creó correctamente, pero hubo un error al registrar la primera asistencia: ${
               errorData.error || "Error desconocido"
-            }`
+            }`,
           );
           return; // No redirigir si hay error
         } else {
@@ -591,7 +614,7 @@ export default function NuevaVisitaPage() {
     } catch (error) {
       console.error("Error:", error);
       setError(
-        error instanceof Error ? error.message : "Error al guardar la visita"
+        error instanceof Error ? error.message : "Error al guardar la visita",
       );
     } finally {
       setSaving(false);
@@ -705,65 +728,91 @@ export default function NuevaVisitaPage() {
                               Buscando visitas similares…
                             </div>
                           )}
-                          {!buscandoDuplicados && visitasCoincidentes.length === 0 &&
-                           (nombresWatched ?? "").length + (apellidosWatched ?? "").length >= 3 &&
-                           !visitaExistente && (
-                            <p className="mt-2 text-xs text-muted-foreground">
-                              ✓ Sin coincidencias — puedes continuar con el registro nuevo.
-                            </p>
-                          )}
-                          {visitasCoincidentes.length > 0 && !visitaExistente && !buscandoDuplicados && (
-                            <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 p-3">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Search className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                                <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                                  {visitasCoincidentes.length === 1
-                                    ? "Encontramos 1 visita con un nombre similar"
-                                    : `Encontramos ${visitasCoincidentes.length} visitas con nombres similares`}
+                          {!buscandoDuplicados &&
+                            visitasCoincidentes.length === 0 &&
+                            (nombresWatched ?? "").length +
+                              (apellidosWatched ?? "").length >=
+                              3 &&
+                            !visitaExistente && (
+                              <p className="mt-2 text-xs text-muted-foreground">
+                                ✓ Sin coincidencias — puedes continuar con el
+                                registro nuevo.
+                              </p>
+                            )}
+                          {visitasCoincidentes.length > 0 &&
+                            !visitaExistente &&
+                            !buscandoDuplicados && (
+                              <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 p-3">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Search className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                                  <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                                    {visitasCoincidentes.length === 1
+                                      ? "Encontramos 1 visita con un nombre similar"
+                                      : `Encontramos ${visitasCoincidentes.length} visitas con nombres similares`}
+                                  </p>
+                                </div>
+                                <p className="text-xs text-amber-700 dark:text-amber-400 mb-3">
+                                  ¿Es alguna de estas personas? Si ya ha
+                                  visitado antes, selecciónala para agregar una
+                                  nueva asistencia sin duplicar el registro.
+                                </p>
+                                <div className="space-y-2">
+                                  {visitasCoincidentes.map((v) => (
+                                    <div
+                                      key={v.id}
+                                      className="flex items-center gap-3 rounded-md bg-white dark:bg-zinc-900 border border-amber-200 dark:border-amber-800 p-2 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-950/50 transition-colors"
+                                      onClick={() => {
+                                        setVisitaExistente(v);
+                                        setAgregarAsistencia(true);
+                                        setDialogDuplicado(true);
+                                      }}
+                                    >
+                                      <Avatar className="h-9 w-9 shrink-0">
+                                        <AvatarImage src={v.foto} />
+                                        <AvatarFallback className="text-xs">
+                                          {v.nombres[0]}
+                                          {v.apellidos[0]}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-sm truncate">
+                                          {v.nombres} {v.apellidos}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {v._count.historialVisitas} asistencia
+                                          {v._count.historialVisitas !== 1
+                                            ? "s"
+                                            : ""}{" "}
+                                          registrada
+                                          {v._count.historialVisitas !== 1
+                                            ? "s"
+                                            : ""}
+                                          {v.fechaPrimeraVisita && (
+                                            <>
+                                              {" "}
+                                              · Primera visita:{" "}
+                                              {toLocaleDateMedium(
+                                                v.fechaPrimeraVisita,
+                                              )}
+                                            </>
+                                          )}
+                                        </p>
+                                      </div>
+                                      <Badge
+                                        variant="secondary"
+                                        className="shrink-0 text-xs"
+                                      >
+                                        Seleccionar
+                                      </Badge>
+                                    </div>
+                                  ))}
+                                </div>
+                                <p className="text-xs text-amber-600 dark:text-amber-500 mt-2">
+                                  Si no es ninguna de estas, continúa llenando
+                                  el formulario para crear una nueva visita.
                                 </p>
                               </div>
-              <p className="text-xs text-amber-700 dark:text-amber-400 mb-3">
-                                ¿Es alguna de estas personas? Si ya ha visitado antes, selecciónala para agregar una nueva asistencia sin duplicar el registro.
-                              </p>
-                              <div className="space-y-2">
-                                {visitasCoincidentes.map((v) => (
-                                  <div
-                                    key={v.id}
-                                    className="flex items-center gap-3 rounded-md bg-white dark:bg-zinc-900 border border-amber-200 dark:border-amber-800 p-2 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-950/50 transition-colors"
-                                    onClick={() => {
-                                      setVisitaExistente(v);
-                                      setAgregarAsistencia(true);
-                                      setDialogDuplicado(true);
-                                    }}
-                                  >
-                                    <Avatar className="h-9 w-9 shrink-0">
-                                      <AvatarImage src={v.foto} />
-                                      <AvatarFallback className="text-xs">
-                                        {v.nombres[0]}{v.apellidos[0]}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="font-medium text-sm truncate">
-                                        {v.nombres} {v.apellidos}
-                                      </p>
-                                      <p className="text-xs text-muted-foreground">
-                                        {v._count.historialVisitas} asistencia{v._count.historialVisitas !== 1 ? "s" : ""} registrada{v._count.historialVisitas !== 1 ? "s" : ""}
-                                        {v.fechaPrimeraVisita && (
-                                          <> · Primera visita: {toLocaleDateMedium(v.fechaPrimeraVisita)}</>
-                                        )}
-                                      </p>
-                                    </div>
-                                    <Badge variant="secondary" className="shrink-0 text-xs">
-                                      Seleccionar
-                                    </Badge>
-                                  </div>
-                                ))}
-                              </div>
-                              <p className="text-xs text-amber-600 dark:text-amber-500 mt-2">
-                                Si no es ninguna de estas, continúa llenando el formulario para crear una nueva visita.
-                              </p>
-                            </div>
-                          )}
+                            )}
                         </div>
 
                         {/* Columna derecha - Foto (ocupa las 3 filas desde el inicio) */}
@@ -1190,12 +1239,12 @@ export default function NuevaVisitaPage() {
 
                                 // Si es actividad regular, establecer fecha actual
                                 const tipoActividad = tiposActividad.find(
-                                  (tipo) => tipo.id.toString() === value
+                                  (tipo) => tipo.id.toString() === value,
                                 );
                                 if (tipoActividad?.tipo === "Regular") {
                                   form.setValue(
                                     "fechaAsistencia",
-                                    new Date().toISOString().split("T")[0]
+                                    new Date().toISOString().split("T")[0],
                                   );
                                 } else {
                                   form.setValue("fechaAsistencia", "");
@@ -1267,18 +1316,18 @@ export default function NuevaVisitaPage() {
                                 field.onChange(value);
                                 if (value && actividades.length > 0) {
                                   const actividad = actividades.find(
-                                    (act) => act.id.toString() === value
+                                    (act) => act.id.toString() === value,
                                   );
                                   if (actividad) {
                                     setActividadSeleccionada(actividad);
                                     const fechaActividad = new Date(
-                                      actividad.fecha
+                                      actividad.fecha,
                                     )
                                       .toISOString()
                                       .split("T")[0];
                                     form.setValue(
                                       "fechaAsistencia",
-                                      fechaActividad
+                                      fechaActividad,
                                     );
                                   }
                                 } else {
@@ -1289,7 +1338,7 @@ export default function NuevaVisitaPage() {
                               disabled={
                                 !tipoSeleccionado ||
                                 tiposActividad.find(
-                                  (t) => t.id.toString() === tipoSeleccionado
+                                  (t) => t.id.toString() === tipoSeleccionado,
                                 )?.tipo !== "Especial"
                               }
                             >
@@ -1300,12 +1349,12 @@ export default function NuevaVisitaPage() {
                                       !tipoSeleccionado
                                         ? "Primero selecciona el tipo"
                                         : tiposActividad.find(
-                                            (t) =>
-                                              t.id.toString() ===
-                                              tipoSeleccionado
-                                          )?.tipo !== "Especial"
-                                        ? "Solo para actividades especiales"
-                                        : "Selecciona la actividad"
+                                              (t) =>
+                                                t.id.toString() ===
+                                                tipoSeleccionado,
+                                            )?.tipo !== "Especial"
+                                          ? "Solo para actividades especiales"
+                                          : "Selecciona la actividad"
                                     }
                                   />
                                 </SelectTrigger>
@@ -1374,14 +1423,14 @@ export default function NuevaVisitaPage() {
                                         // Si es la misma fecha, ordenar por hora
                                         const horaA = a.horaInicio
                                           ? parseInt(
-                                              a.horaInicio.split(":")[0]
+                                              a.horaInicio.split(":")[0],
                                             ) *
                                               60 +
                                             parseInt(a.horaInicio.split(":")[1])
                                           : 0;
                                         const horaB = b.horaInicio
                                           ? parseInt(
-                                              b.horaInicio.split(":")[0]
+                                              b.horaInicio.split(":")[0],
                                             ) *
                                               60 +
                                             parseInt(b.horaInicio.split(":")[1])
@@ -1396,7 +1445,9 @@ export default function NuevaVisitaPage() {
                                           <div className="flex flex-col">
                                             <div className="flex items-center gap-2">
                                               <span className="font-medium">
-                                                {toLocaleDateMedium(horario.fecha)}
+                                                {toLocaleDateMedium(
+                                                  horario.fecha,
+                                                )}
                                               </span>
                                               <span className="text-primary">
                                                 {horario.horaInicio} -{" "}
@@ -1537,13 +1588,16 @@ export default function NuevaVisitaPage() {
           </Form>
 
           {/* Dialog: agregar asistencia a visita existente */}
-          <Dialog open={dialogDuplicado} onOpenChange={(open) => {
-            setDialogDuplicado(open);
-            if (!open) {
-              setVisitaExistente(null);
-              setHistorialError(null);
-            }
-          }}>
+          <Dialog
+            open={dialogDuplicado}
+            onOpenChange={(open) => {
+              setDialogDuplicado(open);
+              if (!open) {
+                setVisitaExistente(null);
+                setHistorialError(null);
+              }
+            }}
+          >
             <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
@@ -1551,7 +1605,8 @@ export default function NuevaVisitaPage() {
                   Agregar nueva asistencia
                 </DialogTitle>
                 <DialogDescription>
-                  Esta persona ya tiene un registro. Se añadirá una nueva asistencia sin duplicar sus datos.
+                  Esta persona ya tiene un registro. Se añadirá una nueva
+                  asistencia sin duplicar sus datos.
                 </DialogDescription>
               </DialogHeader>
 
@@ -1570,10 +1625,19 @@ export default function NuevaVisitaPage() {
                         {visitaExistente.nombres} {visitaExistente.apellidos}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {visitaExistente._count.historialVisitas} asistencia{visitaExistente._count.historialVisitas !== 1 ? "s" : ""} previa{visitaExistente._count.historialVisitas !== 1 ? "s" : ""}
+                        {visitaExistente._count.historialVisitas} asistencia
+                        {visitaExistente._count.historialVisitas !== 1
+                          ? "s"
+                          : ""}{" "}
+                        previa
+                        {visitaExistente._count.historialVisitas !== 1
+                          ? "s"
+                          : ""}
                       </p>
                       {visitaExistente.correo && (
-                        <p className="text-xs text-muted-foreground">{visitaExistente.correo}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {visitaExistente.correo}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -1589,7 +1653,11 @@ export default function NuevaVisitaPage() {
                     <FormField
                       control={form.control}
                       name="tipoActividadId"
-                      render={({ field }: { field: ControllerRenderProps<FormValues> }) => (
+                      render={({
+                        field,
+                      }: {
+                        field: ControllerRenderProps<FormValues>;
+                      }) => (
                         <FormItem>
                           <FormLabel>Tipo de Actividad</FormLabel>
                           <Select
@@ -1598,9 +1666,14 @@ export default function NuevaVisitaPage() {
                               setTipoSeleccionado(value);
                               form.setValue("actividadId", "");
                               setActividadSeleccionada(null);
-                              const tipo = tiposActividad.find((t) => t.id.toString() === value);
+                              const tipo = tiposActividad.find(
+                                (t) => t.id.toString() === value,
+                              );
                               if (tipo?.tipo === "Regular") {
-                                form.setValue("fechaAsistencia", new Date().toISOString().split("T")[0]);
+                                form.setValue(
+                                  "fechaAsistencia",
+                                  new Date().toISOString().split("T")[0],
+                                );
                               } else {
                                 form.setValue("fechaAsistencia", "");
                               }
@@ -1614,7 +1687,10 @@ export default function NuevaVisitaPage() {
                             </FormControl>
                             <SelectContent>
                               {tiposActividad.map((tipo) => (
-                                <SelectItem key={tipo.id} value={tipo.id.toString()}>
+                                <SelectItem
+                                  key={tipo.id}
+                                  value={tipo.id.toString()}
+                                >
                                   {tipo.nombre} ({tipo.tipo})
                                 </SelectItem>
                               ))}
@@ -1630,7 +1706,11 @@ export default function NuevaVisitaPage() {
                       <FormField
                         control={form.control}
                         name="fechaAsistencia"
-                        render={({ field }: { field: ControllerRenderProps<FormValues> }) => (
+                        render={({
+                          field,
+                        }: {
+                          field: ControllerRenderProps<FormValues>;
+                        }) => (
                           <FormItem>
                             <FormLabel>Fecha de Asistencia</FormLabel>
                             <FormControl>
@@ -1643,56 +1723,78 @@ export default function NuevaVisitaPage() {
                     )}
 
                     {/* Actividad específica (solo tipo Especial) */}
-                    {tipoSeleccionado && tiposActividad.find((t) => t.id.toString() === tipoSeleccionado)?.tipo === "Especial" && (
-                      <FormField
-                        control={form.control}
-                        name="actividadId"
-                        render={({ field }: { field: ControllerRenderProps<FormValues> }) => (
-                          <FormItem>
-                            <FormLabel>Actividad Específica</FormLabel>
-                            <Select
-                              onValueChange={(value) => {
-                                field.onChange(value);
-                                const act = actividades.find((a) => a.id.toString() === value);
-                                if (act) {
-                                  setActividadSeleccionada(act);
-                                  form.setValue("fechaAsistencia", new Date(act.fecha).toISOString().split("T")[0]);
-                                } else {
-                                  setActividadSeleccionada(null);
-                                }
-                              }}
-                              value={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecciona la actividad" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {actividades.map((act) => (
-                                  <SelectItem key={act.id} value={act.id.toString()}>
-                                    <div className="flex flex-col">
-                                      <span>{act.nombre}</span>
-                                      <span className="text-xs text-muted-foreground">
-                                        {toLocaleDateShort(act.fecha)}
-                                        {act.horaInicio && ` - ${act.horaInicio}`}
-                                      </span>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
+                    {tipoSeleccionado &&
+                      tiposActividad.find(
+                        (t) => t.id.toString() === tipoSeleccionado,
+                      )?.tipo === "Especial" && (
+                        <FormField
+                          control={form.control}
+                          name="actividadId"
+                          render={({
+                            field,
+                          }: {
+                            field: ControllerRenderProps<FormValues>;
+                          }) => (
+                            <FormItem>
+                              <FormLabel>Actividad Específica</FormLabel>
+                              <Select
+                                onValueChange={(value) => {
+                                  field.onChange(value);
+                                  const act = actividades.find(
+                                    (a) => a.id.toString() === value,
+                                  );
+                                  if (act) {
+                                    setActividadSeleccionada(act);
+                                    form.setValue(
+                                      "fechaAsistencia",
+                                      new Date(act.fecha)
+                                        .toISOString()
+                                        .split("T")[0],
+                                    );
+                                  } else {
+                                    setActividadSeleccionada(null);
+                                  }
+                                }}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Selecciona la actividad" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {actividades.map((act) => (
+                                    <SelectItem
+                                      key={act.id}
+                                      value={act.id.toString()}
+                                    >
+                                      <div className="flex flex-col">
+                                        <span>{act.nombre}</span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {toLocaleDateShort(act.fecha)}
+                                          {act.horaInicio &&
+                                            ` - ${act.horaInicio}`}
+                                        </span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
 
                     {/* Invitado por */}
                     <FormField
                       control={form.control}
                       name="invitadoPorId"
-                      render={({ field }: { field: ControllerRenderProps<FormValues> }) => (
+                      render={({
+                        field,
+                      }: {
+                        field: ControllerRenderProps<FormValues>;
+                      }) => (
                         <FormItem>
                           <FormLabel>Invitado por (Opcional)</FormLabel>
                           <FormControl>
@@ -1720,7 +1822,11 @@ export default function NuevaVisitaPage() {
                     <FormField
                       control={form.control}
                       name="observacionesAsistencia"
-                      render={({ field }: { field: ControllerRenderProps<FormValues> }) => (
+                      render={({
+                        field,
+                      }: {
+                        field: ControllerRenderProps<FormValues>;
+                      }) => (
                         <FormItem>
                           <FormLabel>Observaciones (Opcional)</FormLabel>
                           <FormControl>
@@ -1751,7 +1857,9 @@ export default function NuevaVisitaPage() {
                 </Button>
                 <Button
                   onClick={guardarAsistenciaExistente}
-                  disabled={historialGuardando || !form.watch("tipoActividadId")}
+                  disabled={
+                    historialGuardando || !form.watch("tipoActividadId")
+                  }
                 >
                   {historialGuardando ? "Guardando..." : "Registrar asistencia"}
                 </Button>

@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     if (authError || !user) {
       return NextResponse.json(
         { error: "Usuario no autenticado" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     if (!usuarioIglesia) {
       return NextResponse.json(
         { error: "No tienes acceso a ninguna iglesia activa" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
     console.error("Error buscando visitas:", error);
     return NextResponse.json(
       { error: "Error al buscar visitas" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

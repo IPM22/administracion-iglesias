@@ -61,7 +61,7 @@ const formatPhoneForDisplay = (phone: string | null | undefined): string => {
   } else {
     return `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(
       6,
-      10
+      10,
     )}`;
   }
 };
@@ -200,7 +200,7 @@ export default function ComunidadDetallePage({
       setLoading(true);
       try {
         console.log(
-          `🔄 Cargando detalles de la persona ${id} para iglesia: ${iglesiaActiva?.nombre} (ID: ${iglesiaActiva?.id})`
+          `🔄 Cargando detalles de la persona ${id} para iglesia: ${iglesiaActiva?.nombre} (ID: ${iglesiaActiva?.id})`,
         );
 
         const response = await fetch(`/api/personas/${id}`, {
@@ -246,7 +246,7 @@ export default function ComunidadDetallePage({
               headers: {
                 "Content-Type": "application/json",
               },
-            }
+            },
           );
 
           if (miembroResponse.ok) {
@@ -272,7 +272,7 @@ export default function ComunidadDetallePage({
               headers: {
                 "Content-Type": "application/json",
               },
-            }
+            },
           );
 
           let historialVisitas = [];
@@ -291,7 +291,7 @@ export default function ComunidadDetallePage({
       } catch (error) {
         console.error("Error:", error);
         setError(
-          error instanceof Error ? error.message : "Error al cargar los datos"
+          error instanceof Error ? error.message : "Error al cargar los datos",
         );
       } finally {
         setLoading(false);
@@ -546,7 +546,7 @@ export default function ComunidadDetallePage({
                                 <div className="flex items-center gap-2 mt-1">
                                   <span
                                     className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getRelacionColor(
-                                      familiarRel.tipoRelacion
+                                      familiarRel.tipoRelacion,
                                     )}`}
                                   >
                                     {familiarRel.tipoRelacion}
@@ -618,7 +618,7 @@ export default function ComunidadDetallePage({
                                   {visita.totalVisitas !== 1 ? "s" : ""}
                                   {visita.fechaPrimeraVisita &&
                                     ` • Desde ${formatDate(
-                                      visita.fechaPrimeraVisita
+                                      visita.fechaPrimeraVisita,
                                     )}`}
                                 </p>
                               </div>
@@ -727,7 +727,7 @@ export default function ComunidadDetallePage({
                             {calcularAniosTranscurridos(persona.fechaIngreso)}{" "}
                             año
                             {calcularAniosTranscurridos(
-                              persona.fechaIngreso
+                              persona.fechaIngreso,
                             ) !== 1
                               ? "s"
                               : ""}{" "}

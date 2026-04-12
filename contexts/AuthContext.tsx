@@ -42,7 +42,11 @@ interface AuthContextValue {
   initializing: boolean;
   mostrarSelectorIglesias: boolean;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  signUp: (email: string, password: string, metadata: { nombres: string; apellidos: string }) => Promise<any>;
+  signUp: (
+    email: string,
+    password: string,
+    metadata: { nombres: string; apellidos: string },
+  ) => Promise<any>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   signIn: (email: string, password: string) => Promise<any>;
   signOut: () => Promise<void>;
@@ -166,14 +170,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setMostrarSelectorIglesias(true);
       }
     },
-    [setIglesiaActiva, setMostrarSelectorIglesias]
+    [setIglesiaActiva, setMostrarSelectorIglesias],
   );
 
   const resolverIglesiaParaUsuario = useCallback(
     (usuario: UsuarioCompleto) => {
       if (iglesiaActiva) {
         const valida = usuario.iglesias.find(
-          (ui) => ui.estado === "ACTIVO" && ui.iglesia.id === iglesiaActiva.id
+          (ui) => ui.estado === "ACTIVO" && ui.iglesia.id === iglesiaActiva.id,
         );
         if (!valida) {
           limpiarIglesia();
@@ -185,7 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const desdeStorage = cargarIglesiaDesdeStorage();
       if (desdeStorage) {
         const valida = usuario.iglesias.find(
-          (ui) => ui.estado === "ACTIVO" && ui.iglesia.id === desdeStorage.id
+          (ui) => ui.estado === "ACTIVO" && ui.iglesia.id === desdeStorage.id,
         );
         if (valida) {
           setIglesiaActiva(desdeStorage);
@@ -202,7 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       limpiarIglesia,
       setIglesiaActiva,
       establecerPrimeraIglesiaActiva,
-    ]
+    ],
   );
 
   // ── Carga principal del usuario ───────────────────────────────────────────
@@ -270,7 +274,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [usuarioCompleto, cargarDesdeCache, guardarEnCache, limpiarCache, resolverIglesiaParaUsuario, limpiarIglesia]
+    [
+      usuarioCompleto,
+      cargarDesdeCache,
+      guardarEnCache,
+      limpiarCache,
+      resolverIglesiaParaUsuario,
+      limpiarIglesia,
+    ],
   );
 
   const crearUsuarioAutomaticamente = async (authUser: User) => {
@@ -329,13 +340,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (usuarioCompleto && !iglesiaActiva && !initializing) {
       establecerPrimeraIglesiaActiva(usuarioCompleto);
     }
-  }, [usuarioCompleto, iglesiaActiva, initializing, establecerPrimeraIglesiaActiva]);
+  }, [
+    usuarioCompleto,
+    iglesiaActiva,
+    initializing,
+    establecerPrimeraIglesiaActiva,
+  ]);
 
   // ── Acciones públicas ─────────────────────────────────────────────────────
   const signUp = (
     email: string,
     password: string,
-    metadata: { nombres: string; apellidos: string }
+    metadata: { nombres: string; apellidos: string },
   ) =>
     supabase.auth.signUp({
       email,

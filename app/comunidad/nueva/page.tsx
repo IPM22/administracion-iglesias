@@ -61,7 +61,11 @@ import { CloudinaryUploader } from "../../../components/CloudinaryUploader";
 import { PhoneInput } from "../../../components/PhoneInput";
 import { ModeToggle } from "../../../components/mode-toggle";
 import PersonaSelector from "../../../components/PersonaSelector";
-import { formatDate, toLocaleDateMedium, toLocaleDateShort } from "@/lib/date-utils";
+import {
+  formatDate,
+  toLocaleDateMedium,
+  toLocaleDateShort,
+} from "@/lib/date-utils";
 import dayjs from "dayjs";
 import {
   Dialog,
@@ -249,8 +253,12 @@ function ComunidadNuevaContent() {
   const [agregarAsistencia, setAgregarAsistencia] = useState(false);
 
   // Estados para detección de duplicados (solo cuando tipo=visita)
-  const [visitasCoincidentes, setVisitasCoincidentes] = useState<VisitaBusqueda[]>([]);
-  const [visitaExistente, setVisitaExistente] = useState<VisitaBusqueda | null>(null);
+  const [visitasCoincidentes, setVisitasCoincidentes] = useState<
+    VisitaBusqueda[]
+  >([]);
+  const [visitaExistente, setVisitaExistente] = useState<VisitaBusqueda | null>(
+    null,
+  );
   const [buscandoDuplicados, setBuscandoDuplicados] = useState(false);
   const [dialogDuplicado, setDialogDuplicado] = useState(false);
   const [historialGuardando, setHistorialGuardando] = useState(false);
@@ -334,7 +342,7 @@ function ComunidadNuevaContent() {
       } else {
         console.error(
           "❌ Error al cargar tipos de actividad:",
-          tiposResponse.status
+          tiposResponse.status,
         );
       }
 
@@ -387,7 +395,7 @@ function ComunidadNuevaContent() {
               celular: visita.celular,
               tipo: "visita" as const,
               estado: visita.estado || "Nueva",
-            })
+            }),
           );
 
           personasFinales.push(...visitasConTipo);
@@ -415,7 +423,7 @@ function ComunidadNuevaContent() {
               celular: nino.celular,
               tipo: "nino" as const,
               estado: nino.estado || "Activo",
-            })
+            }),
           );
 
           personasFinales.push(...ninosConTipo);
@@ -449,7 +457,7 @@ function ComunidadNuevaContent() {
         "- Visitas:",
         personasFinales.filter((p) => p.tipo === "visita").length,
         "- Niños:",
-        personasFinales.filter((p) => p.tipo === "nino").length
+        personasFinales.filter((p) => p.tipo === "nino").length,
       );
 
       setPersonasInvitadores(personasFinales);
@@ -467,7 +475,7 @@ function ComunidadNuevaContent() {
       }
 
       const tipoActividad = tiposActividad.find(
-        (tipoAct) => tipoAct.id.toString() === tipoSeleccionado
+        (tipoAct) => tipoAct.id.toString() === tipoSeleccionado,
       );
 
       if (tipoActividad?.tipo === "Especial") {
@@ -480,7 +488,7 @@ function ComunidadNuevaContent() {
             console.error(
               "❌ Error al cargar actividades:",
               response.status,
-              errorText
+              errorText,
             );
             throw new Error(`Error ${response.status}: ${errorText}`);
           }
@@ -493,12 +501,12 @@ function ComunidadNuevaContent() {
             : data.actividades || [];
           const actividadesFiltradas = actividadesArray.filter(
             (act: Actividad) =>
-              act.tipoActividad.id.toString() === tipoSeleccionado
+              act.tipoActividad.id.toString() === tipoSeleccionado,
           );
 
           actividadesFiltradas.sort(
             (a: Actividad, b: Actividad) =>
-              new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+              new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
           );
 
           console.log("✅ Actividades filtradas:", actividadesFiltradas.length);
@@ -511,7 +519,7 @@ function ComunidadNuevaContent() {
 
           // Buscar actividades de hoy primero
           const actividadesHoy = actividadesFiltradas.filter(
-            (act: Actividad) => act.fecha.split("T")[0] === hoy
+            (act: Actividad) => act.fecha.split("T")[0] === hoy,
           );
 
           let actividadParaSeleccionar: Actividad | null = null;
@@ -533,7 +541,7 @@ function ComunidadNuevaContent() {
                         parseInt(b.horaInicio.split(":")[1])
                       : 0;
                     return horaA - horaB;
-                  }
+                  },
                 );
 
                 // Buscar horario actual o próximo
@@ -560,7 +568,7 @@ function ComunidadNuevaContent() {
                         "🎯 Auto-seleccionando actividad en curso:",
                         actividad.nombre,
                         "horario:",
-                        horario.horaInicio
+                        horario.horaInicio,
                       );
                       break;
                     } else if (horaActual < inicioMinutos) {
@@ -572,7 +580,7 @@ function ComunidadNuevaContent() {
                         "🎯 Auto-seleccionando próxima actividad:",
                         actividad.nombre,
                         "horario:",
-                        horario.horaInicio
+                        horario.horaInicio,
                       );
                       break;
                     }
@@ -594,14 +602,14 @@ function ComunidadNuevaContent() {
                   actividadParaSeleccionar = actividad;
                   console.log(
                     "🎯 Auto-seleccionando actividad única en curso:",
-                    actividad.nombre
+                    actividad.nombre,
                   );
                   break;
                 } else if (horaActual < inicioMinutos) {
                   actividadParaSeleccionar = actividad;
                   console.log(
                     "🎯 Auto-seleccionando próxima actividad única:",
-                    actividad.nombre
+                    actividad.nombre,
                   );
                   break;
                 }
@@ -615,7 +623,7 @@ function ComunidadNuevaContent() {
               .filter((act: Actividad) => new Date(act.fecha) > ahora)
               .sort(
                 (a: Actividad, b: Actividad) =>
-                  new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
+                  new Date(a.fecha).getTime() - new Date(b.fecha).getTime(),
               );
 
             if (actividadesFuturas.length > 0) {
@@ -636,13 +644,13 @@ function ComunidadNuevaContent() {
                         parseInt(b.horaInicio.split(":")[1])
                       : 0;
                     return horaA - horaB;
-                  }
+                  },
                 )[0];
                 horarioParaSeleccionar = primerHorario.id.toString();
               }
               console.log(
                 "🎯 Auto-seleccionando próxima actividad futura:",
-                actividadParaSeleccionar?.nombre
+                actividadParaSeleccionar?.nombre,
               );
             }
           }
@@ -651,7 +659,7 @@ function ComunidadNuevaContent() {
           if (actividadParaSeleccionar) {
             form.setValue(
               "actividadId",
-              actividadParaSeleccionar.id.toString()
+              actividadParaSeleccionar.id.toString(),
             );
             setActividadSeleccionada(actividadParaSeleccionar);
 
@@ -664,7 +672,7 @@ function ComunidadNuevaContent() {
           console.error("💥 Error al cargar actividades:", error);
           setError(
             "Error al cargar las actividades: " +
-              (error instanceof Error ? error.message : "Error desconocido")
+              (error instanceof Error ? error.message : "Error desconocido"),
           );
         }
       } else {
@@ -672,7 +680,7 @@ function ComunidadNuevaContent() {
         if (tipoActividad?.tipo === "Regular") {
           form.setValue(
             "fechaAsistencia",
-            new Date().toISOString().split("T")[0]
+            new Date().toISOString().split("T")[0],
           );
         }
       }
@@ -690,7 +698,7 @@ function ComunidadNuevaContent() {
 
     if (actividadIdWatched && actividades.length > 0) {
       const actividadEncontrada = actividades.find(
-        (act) => act.id.toString() === actividadIdWatched
+        (act) => act.id.toString() === actividadIdWatched,
       );
 
       if (actividadEncontrada) {
@@ -721,7 +729,9 @@ function ComunidadNuevaContent() {
     setBuscandoDuplicados(true);
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/visitas/buscar?q=${encodeURIComponent(query)}`);
+        const res = await fetch(
+          `/api/visitas/buscar?q=${encodeURIComponent(query)}`,
+        );
         if (res.ok) {
           const data = await res.json();
           setVisitasCoincidentes(data);
@@ -754,10 +764,14 @@ function ComunidadNuevaContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fecha: fechaParaRegistro,
-          tipoActividadId: values.tipoActividadId ? parseInt(values.tipoActividadId) : null,
+          tipoActividadId: values.tipoActividadId
+            ? parseInt(values.tipoActividadId)
+            : null,
           actividadId: values.actividadId ? parseInt(values.actividadId) : null,
           horarioId: values.horarioId ? parseInt(values.horarioId) : null,
-          invitadoPorId: values.invitadoPorAsistenciaId ? parseInt(values.invitadoPorAsistenciaId) : null,
+          invitadoPorId: values.invitadoPorAsistenciaId
+            ? parseInt(values.invitadoPorAsistenciaId)
+            : null,
           observaciones: values.observacionesAsistencia || null,
         }),
       });
@@ -778,7 +792,7 @@ function ComunidadNuevaContent() {
   const deberMostrarCampoFecha = () => {
     if (tipo !== "visita") return false;
     const tipoActividad = tiposActividad.find(
-      (tipoAct) => tipoAct.id.toString() === tipoSeleccionado
+      (tipoAct) => tipoAct.id.toString() === tipoSeleccionado,
     );
     return tipoActividad?.tipo === "Regular";
   };
@@ -792,8 +806,8 @@ function ComunidadNuevaContent() {
         tipo === "visita"
           ? "/api/visitas"
           : tipo === "nino"
-          ? "/api/ninos" // Usar API específica para niños
-          : "/api/miembros";
+            ? "/api/ninos" // Usar API específica para niños
+            : "/api/miembros";
 
       // Preparar datos con tipo y rol correctos según el parámetro de la URL
       const dataToSend = {
@@ -819,9 +833,9 @@ function ComunidadNuevaContent() {
               tipo === "visita"
                 ? "la visita"
                 : tipo === "nino"
-                ? "el niño"
-                : "el miembro"
-            }`
+                  ? "el niño"
+                  : "el miembro"
+            }`,
         );
       }
 
@@ -858,7 +872,7 @@ function ComunidadNuevaContent() {
                 : null,
               observaciones: values.observacionesAsistencia || null,
             }),
-          }
+          },
         );
 
         if (!historialResponse.ok) {
@@ -866,13 +880,13 @@ function ComunidadNuevaContent() {
           console.error(
             "Error al registrar primera asistencia:",
             historialResponse.status,
-            errorData
+            errorData,
           );
           // Mostrar el error específico al usuario
           setError(
             `La visita se creó correctamente, pero hubo un error al registrar la primera asistencia: ${
               errorData.error || "Error desconocido"
-            }`
+            }`,
           );
           return; // No redirigir si hay error
         } else {
@@ -895,9 +909,9 @@ function ComunidadNuevaContent() {
               tipo === "visita"
                 ? "la visita"
                 : tipo === "nino"
-                ? "el niño"
-                : "el miembro"
-            }`
+                  ? "el niño"
+                  : "el miembro"
+            }`,
       );
     } finally {
       setSaving(false);
@@ -1034,65 +1048,94 @@ function ComunidadNuevaContent() {
                                   Buscando visitas similares…
                                 </div>
                               )}
-                              {!buscandoDuplicados && visitasCoincidentes.length === 0 &&
-                               (nombresWatched ?? "").length + (apellidosWatched ?? "").length >= 3 &&
-                               !visitaExistente && (
-                                <p className="mt-2 text-xs text-muted-foreground">
-                                  ✓ Sin coincidencias — puedes continuar con el registro nuevo.
-                                </p>
-                              )}
-                              {visitasCoincidentes.length > 0 && !visitaExistente && !buscandoDuplicados && (
-                                <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 p-3">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <Search className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                                    <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                                      {visitasCoincidentes.length === 1
-                                        ? "Encontramos 1 visita con un nombre similar"
-                                        : `Encontramos ${visitasCoincidentes.length} visitas con nombres similares`}
+                              {!buscandoDuplicados &&
+                                visitasCoincidentes.length === 0 &&
+                                (nombresWatched ?? "").length +
+                                  (apellidosWatched ?? "").length >=
+                                  3 &&
+                                !visitaExistente && (
+                                  <p className="mt-2 text-xs text-muted-foreground">
+                                    ✓ Sin coincidencias — puedes continuar con
+                                    el registro nuevo.
+                                  </p>
+                                )}
+                              {visitasCoincidentes.length > 0 &&
+                                !visitaExistente &&
+                                !buscandoDuplicados && (
+                                  <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 p-3">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <Search className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                                      <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                                        {visitasCoincidentes.length === 1
+                                          ? "Encontramos 1 visita con un nombre similar"
+                                          : `Encontramos ${visitasCoincidentes.length} visitas con nombres similares`}
+                                      </p>
+                                    </div>
+                                    <p className="text-xs text-amber-700 dark:text-amber-400 mb-3">
+                                      ¿Es alguna de estas personas? Si ya ha
+                                      visitado antes, selecciónala para agregar
+                                      una nueva asistencia sin duplicar el
+                                      registro.
+                                    </p>
+                                    <div className="space-y-2">
+                                      {visitasCoincidentes.map((v) => (
+                                        <div
+                                          key={v.id}
+                                          className="flex items-center gap-3 rounded-md bg-white dark:bg-zinc-900 border border-amber-200 dark:border-amber-800 p-2 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-950/50 transition-colors"
+                                          onClick={() => {
+                                            setVisitaExistente(v);
+                                            setAgregarAsistencia(true);
+                                            setDialogDuplicado(true);
+                                          }}
+                                        >
+                                          <Avatar className="h-9 w-9 shrink-0">
+                                            <AvatarImage src={v.foto} />
+                                            <AvatarFallback className="text-xs">
+                                              {v.nombres[0]}
+                                              {v.apellidos[0]}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                          <div className="flex-1 min-w-0">
+                                            <p className="font-medium text-sm truncate">
+                                              {v.nombres} {v.apellidos}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                              {v._count.historialVisitas}{" "}
+                                              asistencia
+                                              {v._count.historialVisitas !== 1
+                                                ? "s"
+                                                : ""}{" "}
+                                              registrada
+                                              {v._count.historialVisitas !== 1
+                                                ? "s"
+                                                : ""}
+                                              {v.fechaPrimeraVisita && (
+                                                <>
+                                                  {" "}
+                                                  · Primera visita:{" "}
+                                                  {toLocaleDateMedium(
+                                                    v.fechaPrimeraVisita,
+                                                  )}
+                                                </>
+                                              )}
+                                            </p>
+                                          </div>
+                                          <Badge
+                                            variant="secondary"
+                                            className="shrink-0 text-xs"
+                                          >
+                                            Seleccionar
+                                          </Badge>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <p className="text-xs text-amber-600 dark:text-amber-500 mt-2">
+                                      Si no es ninguna de estas, continúa
+                                      llenando el formulario para crear una
+                                      nueva visita.
                                     </p>
                                   </div>
-                                  <p className="text-xs text-amber-700 dark:text-amber-400 mb-3">
-                                    ¿Es alguna de estas personas? Si ya ha visitado antes, selecciónala para agregar una nueva asistencia sin duplicar el registro.
-                                  </p>
-                                  <div className="space-y-2">
-                                    {visitasCoincidentes.map((v) => (
-                                      <div
-                                        key={v.id}
-                                        className="flex items-center gap-3 rounded-md bg-white dark:bg-zinc-900 border border-amber-200 dark:border-amber-800 p-2 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-950/50 transition-colors"
-                                        onClick={() => {
-                                          setVisitaExistente(v);
-                                          setAgregarAsistencia(true);
-                                          setDialogDuplicado(true);
-                                        }}
-                                      >
-                                        <Avatar className="h-9 w-9 shrink-0">
-                                          <AvatarImage src={v.foto} />
-                                          <AvatarFallback className="text-xs">
-                                            {v.nombres[0]}{v.apellidos[0]}
-                                          </AvatarFallback>
-                                        </Avatar>
-                                        <div className="flex-1 min-w-0">
-                                          <p className="font-medium text-sm truncate">
-                                            {v.nombres} {v.apellidos}
-                                          </p>
-                                          <p className="text-xs text-muted-foreground">
-                                            {v._count.historialVisitas} asistencia{v._count.historialVisitas !== 1 ? "s" : ""} registrada{v._count.historialVisitas !== 1 ? "s" : ""}
-                                            {v.fechaPrimeraVisita && (
-                                              <> · Primera visita: {toLocaleDateMedium(v.fechaPrimeraVisita)}</>
-                                            )}
-                                          </p>
-                                        </div>
-                                        <Badge variant="secondary" className="shrink-0 text-xs">
-                                          Seleccionar
-                                        </Badge>
-                                      </div>
-                                    ))}
-                                  </div>
-                                  <p className="text-xs text-amber-600 dark:text-amber-500 mt-2">
-                                    Si no es ninguna de estas, continúa llenando el formulario para crear una nueva visita.
-                                  </p>
-                                </div>
-                              )}
+                                )}
                             </>
                           )}
 
@@ -1256,8 +1299,8 @@ function ComunidadNuevaContent() {
                                     {tipo === "visita"
                                       ? "de la Visita"
                                       : tipo === "nino"
-                                      ? "del Niño"
-                                      : "del Miembro"}
+                                        ? "del Niño"
+                                        : "del Miembro"}
                                   </FormLabel>
                                   <FormControl>
                                     <CloudinaryUploader
@@ -1288,15 +1331,15 @@ function ComunidadNuevaContent() {
                     {tipo === "visita"
                       ? "Información de Contacto"
                       : tipo === "nino"
-                      ? "Datos de Contacto y Tutores"
-                      : "Datos de Contacto y Ministeriales"}
+                        ? "Datos de Contacto y Tutores"
+                        : "Datos de Contacto y Ministeriales"}
                   </CardTitle>
                   <CardDescription>
                     {tipo === "visita"
                       ? "Información de contacto de la visita"
                       : tipo === "nino"
-                      ? "Datos de contacto del niño y sus tutores"
-                      : "Información de contacto y datos ministeriales del miembro"}
+                        ? "Datos de contacto del niño y sus tutores"
+                        : "Información de contacto y datos ministeriales del miembro"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8">
@@ -1626,8 +1669,8 @@ function ComunidadNuevaContent() {
                       {tipo === "visita"
                         ? "Información Adicional"
                         : tipo === "nino"
-                        ? "Notas sobre el Niño"
-                        : "Información Adicional"}
+                          ? "Notas sobre el Niño"
+                          : "Información Adicional"}
                     </h3>
                     <FormField
                       control={form.control}
@@ -1641,8 +1684,8 @@ function ComunidadNuevaContent() {
                                 tipo === "visita"
                                   ? "Información adicional sobre la visita, cómo conoció la iglesia, etc..."
                                   : tipo === "nino"
-                                  ? "Información sobre alergias, necesidades especiales, etc..."
-                                  : "Información adicional sobre el miembro, ministerios de interés, etc..."
+                                    ? "Información sobre alergias, necesidades especiales, etc..."
+                                    : "Información adicional sobre el miembro, ministerios de interés, etc..."
                               }
                               className="min-h-[100px]"
                               {...field}
@@ -1714,12 +1757,13 @@ function ComunidadNuevaContent() {
 
                                   // Si es actividad regular, establecer fecha actual
                                   const tipoActividad = tiposActividad.find(
-                                    (tipoAct) => tipoAct.id.toString() === value
+                                    (tipoAct) =>
+                                      tipoAct.id.toString() === value,
                                   );
                                   if (tipoActividad?.tipo === "Regular") {
                                     form.setValue(
                                       "fechaAsistencia",
-                                      new Date().toISOString().split("T")[0]
+                                      new Date().toISOString().split("T")[0],
                                     );
                                   } else {
                                     form.setValue("fechaAsistencia", "");
@@ -1783,18 +1827,18 @@ function ComunidadNuevaContent() {
                                   field.onChange(value);
                                   if (value && actividades.length > 0) {
                                     const actividad = actividades.find(
-                                      (act) => act.id.toString() === value
+                                      (act) => act.id.toString() === value,
                                     );
                                     if (actividad) {
                                       setActividadSeleccionada(actividad);
                                       const fechaActividad = new Date(
-                                        actividad.fecha
+                                        actividad.fecha,
                                       )
                                         .toISOString()
                                         .split("T")[0];
                                       form.setValue(
                                         "fechaAsistencia",
-                                        fechaActividad
+                                        fechaActividad,
                                       );
                                     }
                                   } else {
@@ -1805,7 +1849,7 @@ function ComunidadNuevaContent() {
                                 disabled={
                                   !tipoSeleccionado ||
                                   tiposActividad.find(
-                                    (t) => t.id.toString() === tipoSeleccionado
+                                    (t) => t.id.toString() === tipoSeleccionado,
                                   )?.tipo !== "Especial"
                                 }
                               >
@@ -1816,12 +1860,12 @@ function ComunidadNuevaContent() {
                                         !tipoSeleccionado
                                           ? "Primero selecciona el tipo"
                                           : tiposActividad.find(
-                                              (t) =>
-                                                t.id.toString() ===
-                                                tipoSeleccionado
-                                            )?.tipo !== "Especial"
-                                          ? "Solo para actividades especiales"
-                                          : "Selecciona la actividad"
+                                                (t) =>
+                                                  t.id.toString() ===
+                                                  tipoSeleccionado,
+                                              )?.tipo !== "Especial"
+                                            ? "Solo para actividades especiales"
+                                            : "Selecciona la actividad"
                                       }
                                     />
                                   </SelectTrigger>
@@ -1918,20 +1962,20 @@ function ComunidadNuevaContent() {
                                           // Si es la misma fecha, ordenar por hora
                                           const horaA = a.horaInicio
                                             ? parseInt(
-                                                a.horaInicio.split(":")[0]
+                                                a.horaInicio.split(":")[0],
                                               ) *
                                                 60 +
                                               parseInt(
-                                                a.horaInicio.split(":")[1]
+                                                a.horaInicio.split(":")[1],
                                               )
                                             : 0;
                                           const horaB = b.horaInicio
                                             ? parseInt(
-                                                b.horaInicio.split(":")[0]
+                                                b.horaInicio.split(":")[0],
                                               ) *
                                                 60 +
                                               parseInt(
-                                                b.horaInicio.split(":")[1]
+                                                b.horaInicio.split(":")[1],
                                               )
                                             : 0;
                                           return horaA - horaB;
@@ -1944,7 +1988,9 @@ function ComunidadNuevaContent() {
                                             <div className="flex flex-col">
                                               <div className="flex items-center gap-2">
                                                 <span className="font-medium">
-                                                  {toLocaleDateMedium(horario.fecha)}
+                                                  {toLocaleDateMedium(
+                                                    horario.fecha,
+                                                  )}
                                                 </span>
                                                 <span className="text-primary">
                                                   {horario.horaInicio} -{" "}
@@ -1983,7 +2029,7 @@ function ComunidadNuevaContent() {
                               <PersonaSelector
                                 personas={personasInvitadores}
                                 onSeleccionar={(
-                                  persona: PersonaInvitador | null
+                                  persona: PersonaInvitador | null,
                                 ) => {
                                   if (persona) {
                                     field.onChange(persona.id.toString());
@@ -2052,10 +2098,10 @@ function ComunidadNuevaContent() {
                         tipo === "visita" && agregarAsistencia
                           ? "Visita y Primera Asistencia"
                           : tipo === "visita"
-                          ? "Visita"
-                          : tipo === "nino"
-                          ? "Niño"
-                          : "Miembro"
+                            ? "Visita"
+                            : tipo === "nino"
+                              ? "Niño"
+                              : "Miembro"
                       }`}
                 </Button>
               </div>
@@ -2063,13 +2109,16 @@ function ComunidadNuevaContent() {
           </Form>
 
           {/* Dialog: agregar asistencia a visita existente sin duplicar */}
-          <Dialog open={dialogDuplicado} onOpenChange={(open) => {
-            setDialogDuplicado(open);
-            if (!open) {
-              setVisitaExistente(null);
-              setHistorialError(null);
-            }
-          }}>
+          <Dialog
+            open={dialogDuplicado}
+            onOpenChange={(open) => {
+              setDialogDuplicado(open);
+              if (!open) {
+                setVisitaExistente(null);
+                setHistorialError(null);
+              }
+            }}
+          >
             <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
@@ -2077,7 +2126,8 @@ function ComunidadNuevaContent() {
                   Agregar nueva asistencia
                 </DialogTitle>
                 <DialogDescription>
-                  Esta persona ya tiene un registro. Se añadirá una nueva asistencia sin duplicar sus datos.
+                  Esta persona ya tiene un registro. Se añadirá una nueva
+                  asistencia sin duplicar sus datos.
                 </DialogDescription>
               </DialogHeader>
 
@@ -2088,7 +2138,8 @@ function ComunidadNuevaContent() {
                     <Avatar className="h-12 w-12 shrink-0">
                       <AvatarImage src={visitaExistente.foto} />
                       <AvatarFallback>
-                        {visitaExistente.nombres[0]}{visitaExistente.apellidos[0]}
+                        {visitaExistente.nombres[0]}
+                        {visitaExistente.apellidos[0]}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
@@ -2096,7 +2147,14 @@ function ComunidadNuevaContent() {
                         {visitaExistente.nombres} {visitaExistente.apellidos}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {visitaExistente._count.historialVisitas} asistencia{visitaExistente._count.historialVisitas !== 1 ? "s" : ""} previa{visitaExistente._count.historialVisitas !== 1 ? "s" : ""}
+                        {visitaExistente._count.historialVisitas} asistencia
+                        {visitaExistente._count.historialVisitas !== 1
+                          ? "s"
+                          : ""}{" "}
+                        previa
+                        {visitaExistente._count.historialVisitas !== 1
+                          ? "s"
+                          : ""}
                       </p>
                     </div>
                     <button
@@ -2127,9 +2185,14 @@ function ComunidadNuevaContent() {
                                 setTipoSeleccionado(value);
                                 form.setValue("actividadId", "");
                                 setActividadSeleccionada(null);
-                                const tipoAct = tiposActividad.find(t => t.id.toString() === value);
+                                const tipoAct = tiposActividad.find(
+                                  (t) => t.id.toString() === value,
+                                );
                                 if (tipoAct?.tipo === "Regular") {
-                                  form.setValue("fechaAsistencia", new Date().toISOString().split("T")[0]);
+                                  form.setValue(
+                                    "fechaAsistencia",
+                                    new Date().toISOString().split("T")[0],
+                                  );
                                 } else {
                                   form.setValue("fechaAsistencia", "");
                                 }
@@ -2143,7 +2206,10 @@ function ComunidadNuevaContent() {
                               </FormControl>
                               <SelectContent>
                                 {tiposActividad.map((t) => (
-                                  <SelectItem key={t.id} value={t.id.toString()}>
+                                  <SelectItem
+                                    key={t.id}
+                                    value={t.id.toString()}
+                                  >
                                     {t.nombre} ({t.tipo})
                                   </SelectItem>
                                 ))}
@@ -2177,7 +2243,10 @@ function ComunidadNuevaContent() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Actividad específica</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Selecciona la actividad" />
@@ -2185,8 +2254,12 @@ function ComunidadNuevaContent() {
                                 </FormControl>
                                 <SelectContent>
                                   {actividades.map((act) => (
-                                    <SelectItem key={act.id} value={act.id.toString()}>
-                                      {act.nombre} — {toLocaleDateShort(act.fecha)}
+                                    <SelectItem
+                                      key={act.id}
+                                      value={act.id.toString()}
+                                    >
+                                      {act.nombre} —{" "}
+                                      {toLocaleDateShort(act.fecha)}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -2215,7 +2288,9 @@ function ComunidadNuevaContent() {
                                     setPersonaInvitadorSeleccionada(null);
                                   }
                                 }}
-                                personaSeleccionada={personaInvitadorSeleccionada}
+                                personaSeleccionada={
+                                  personaInvitadorSeleccionada
+                                }
                                 placeholder="Buscar quien invitó..."
                               />
                             </FormControl>
@@ -2265,7 +2340,9 @@ function ComunidadNuevaContent() {
                 <Button
                   type="button"
                   onClick={guardarAsistenciaExistente}
-                  disabled={historialGuardando || !form.watch("tipoActividadId")}
+                  disabled={
+                    historialGuardando || !form.watch("tipoActividadId")
+                  }
                 >
                   {historialGuardando ? "Registrando…" : "Registrar asistencia"}
                 </Button>

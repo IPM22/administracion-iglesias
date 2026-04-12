@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     if (authError || !user) {
       return NextResponse.json(
         { error: "Usuario no autenticado" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
       if (!usuarioIglesia) {
         return NextResponse.json(
           { error: "No tienes acceso a ninguna iglesia activa" },
-          { status: 403 }
+          { status: 403 },
         );
       }
 
@@ -61,7 +61,7 @@ export async function GET(request: Request) {
     if (!usuarioTieneAcceso) {
       return NextResponse.json(
         { error: "No tienes acceso a esta iglesia" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -477,19 +477,19 @@ export async function GET(request: Request) {
       cambios: {
         miembros: calcularPorcentajeCambio(
           miembrosNuevos30Dias,
-          miembrosNuevos60Dias
+          miembrosNuevos60Dias,
         ),
         visitas: calcularPorcentajeCambio(
           visitasNuevas30Dias,
-          visitasNuevas60Dias
+          visitasNuevas60Dias,
         ),
         familias: calcularPorcentajeCambio(
           familiasNuevas30Dias,
-          familiasNuevas60Dias
+          familiasNuevas60Dias,
         ),
         conversiones: calcularPorcentajeCambio(
           conversionesActuales,
-          conversionesAnteriores
+          conversionesAnteriores,
         ),
       },
 
@@ -545,7 +545,7 @@ export async function GET(request: Request) {
     console.error("Error al obtener estadísticas del dashboard:", error);
     return NextResponse.json(
       { error: "Error al obtener estadísticas" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

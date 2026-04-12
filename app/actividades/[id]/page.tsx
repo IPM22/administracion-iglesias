@@ -72,7 +72,7 @@ const formatPhoneForDisplay = (phone: string | null | undefined): string => {
   } else {
     return `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(
       6,
-      10
+      10,
     )}`;
   }
 };
@@ -283,7 +283,7 @@ export default function DetalleActividadPage({
       alert(
         error instanceof Error
           ? error.message
-          : "Error al eliminar la actividad"
+          : "Error al eliminar la actividad",
       );
     } finally {
       setIsDeleting(false);
@@ -323,10 +323,10 @@ export default function DetalleActividadPage({
     // Crear un grupo para cada horario
     actividad.horarios.forEach((horario) => {
       const asistentesHorario = actividad.historialVisitas.filter(
-        (h) => h.horarioId === horario.id
+        (h) => h.horarioId === horario.id,
       );
       console.log(
-        `Horario ${horario.id} tiene ${asistentesHorario.length} asistentes`
+        `Horario ${horario.id} tiene ${asistentesHorario.length} asistentes`,
       );
       grupos.push({
         horario,
@@ -336,11 +336,11 @@ export default function DetalleActividadPage({
 
     // Agregar grupo para asistentes sin horario específico
     const asistentesSinHorario = actividad.historialVisitas.filter(
-      (h) => !h.horarioId
+      (h) => !h.horarioId,
     );
 
     console.log(
-      `Asistentes sin horario específico: ${asistentesSinHorario.length}`
+      `Asistentes sin horario específico: ${asistentesSinHorario.length}`,
     );
 
     if (asistentesSinHorario.length > 0) {
@@ -355,7 +355,7 @@ export default function DetalleActividadPage({
     // Si después de todo no hay grupos con asistentes, crear un grupo general con todos
     const totalAsistentes = grupos.reduce(
       (total, grupo) => total + grupo.asistentes.length,
-      0
+      0,
     );
     if (totalAsistentes === 0 && actividad.historialVisitas.length > 0) {
       console.log("Creando grupo de emergencia con todos los asistentes");
@@ -373,7 +373,7 @@ export default function DetalleActividadPage({
   // Función para exportar a Excel
   const exportarExcel = (
     horario: Horario | null,
-    asistentes: HistorialVisita[]
+    asistentes: HistorialVisita[],
   ) => {
     if (!actividad) return;
 
@@ -384,7 +384,10 @@ export default function DetalleActividadPage({
       "Invitado por": asistente.persona.personaInvita
         ? `${asistente.persona.personaInvita.nombres} ${asistente.persona.personaInvita.apellidos}`
         : "No especificado",
-      "Teléfono": asistente.persona.celular || asistente.persona.telefono || "No especificado",
+      Teléfono:
+        asistente.persona.celular ||
+        asistente.persona.telefono ||
+        "No especificado",
       Observaciones: asistente.observaciones || "Sin observaciones",
     }));
 
@@ -406,7 +409,7 @@ export default function DetalleActividadPage({
   // Función para exportar a PDF
   const exportarPDF = async (
     horario: Horario | null,
-    asistentes: HistorialVisita[]
+    asistentes: HistorialVisita[],
   ) => {
     if (!actividad) return;
 
@@ -427,10 +430,10 @@ export default function DetalleActividadPage({
       pdf.text(`Horario: ${formatearFecha(horario.fecha)}`, 20, 35);
       pdf.text(
         `${formatearHora(horario.horaInicio)} - ${formatearHora(
-          horario.horaFin
+          horario.horaFin,
         )}`,
         20,
-        45
+        45,
       );
       if (horario.notas) {
         pdf.text(`Notas: ${horario.notas}`, 20, 55);
@@ -459,7 +462,7 @@ export default function DetalleActividadPage({
           asistente.persona.apellidos
         }`,
         25,
-        yPosition
+        yPosition,
       );
 
       if (asistente.persona.personaInvita) {
@@ -468,7 +471,7 @@ export default function DetalleActividadPage({
         pdf.text(
           `   Invitado por: ${asistente.persona.personaInvita.nombres} ${asistente.persona.personaInvita.apellidos}`,
           25,
-          yPosition
+          yPosition,
         );
         pdf.setFontSize(12);
       }
@@ -497,12 +500,12 @@ export default function DetalleActividadPage({
     pdf.text(
       `Total de asistentes: ${asistentes.length}`,
       20,
-      pdf.internal.pageSize.height - 15
+      pdf.internal.pageSize.height - 15,
     );
     pdf.text(
       `Generado el: ${new Date().toLocaleDateString("es-ES")}`,
       20,
-      pdf.internal.pageSize.height - 10
+      pdf.internal.pageSize.height - 10,
     );
 
     // Descargar
@@ -513,7 +516,7 @@ export default function DetalleActividadPage({
     pdf.save(
       `${actividad.nombre}_${nombreHorario}_${
         new Date().toISOString().split("T")[0]
-      }.pdf`
+      }.pdf`,
     );
   };
 
@@ -552,7 +555,7 @@ export default function DetalleActividadPage({
             };
           }
           return null;
-        })
+        }),
       );
 
       // Filtrar personas válidas
@@ -580,7 +583,7 @@ export default function DetalleActividadPage({
             return data.persona || data;
           }
           return null;
-        })
+        }),
       );
 
       const personasConCorreo = personasCompletas.filter((persona) => {
@@ -589,7 +592,7 @@ export default function DetalleActividadPage({
 
       if (personasConCorreo.length === 0) {
         toast.error(
-          "No se encontraron correos electrónicos para los asistentes"
+          "No se encontraron correos electrónicos para los asistentes",
         );
         return;
       }
@@ -600,7 +603,7 @@ export default function DetalleActividadPage({
 
       window.open(url, "_blank");
       toast.success(
-        `Se abrió el cliente de correo con ${personasConCorreo.length} destinatarios`
+        `Se abrió el cliente de correo con ${personasConCorreo.length} destinatarios`,
       );
     } catch (error) {
       console.error("Error al generar correos:", error);
@@ -728,7 +731,7 @@ export default function DetalleActividadPage({
                     </Badge>
                     <Badge
                       className={getTipoBadgeColor(
-                        actividad.tipoActividad.tipo
+                        actividad.tipoActividad.tipo,
                       )}
                     >
                       {actividad.tipoActividad.nombre}
@@ -1018,7 +1021,7 @@ export default function DetalleActividadPage({
                               className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted/80 transition-colors cursor-pointer"
                               onClick={() =>
                                 router.push(
-                                  `/comunidad/${historial.persona.id}`
+                                  `/comunidad/${historial.persona.id}`,
                                 )
                               }
                             >
@@ -1045,25 +1048,35 @@ export default function DetalleActividadPage({
                                         })}
                                       </span>
                                     </div>
-                                    
+
                                     {/* Persona que invitó */}
                                     {historial.persona.personaInvita && (
                                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                         <span>👤</span>
                                         <span>
                                           Invitado por:{" "}
-                                          {historial.persona.personaInvita.nombres}{" "}
-                                          {historial.persona.personaInvita.apellidos}
+                                          {
+                                            historial.persona.personaInvita
+                                              .nombres
+                                          }{" "}
+                                          {
+                                            historial.persona.personaInvita
+                                              .apellidos
+                                          }
                                         </span>
                                       </div>
                                     )}
-                                    
+
                                     {/* Información de contacto */}
-                                    {(historial.persona.telefono || historial.persona.celular) && (
+                                    {(historial.persona.telefono ||
+                                      historial.persona.celular) && (
                                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                         <span>📞</span>
                                         <span>
-                                          {formatPhoneForDisplay(historial.persona.celular || historial.persona.telefono)}
+                                          {formatPhoneForDisplay(
+                                            historial.persona.celular ||
+                                              historial.persona.telefono,
+                                          )}
                                         </span>
                                       </div>
                                     )}
@@ -1095,17 +1108,13 @@ export default function DetalleActividadPage({
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Creada:</span>
-                  <span>
-                    {toLocaleDateShort(actividad.createdAt)}
-                  </span>
+                  <span>{toLocaleDateShort(actividad.createdAt)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
                     Última actualización:
                   </span>
-                  <span>
-                    {toLocaleDateShort(actividad.updatedAt)}
-                  </span>
+                  <span>{toLocaleDateShort(actividad.updatedAt)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
@@ -1173,9 +1182,9 @@ export default function DetalleActividadPage({
                 Envía mensajes de agradecimiento a los asistentes de{" "}
                 {horarioSeleccionado
                   ? `${formatearFecha(
-                      horarioSeleccionado.fecha
+                      horarioSeleccionado.fecha,
                     )} (${formatearHora(
-                      horarioSeleccionado.horaInicio
+                      horarioSeleccionado.horaInicio,
                     )} - ${formatearHora(horarioSeleccionado.horaFin)})`
                   : "esta actividad"}
               </DialogDescription>
@@ -1184,7 +1193,7 @@ export default function DetalleActividadPage({
               {(() => {
                 const asistentesHorario = horarioSeleccionado
                   ? actividad.historialVisitas.filter(
-                      (h) => h.horarioId === horarioSeleccionado.id
+                      (h) => h.horarioId === horarioSeleccionado.id,
                     )
                   : actividad.historialVisitas.filter((h) => !h.horarioId);
 

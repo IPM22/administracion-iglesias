@@ -587,7 +587,7 @@ function ComunidadContent() {
       resultado = resultado.filter((p) => p.rol === "VISITA");
     } else if (seccionActual === "ninos") {
       resultado = resultado.filter(
-        (p) => p.tipo === "NINO" || p.tipo === "ADOLESCENTE"
+        (p) => p.tipo === "NINO" || p.tipo === "ADOLESCENTE",
       );
     }
 
@@ -628,7 +628,7 @@ function ComunidadContent() {
       miembros: todasLasPersonas.filter((p) => p.rol === "MIEMBRO").length,
       visitas: todasLasPersonas.filter((p) => p.rol === "VISITA").length,
       ninos: todasLasPersonas.filter(
-        (p) => p.tipo === "NINO" || p.tipo === "ADOLESCENTE"
+        (p) => p.tipo === "NINO" || p.tipo === "ADOLESCENTE",
       ).length,
       total: todasLasPersonas.length,
     };
@@ -858,7 +858,7 @@ function ComunidadContent() {
         Mostrando {(paginationInfo.page - 1) * paginationInfo.limit + 1} -{" "}
         {Math.min(
           paginationInfo.page * paginationInfo.limit,
-          paginationInfo.total
+          paginationInfo.total,
         )}{" "}
         de {paginationInfo.total} personas
       </div>
@@ -1074,22 +1074,22 @@ function ComunidadContent() {
               <p className="text-muted-foreground mb-4">
                 {busqueda ||
                 Object.keys(filtros).some(
-                  (key) => filtros[key as keyof FiltrosPersona]
+                  (key) => filtros[key as keyof FiltrosPersona],
                 )
                   ? "No hay personas que coincidan con los criterios de búsqueda"
                   : `No hay ${
                       seccionActual === "miembros"
                         ? "miembros"
                         : seccionActual === "visitas"
-                        ? "visitas"
-                        : seccionActual === "ninos"
-                        ? "niños"
-                        : "personas"
+                          ? "visitas"
+                          : seccionActual === "ninos"
+                            ? "niños"
+                            : "personas"
                     } registrados`}
               </p>
               {(busqueda ||
                 Object.keys(filtros).some(
-                  (key) => filtros[key as keyof FiltrosPersona]
+                  (key) => filtros[key as keyof FiltrosPersona],
                 )) && (
                 <Button variant="outline" onClick={limpiarFiltros}>
                   Limpiar filtros
@@ -1151,7 +1151,7 @@ function ComunidadContent() {
                                 >
                                   {
                                     TIPOS_PERSONA.find(
-                                      (t) => t.value === persona.tipo
+                                      (t) => t.value === persona.tipo,
                                     )?.label
                                   }
                                 </Badge>
@@ -1230,7 +1230,7 @@ function ComunidadContent() {
                                   <p className="text-sm text-muted-foreground">
                                     {
                                       TIPOS_PERSONA.find(
-                                        (t) => t.value === persona.tipo
+                                        (t) => t.value === persona.tipo,
                                       )?.label
                                     }
                                   </p>
@@ -1268,7 +1268,7 @@ function ComunidadContent() {
                               >
                                 {
                                   ESTADOS_PERSONA.find(
-                                    (e) => e.value === persona.estado
+                                    (e) => e.value === persona.estado,
                                   )?.label
                                 }
                               </Badge>
@@ -1304,7 +1304,9 @@ function ComunidadContent() {
                               <TableCell>
                                 {persona.fechaPrimeraVisita ? (
                                   <span className="text-sm">
-                                    {toLocaleDateShort(persona.fechaPrimeraVisita)}
+                                    {toLocaleDateShort(
+                                      persona.fechaPrimeraVisita,
+                                    )}
                                   </span>
                                 ) : (
                                   <span className="text-sm text-muted-foreground">
@@ -1360,7 +1362,7 @@ function ComunidadContent() {
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     router.push(
-                                      `/comunidad/${persona.id}/editar`
+                                      `/comunidad/${persona.id}/editar`,
                                     );
                                   }}
                                 >

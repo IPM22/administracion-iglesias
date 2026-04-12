@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   const miembroId = parseInt(id);
@@ -19,7 +19,7 @@ export async function GET(
     if (isNaN(miembroId)) {
       return NextResponse.json(
         { error: "ID de miembro inválido" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -55,7 +55,7 @@ export async function GET(
     if (!persona) {
       return NextResponse.json(
         { error: "Persona no encontrada" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -119,7 +119,7 @@ export async function GET(
     };
 
     console.log(
-      `🔍 DEBUG API - Persona ${persona.id} cargada con ${familiares.length} familiares y ${personasInvitadas.length} personas invitadas`
+      `🔍 DEBUG API - Persona ${persona.id} cargada con ${familiares.length} familiares y ${personasInvitadas.length} personas invitadas`,
     );
 
     return NextResponse.json(personaCompleta);
@@ -127,26 +127,26 @@ export async function GET(
     console.error("Error al obtener persona:", error);
     console.error(
       "Stack trace:",
-      error instanceof Error ? error.stack : "No disponible"
+      error instanceof Error ? error.stack : "No disponible",
     );
 
     if (error instanceof Error && error.message === "Usuario no autenticado") {
       return NextResponse.json(
         { error: "Usuario no autenticado" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     return NextResponse.json(
       { error: "Error al obtener la persona" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   const miembroId = parseInt(id);
@@ -159,7 +159,7 @@ export async function PUT(
     if (isNaN(miembroId)) {
       return NextResponse.json(
         { error: "ID de miembro inválido" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -174,7 +174,7 @@ export async function PUT(
     if (!miembroExistente) {
       return NextResponse.json(
         { error: "Miembro no encontrado" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -239,7 +239,9 @@ export async function PUT(
       fechaBautismo: parseDate(fechaBautismo) || miembroExistente.fechaBautismo,
       fechaPrimeraVisita:
         parseDate(fechaPrimeraVisita) ?? miembroExistente.fechaPrimeraVisita,
-      estado: (parseString(estado) as import("@prisma/client").EstadoPersona) || miembroExistente.estado,
+      estado:
+        (parseString(estado) as import("@prisma/client").EstadoPersona) ||
+        miembroExistente.estado,
       updatedAt: new Date(),
     };
 
@@ -255,20 +257,20 @@ export async function PUT(
     if (error instanceof Error && error.message === "Usuario no autenticado") {
       return NextResponse.json(
         { error: "Usuario no autenticado" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     return NextResponse.json(
       { error: "Error al actualizar la persona" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     // Obtener contexto del usuario autenticado
@@ -281,7 +283,7 @@ export async function DELETE(
     if (isNaN(miembroId)) {
       return NextResponse.json(
         { error: "ID de miembro inválido" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -296,7 +298,7 @@ export async function DELETE(
     if (!persona) {
       return NextResponse.json(
         { error: "Miembro no encontrado" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -311,20 +313,20 @@ export async function DELETE(
     if (error instanceof Error && error.message === "Usuario no autenticado") {
       return NextResponse.json(
         { error: "Usuario no autenticado" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     return NextResponse.json(
       { error: "Error al eliminar la persona" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     // Obtener contexto del usuario autenticado
@@ -337,7 +339,7 @@ export async function PATCH(
     if (isNaN(miembroId)) {
       return NextResponse.json(
         { error: "ID de miembro inválido" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -355,7 +357,7 @@ export async function PATCH(
     if (!personaExistente) {
       return NextResponse.json(
         { error: "Miembro no encontrado" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -385,13 +387,13 @@ export async function PATCH(
     if (error instanceof Error && error.message === "Usuario no autenticado") {
       return NextResponse.json(
         { error: "Usuario no autenticado" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     return NextResponse.json(
       { error: "Error al actualizar la persona" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

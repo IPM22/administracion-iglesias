@@ -330,7 +330,7 @@ export default function FamiliaDetallePage({
   const removerPersona = async (persona: PersonaFamilia) => {
     if (
       !confirm(
-        `¿Estás seguro de que quieres remover a ${persona.nombres} ${persona.apellidos} de esta familia?`
+        `¿Estás seguro de que quieres remover a ${persona.nombres} ${persona.apellidos} de esta familia?`,
       )
     ) {
       return;
@@ -401,7 +401,7 @@ export default function FamiliaDetallePage({
   const personasFiltradas = todasLasPersonas.filter(
     (persona) =>
       persona.nombres.toLowerCase().includes(busqueda.toLowerCase()) ||
-      persona.apellidos.toLowerCase().includes(busqueda.toLowerCase())
+      persona.apellidos.toLowerCase().includes(busqueda.toLowerCase()),
   );
 
   if (cargando) {
@@ -773,7 +773,7 @@ export default function FamiliaDetallePage({
                             <Badge
                               variant={getBadgeVariant(
                                 persona.estado,
-                                persona.tipo
+                                persona.tipo,
                               )}
                               className="text-xs"
                             >

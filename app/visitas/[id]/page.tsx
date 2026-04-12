@@ -55,7 +55,7 @@ const formatPhoneForDisplay = (phone: string | null | undefined): string => {
   } else {
     return `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(
       6,
-      10
+      10,
     )}`;
   }
 };

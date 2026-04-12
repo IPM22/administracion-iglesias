@@ -49,7 +49,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { ModeToggle } from "../../../../../components/mode-toggle";
 import PersonaSelector from "../../../../../components/PersonaSelector";
-import { formatDateForInput, toLocaleDateShort, toLocaleDateLong } from "@/lib/date-utils";
+import {
+  formatDateForInput,
+  toLocaleDateShort,
+  toLocaleDateLong,
+} from "@/lib/date-utils";
 
 interface TipoActividad {
   id: number;
@@ -119,7 +123,7 @@ const formSchema = z
     {
       message: "La fecha es requerida para actividades regulares",
       path: ["fecha"],
-    }
+    },
   );
 
 type FormValues = z.infer<typeof formSchema>;
@@ -193,7 +197,7 @@ export default function NuevaEntradaHistorialPage({
         const visitasData = await visitasResponse.json();
         // Filtrar para excluir la visita actual
         const visitasFiltradas = visitasData.filter(
-          (v: Visita) => v.id !== parseInt(id)
+          (v: Visita) => v.id !== parseInt(id),
         );
 
         // Crear lista combinada de invitados por
@@ -201,14 +205,14 @@ export default function NuevaEntradaHistorialPage({
           (miembro: Miembro) => ({
             ...miembro,
             tipo: "miembro" as const,
-          })
+          }),
         );
 
         const visitasConTipo: Persona[] = visitasFiltradas.map(
           (visita: Visita) => ({
             ...visita,
             tipo: "visita" as const,
-          })
+          }),
         );
 
         setPersonas([...miembrosConTipo, ...visitasConTipo]);
@@ -232,7 +236,7 @@ export default function NuevaEntradaHistorialPage({
       }
 
       const tipoActividad = tiposActividad.find(
-        (tipo) => tipo.id.toString() === tipoSeleccionado
+        (tipo) => tipo.id.toString() === tipoSeleccionado,
       );
 
       if (tipoActividad?.tipo === "Especial") {
@@ -243,12 +247,12 @@ export default function NuevaEntradaHistorialPage({
             // Filtrar solo actividades del tipo seleccionado (incluyendo pasadas y futuras)
             const actividadesFiltradas = data.filter(
               (act: Actividad) =>
-                act.tipoActividad.id.toString() === tipoSeleccionado
+                act.tipoActividad.id.toString() === tipoSeleccionado,
             );
             // Ordenar por fecha, más recientes primero
             actividadesFiltradas.sort(
               (a: Actividad, b: Actividad) =>
-                new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+                new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
             );
             setActividades(actividadesFiltradas);
           }
@@ -273,7 +277,7 @@ export default function NuevaEntradaHistorialPage({
 
     if (actividadIdSeleccionada && actividades.length > 0) {
       const actividadSeleccionada = actividades.find(
-        (act) => act.id.toString() === actividadIdSeleccionada
+        (act) => act.id.toString() === actividadIdSeleccionada,
       );
 
       if (actividadSeleccionada) {
@@ -290,7 +294,7 @@ export default function NuevaEntradaHistorialPage({
   // Función para determinar si se debe mostrar el campo de fecha
   const deberMostrarCampoFecha = () => {
     const tipoActividad = tiposActividad.find(
-      (tipo) => tipo.id.toString() === tipoSeleccionado
+      (tipo) => tipo.id.toString() === tipoSeleccionado,
     );
     // Solo mostrar para actividades específicamente regulares
     return tipoActividad?.tipo === "Regular";
@@ -333,7 +337,7 @@ export default function NuevaEntradaHistorialPage({
     } catch (error) {
       console.error("Error:", error);
       setError(
-        error instanceof Error ? error.message : "Error al guardar la visita"
+        error instanceof Error ? error.message : "Error al guardar la visita",
       );
     } finally {
       setSaving(false);
@@ -452,12 +456,12 @@ export default function NuevaEntradaHistorialPage({
 
                               // Si es actividad regular, establecer fecha actual
                               const tipoActividad = tiposActividad.find(
-                                (tipo) => tipo.id.toString() === value
+                                (tipo) => tipo.id.toString() === value,
                               );
                               if (tipoActividad?.tipo === "Regular") {
                                 form.setValue(
                                   "fecha",
-                                  formatDateForInput(new Date().toISOString())
+                                  formatDateForInput(new Date().toISOString()),
                                 );
                               } else {
                                 form.setValue("fecha", undefined);
@@ -530,12 +534,12 @@ export default function NuevaEntradaHistorialPage({
                               // Buscar y establecer la actividad seleccionada
                               if (value && actividades.length > 0) {
                                 const actividad = actividades.find(
-                                  (act) => act.id.toString() === value
+                                  (act) => act.id.toString() === value,
                                 );
                                 if (actividad) {
                                   setActividadSeleccionada(actividad);
                                   const fechaActividad = formatDateForInput(
-                                    actividad.fecha
+                                    actividad.fecha,
                                   );
                                   form.setValue("fecha", fechaActividad);
                                 }
@@ -547,7 +551,7 @@ export default function NuevaEntradaHistorialPage({
                             disabled={
                               !tipoSeleccionado ||
                               tiposActividad.find(
-                                (t) => t.id.toString() === tipoSeleccionado
+                                (t) => t.id.toString() === tipoSeleccionado,
                               )?.tipo !== "Especial"
                             }
                           >
@@ -558,11 +562,12 @@ export default function NuevaEntradaHistorialPage({
                                     !tipoSeleccionado
                                       ? "Primero selecciona el tipo"
                                       : tiposActividad.find(
-                                          (t) =>
-                                            t.id.toString() === tipoSeleccionado
-                                        )?.tipo !== "Especial"
-                                      ? "Solo para actividades especiales"
-                                      : "Selecciona la actividad"
+                                            (t) =>
+                                              t.id.toString() ===
+                                              tipoSeleccionado,
+                                          )?.tipo !== "Especial"
+                                        ? "Solo para actividades especiales"
+                                        : "Selecciona la actividad"
                                   }
                                 />
                               </SelectTrigger>

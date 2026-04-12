@@ -192,7 +192,7 @@ export default function ConfiguracionPage() {
     setLoadingSolicitudes(true);
     try {
       const response = await fetch(
-        `/api/solicitudes?iglesiaId=${iglesiaActiva.id}&estado=PENDIENTE`
+        `/api/solicitudes?iglesiaId=${iglesiaActiva.id}&estado=PENDIENTE`,
       );
       if (response.ok) {
         const data = await response.json();
@@ -212,7 +212,7 @@ export default function ConfiguracionPage() {
     setLoadingUsuarios(true);
     try {
       const response = await fetch(
-        `/api/iglesias/${iglesiaActiva.id}/usuarios?estado=ACTIVO`
+        `/api/iglesias/${iglesiaActiva.id}/usuarios?estado=ACTIVO`,
       );
       if (response.ok) {
         const data = await response.json();
@@ -314,7 +314,7 @@ export default function ConfiguracionPage() {
 
   const handleResponderSolicitud = async (
     solicitudId: number,
-    estado: "ACTIVO" | "RECHAZADO"
+    estado: "ACTIVO" | "RECHAZADO",
   ) => {
     try {
       const response = await fetch("/api/solicitudes", {
@@ -333,7 +333,7 @@ export default function ConfiguracionPage() {
         toast.success(
           estado === "ACTIVO"
             ? "Solicitud aprobada correctamente"
-            : "Solicitud rechazada"
+            : "Solicitud rechazada",
         );
         await cargarSolicitudes();
       } else {
@@ -347,7 +347,7 @@ export default function ConfiguracionPage() {
 
   const handleCambiarRolUsuario = async (
     usuarioId: string,
-    nuevoRol: string
+    nuevoRol: string,
   ) => {
     if (!iglesiaActiva?.id) return;
 
@@ -363,7 +363,7 @@ export default function ConfiguracionPage() {
             usuarioId,
             rol: nuevoRol,
           }),
-        }
+        },
       );
 
       if (response.ok) {
@@ -1019,7 +1019,7 @@ export default function ConfiguracionPage() {
                             onChange={(e) =>
                               handleCambiarRolUsuario(
                                 usuarioIglesia.usuario.id,
-                                e.target.value
+                                e.target.value,
                               )
                             }
                             className="text-sm border border-border rounded-md px-3 py-2 bg-background"
@@ -1107,8 +1107,7 @@ export default function ConfiguracionPage() {
                             </p>
                           )}
                           <p className="text-xs text-muted-foreground">
-                            Solicitado:{" "}
-                            {toLocaleDateShort(solicitud.createdAt)}
+                            Solicitado: {toLocaleDateShort(solicitud.createdAt)}
                           </p>
                         </div>
                       </div>

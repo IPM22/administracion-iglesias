@@ -32,7 +32,7 @@ function parseDateLocal(dateString: string | Date): dayjs.Dayjs {
   if (dateString instanceof Date) {
     // Construir desde componentes locales para evitar conversión UTC
     return dayjs(
-      `${dateString.getFullYear()}-${String(dateString.getMonth() + 1).padStart(2, "0")}-${String(dateString.getDate()).padStart(2, "0")}`
+      `${dateString.getFullYear()}-${String(dateString.getMonth() + 1).padStart(2, "0")}-${String(dateString.getDate()).padStart(2, "0")}`,
     );
   }
   return dayjs(extractDatePart(String(dateString)));
@@ -63,11 +63,16 @@ export function toLocaleDateShort(dateString?: string | Date | null): string {
  */
 export function toLocaleDateLong(
   dateString?: string | Date | null,
-  opts: { day?: boolean; month?: "short" | "long"; year?: boolean; weekday?: "short" | "long" } = {
+  opts: {
+    day?: boolean;
+    month?: "short" | "long";
+    year?: boolean;
+    weekday?: "short" | "long";
+  } = {
     day: true,
     month: "long",
     year: true,
-  }
+  },
 ): string {
   if (!dateString) return "—";
   try {
@@ -135,7 +140,7 @@ export function formatDate(
     year: "numeric",
     month: "long",
     day: "numeric",
-  }
+  },
 ): string {
   if (!dateString) return "—";
 
@@ -183,7 +188,7 @@ export function formatDate(
  * @returns Edad en años o null si no es válida
  */
 export function calcularEdad(
-  fechaNacimiento?: string | Date | null
+  fechaNacimiento?: string | Date | null,
 ): number | null {
   if (!fechaNacimiento) return null;
   try {
@@ -199,7 +204,7 @@ export function calcularEdad(
  * Calcula años transcurridos desde una fecha (útil para calcular años en la iglesia)
  */
 export function calcularAniosTranscurridos(
-  fechaInicio?: string | Date | null
+  fechaInicio?: string | Date | null,
 ): number | null {
   if (!fechaInicio) return null;
   try {
@@ -295,7 +300,7 @@ export function formatDateComplete(dateString?: string | Date | null): string {
  */
 export function formatDateTimeShort(
   dateString?: string | Date | null,
-  timeString?: string
+  timeString?: string,
 ): string {
   if (!dateString) return "—";
   try {
@@ -307,7 +312,9 @@ export function formatDateTimeShort(
     if (timeString) {
       try {
         const [hours, minutes] = timeString.split(":");
-        const timeDate = dayjs().hour(parseInt(hours)).minute(parseInt(minutes));
+        const timeDate = dayjs()
+          .hour(parseInt(hours))
+          .minute(parseInt(minutes));
         result += ` ${timeDate.format("HH:mm")}`;
       } catch {
         result += ` ${timeString}`;
@@ -332,7 +339,7 @@ export function formatActivityDate(
     year: "numeric",
     month: "long",
     day: "numeric",
-  }
+  },
 ): string {
   if (!dateString) return "—";
   try {

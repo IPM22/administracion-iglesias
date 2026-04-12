@@ -173,7 +173,7 @@ export default function DashboardPage() {
           headers: {
             "Cache-Control": "max-age=30", // Cache por 30 segundos
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -267,7 +267,7 @@ export default function DashboardPage() {
   if (!iglesiaActiva && !initializing) {
     // Verificar si el usuario tiene solicitudes pendientes
     const tieneSolicitudesPendientes = usuarioCompleto?.iglesias?.some(
-      (iglesia) => iglesia.estado === "PENDIENTE"
+      (iglesia) => iglesia.estado === "PENDIENTE",
     );
 
     if (tieneSolicitudesPendientes) {
@@ -467,7 +467,7 @@ export default function DashboardPage() {
       description: `${Math.round(
         ((stats.estadisticasEclesiasticas?.enMinisterios || 0) /
           stats.totalMiembros) *
-          100
+          100,
       )}% de miembros`,
       icon: UserCheck,
       color: "text-emerald-600",
@@ -683,7 +683,7 @@ export default function DashboardPage() {
                               </span>
                             </div>
                           </div>
-                        )
+                        ),
                       )}
                     </div>
                   </CardContent>
@@ -726,7 +726,7 @@ export default function DashboardPage() {
                               </span>
                             </div>
                           </div>
-                        )
+                        ),
                       )}
                     </div>
                   </CardContent>
@@ -782,7 +782,7 @@ export default function DashboardPage() {
                                 <Badge
                                   variant="outline"
                                   className={`text-xs ${obtenerColorTipo(
-                                    actividad.tipoCategoria
+                                    actividad.tipoCategoria,
                                   )}`}
                                 >
                                   {actividad.tipo}

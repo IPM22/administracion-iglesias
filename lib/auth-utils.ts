@@ -8,7 +8,7 @@ export interface UserContext {
 }
 
 export async function getUserContext(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<UserContext | null> {
   try {
     // Obtener el ID del usuario desde los headers (inyectado por el middleware de Supabase)

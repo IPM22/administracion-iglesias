@@ -47,7 +47,7 @@ async function getActividadData(id: string): Promise<ActividadData | null> {
       console.error(
         "❌ METADATA: Error en respuesta:",
         response.status,
-        response.statusText
+        response.statusText,
       );
       return null;
     }
@@ -75,7 +75,7 @@ export async function generateMetadata({
 
   if (!actividad) {
     console.warn(
-      "⚠️ METADATA: No se encontró la actividad, usando metadata de fallback"
+      "⚠️ METADATA: No se encontró la actividad, usando metadata de fallback",
     );
     return {
       title: "Evento no encontrado | Iglesia Central",
@@ -121,7 +121,7 @@ export async function generateMetadata({
   const getHorarioCompleto = () => {
     if (actividad.horaInicio && actividad.horaFin) {
       return `${formatearHora(actividad.horaInicio)} - ${formatearHora(
-        actividad.horaFin
+        actividad.horaFin,
       )}`;
     } else if (actividad.horaInicio) {
       return formatearHora(actividad.horaInicio);

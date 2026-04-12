@@ -143,31 +143,31 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         },
       ]
     : iglesiaActiva
-    ? [
-        {
-          name: iglesiaActiva.nombre,
-          logo: Building2,
-          logoUrl: iglesiaActiva.logoUrl ?? undefined,
-          plan:
-            iglesiaActiva.rol === "ADMIN"
-              ? "Administrador"
-              : iglesiaActiva.rol === "PASTOR"
-              ? "Pastor"
-              : iglesiaActiva.rol === "LIDER"
-              ? "Líder"
-              : iglesiaActiva.rol === "SECRETARIO"
-              ? "Secretario"
-              : "Miembro",
-        },
-      ]
-    : [
-        {
-          name: "Sin iglesia",
-          logo: Building2,
-          logoUrl: undefined as string | undefined,
-          plan: "Sin acceso",
-        },
-      ];
+      ? [
+          {
+            name: iglesiaActiva.nombre,
+            logo: Building2,
+            logoUrl: iglesiaActiva.logoUrl ?? undefined,
+            plan:
+              iglesiaActiva.rol === "ADMIN"
+                ? "Administrador"
+                : iglesiaActiva.rol === "PASTOR"
+                  ? "Pastor"
+                  : iglesiaActiva.rol === "LIDER"
+                    ? "Líder"
+                    : iglesiaActiva.rol === "SECRETARIO"
+                      ? "Secretario"
+                      : "Miembro",
+          },
+        ]
+      : [
+          {
+            name: "Sin iglesia",
+            logo: Building2,
+            logoUrl: undefined as string | undefined,
+            plan: "Sin acceso",
+          },
+        ];
 
   return (
     <Sidebar collapsible="icon" {...props}>

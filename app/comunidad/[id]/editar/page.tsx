@@ -159,7 +159,9 @@ export default function EditarVisitaPage({
           estadoCivil: data.estadoCivil,
           ocupacion: data.ocupacion || "",
           fechaPrimeraVisita: formatDateForInput(data.fechaPrimeraVisita),
-          estado: (data.estado as "ACTIVA" | "INACTIVA" | "RECURRENTE" | "NUEVA") || "ACTIVA",
+          estado:
+            (data.estado as "ACTIVA" | "INACTIVA" | "RECURRENTE" | "NUEVA") ||
+            "ACTIVA",
           foto: data.foto || "",
           notasAdicionales: data.notas || data.notasAdicionales || "",
         });
@@ -199,7 +201,7 @@ export default function EditarVisitaPage({
     } catch (err) {
       console.error("Error:", err);
       setError(
-        err instanceof Error ? err.message : "Error al guardar los cambios"
+        err instanceof Error ? err.message : "Error al guardar los cambios",
       );
     } finally {
       setSaving(false);
@@ -327,7 +329,10 @@ export default function EditarVisitaPage({
                                 <FormItem>
                                   <FormLabel>Nombres</FormLabel>
                                   <FormControl>
-                                    <Input placeholder="Juan Carlos" {...field} />
+                                    <Input
+                                      placeholder="Juan Carlos"
+                                      {...field}
+                                    />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -639,8 +644,12 @@ export default function EditarVisitaPage({
                                 </FormControl>
                                 <SelectContent>
                                   <SelectItem value="ACTIVA">Activa</SelectItem>
-                                  <SelectItem value="INACTIVA">Inactiva</SelectItem>
-                                  <SelectItem value="RECURRENTE">Recurrente</SelectItem>
+                                  <SelectItem value="INACTIVA">
+                                    Inactiva
+                                  </SelectItem>
+                                  <SelectItem value="RECURRENTE">
+                                    Recurrente
+                                  </SelectItem>
                                   <SelectItem value="NUEVA">Nueva</SelectItem>
                                 </SelectContent>
                               </Select>

@@ -141,7 +141,7 @@ export default function EditarMiembroPage({
       setLoading(true);
       try {
         console.log(
-          `🔄 Cargando datos del miembro ${id} para edición - Iglesia: ${iglesiaActiva?.nombre} (ID: ${iglesiaActiva?.id})`
+          `🔄 Cargando datos del miembro ${id} para edición - Iglesia: ${iglesiaActiva?.nombre} (ID: ${iglesiaActiva?.id})`,
         );
 
         // Llamar directamente a la API para evitar bucles infinitos
@@ -232,7 +232,7 @@ export default function EditarMiembroPage({
     } catch (error) {
       console.error("Error:", error);
       setError(
-        error instanceof Error ? error.message : "Error al guardar los cambios"
+        error instanceof Error ? error.message : "Error al guardar los cambios",
       );
     } finally {
       setSaving(false);

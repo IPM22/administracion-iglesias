@@ -180,7 +180,9 @@ export default function MinisterioDetallePage({
     } catch (error) {
       console.error("Error:", error);
       alert(
-        error instanceof Error ? error.message : "Error al cambiar el liderazgo"
+        error instanceof Error
+          ? error.message
+          : "Error al cambiar el liderazgo",
       );
     }
   };
@@ -205,7 +207,9 @@ export default function MinisterioDetallePage({
     } catch (error) {
       console.error("Error:", error);
       alert(
-        error instanceof Error ? error.message : "Error al remover el liderazgo"
+        error instanceof Error
+          ? error.message
+          : "Error al remover el liderazgo",
       );
     }
   };
@@ -422,7 +426,7 @@ export default function MinisterioDetallePage({
                                 <DropdownMenuItem
                                   onClick={() =>
                                     router.push(
-                                      `/miembros/${persona.persona.id}`
+                                      `/miembros/${persona.persona.id}`,
                                     )
                                   }
                                 >
@@ -715,7 +719,8 @@ export default function MinisterioDetallePage({
                       {
                         ministerio.actividades.filter(
                           (a) =>
-                            a.estado === "Programada" || a.estado === "En curso"
+                            a.estado === "Programada" ||
+                            a.estado === "En curso",
                         ).length
                       }
                     </span>
