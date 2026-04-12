@@ -180,14 +180,6 @@ export default function HistorialVisitaPage({
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("es-ES", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
   const getNombreCompleto = () => {
     if (!visita) return "";
     return `${visita.nombres} ${visita.apellidos}`;

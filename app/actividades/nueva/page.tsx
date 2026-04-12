@@ -22,6 +22,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -52,6 +53,7 @@ import { CloudinaryUploader } from "../../../components/CloudinaryUploader";
 import MinisterioSelector from "../../../components/MinisterioSelector";
 import { GoogleMapsEmbed } from "@/components/GoogleMapsEmbed";
 import { UseIglesiaLocationButton } from "@/components/ActividadFormHelpers";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface TipoActividad {
   id: number;
@@ -125,7 +127,8 @@ export default function NuevaActividadPage() {
     useState<Ministerio | null>(null);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       nombre: "",
       descripcion: "",
@@ -303,342 +306,339 @@ export default function NuevaActividadPage() {
             </div>
           )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Crear Nueva Actividad
-              </CardTitle>
-              <CardDescription>
-                Registra una nueva actividad para la iglesia
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(onSubmit)}
-                  className="space-y-6"
-                >
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {/* Nombre */}
-                    <FormField
-                      control={form.control}
-                      name="nombre"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nombre de la Actividad</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Ej: Culto Dominical"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <Tabs defaultValue="basico">
+                <TabsList className="mb-4 w-full">
+                  <TabsTrigger value="basico" className="flex-1">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Lo básico
+                  </TabsTrigger>
+                  <TabsTrigger value="detalles" className="flex-1">
+                    <Clock className="mr-2 h-4 w-4" />
+                    Detalles opcionales
+                  </TabsTrigger>
+                </TabsList>
 
-                    {/* Tipo de Actividad */}
-                    <FormField
-                      control={form.control}
-                      name="tipoActividadId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tipo de Actividad</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
+                {/* ── TAB 1: BÁSICO ── */}
+                <TabsContent value="basico">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Información básica</CardTitle>
+                      <CardDescription>
+                        Con estos campos ya puedes guardar la actividad.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {/* Nombre */}
+                        <FormField
+                          control={form.control}
+                          name="nombre"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Nombre de la Actividad</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="Ej: Culto Dominical"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Tipo de Actividad */}
+                        <FormField
+                          control={form.control}
+                          name="tipoActividadId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Tipo de Actividad</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Selecciona el tipo" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {tiposActividad.map((tipo) => (
+                                    <SelectItem
+                                      key={tipo.id}
+                                      value={tipo.id.toString()}
+                                    >
+                                      {tipo.nombre} ({tipo.tipo})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      {/* Ministerio Organizador */}
+                      <FormField
+                        control={form.control}
+                        name="ministerioId"
+                        render={() => (
+                          <FormItem>
+                            <FormLabel>
+                              Ministerio Organizador{" "}
+                              <span className="text-red-500">*</span>
+                            </FormLabel>
                             <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecciona el tipo" />
-                              </SelectTrigger>
+                              <MinisterioSelector
+                                ministerios={ministerios}
+                                onSeleccionar={setMinisterioSeleccionado}
+                                ministerioSeleccionado={ministerioSeleccionado}
+                                placeholder="Buscar y seleccionar ministerio organizador..."
+                                disabled={saving}
+                              />
                             </FormControl>
-                            <SelectContent>
-                              {tiposActividad.map((tipo) => (
-                                <SelectItem
-                                  key={tipo.id}
-                                  value={tipo.id.toString()}
-                                >
-                                  {tipo.nombre} ({tipo.tipo})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                            <FormDescription>
+                              Ministerio responsable de organizar esta actividad
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                  {/* Ministerio Organizador */}
-                  <FormField
-                    control={form.control}
-                    name="ministerioId"
-                    render={() => (
-                      <FormItem>
-                        <FormLabel>
-                          Ministerio Organizador{" "}
-                          <span className="text-red-500">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <MinisterioSelector
-                            ministerios={ministerios}
-                            onSeleccionar={setMinisterioSeleccionado}
-                            ministerioSeleccionado={ministerioSeleccionado}
-                            placeholder="Buscar y seleccionar ministerio organizador..."
-                            disabled={saving}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Ministerio responsable de organizar esta actividad
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                      {/* Fecha y hora */}
+                      <div className="grid gap-4 md:grid-cols-3">
+                        <FormField
+                          control={form.control}
+                          name="fecha"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Fecha</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="horaInicio"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Hora de Inicio</FormLabel>
+                              <FormControl>
+                                <Input type="time" {...field} />
+                              </FormControl>
+                              <FormDescription>Opcional</FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="horaFin"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Hora de Fin</FormLabel>
+                              <FormControl>
+                                <Input type="time" {...field} />
+                              </FormControl>
+                              <FormDescription>Opcional</FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
 
-                  {/* Descripción */}
-                  <FormField
-                    control={form.control}
-                    name="descripcion"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Descripción</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Descripción de la actividad..."
-                            className="min-h-[100px]"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Opcional - Describe brevemente la actividad
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                      {/* Estado */}
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="estado"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Estado</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="Programada">
+                                    Programada
+                                  </SelectItem>
+                                  <SelectItem value="En curso">
+                                    En curso
+                                  </SelectItem>
+                                  <SelectItem value="Finalizada">
+                                    Finalizada
+                                  </SelectItem>
+                                  <SelectItem value="Cancelada">
+                                    Cancelada
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-end gap-3">
+                      <Button
+                        variant="outline"
+                        type="button"
+                        onClick={() => router.back()}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button type="submit" disabled={saving}>
+                        {saving ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Creando...
+                          </>
+                        ) : (
+                          "Crear Actividad"
+                        )}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </TabsContent>
 
-                  {/* Banner */}
-                  <FormField
-                    control={form.control}
-                    name="banner"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Banner de la Actividad</FormLabel>
-                        <FormControl>
-                          <CloudinaryUploader
-                            type="actividad"
-                            value={field.value}
-                            onChange={field.onChange}
-                            onRemove={() => field.onChange("")}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Opcional - Imagen promocional de la actividad
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid gap-4 md:grid-cols-3">
-                    {/* Fecha */}
-                    <FormField
-                      control={form.control}
-                      name="fecha"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Fecha</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Hora Inicio */}
-                    <FormField
-                      control={form.control}
-                      name="horaInicio"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Hora de Inicio</FormLabel>
-                          <FormControl>
-                            <Input type="time" {...field} />
-                          </FormControl>
-                          <FormDescription>Opcional</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Hora Fin */}
-                    <FormField
-                      control={form.control}
-                      name="horaFin"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Hora de Fin</FormLabel>
-                          <FormControl>
-                            <Input type="time" {...field} />
-                          </FormControl>
-                          <FormDescription>Opcional</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  {/* Ubicación con Google Maps Embed */}
-                  <FormField
-                    control={form.control}
-                    name="ubicacion"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Ubicación y Google Maps</FormLabel>
-                        <FormControl>
-                          <div className="space-y-4">
-                            <UseIglesiaLocationButton
-                              onLocationSet={(data) => {
-                                field.onChange(data.direccion);
-                                form.setValue(
-                                  "googleMapsEmbed",
-                                  data.googleMapsEmbed
-                                );
-                              }}
-                            />
-                            <GoogleMapsEmbed
-                              onLocationChange={(location: {
-                                direccion: string;
-                                googleMapsEmbed?: string;
-                              }) => {
-                                field.onChange(location.direccion);
-                                form.setValue(
-                                  "googleMapsEmbed",
-                                  location.googleMapsEmbed
-                                );
-                              }}
-                              direccion={field.value || ""}
-                              googleMapsEmbed={form.getValues(
-                                "googleMapsEmbed"
-                              )}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormDescription>
-                          Opcional - Dirección física del evento con embed de
-                          Google Maps
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {/* Estado */}
-                    <FormField
-                      control={form.control}
-                      name="estado"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Estado</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
+                {/* ── TAB 2: DETALLES ── */}
+                <TabsContent value="detalles">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Detalles opcionales</CardTitle>
+                      <CardDescription>
+                        Complementa la actividad con descripción, imagen y
+                        ubicación.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Descripción */}
+                      <FormField
+                        control={form.control}
+                        name="descripcion"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Descripción</FormLabel>
                             <FormControl>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
+                              <Textarea
+                                placeholder="Descripción de la actividad..."
+                                className="min-h-[100px]"
+                                {...field}
+                              />
                             </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Programada">
-                                Programada
-                              </SelectItem>
-                              <SelectItem value="En curso">En curso</SelectItem>
-                              <SelectItem value="Finalizada">
-                                Finalizada
-                              </SelectItem>
-                              <SelectItem value="Cancelada">
-                                Cancelada
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                            <FormDescription>
+                              Describe brevemente la actividad
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                  <div className="flex justify-end space-x-4">
-                    <Button
-                      variant="outline"
-                      type="button"
-                      onClick={() => router.back()}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button type="submit" disabled={saving}>
-                      {saving ? "Creando..." : "Crear Actividad"}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
+                      {/* Banner */}
+                      <FormField
+                        control={form.control}
+                        name="banner"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Banner de la Actividad</FormLabel>
+                            <FormControl>
+                              <CloudinaryUploader
+                                type="actividad"
+                                value={field.value}
+                                onChange={field.onChange}
+                                onRemove={() => field.onChange("")}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Imagen promocional de la actividad
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-          {/* Información adicional */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Información Importante
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <span className="font-medium">Ministerio organizador:</span>
-                  <p className="text-muted-foreground">
-                    Es requerido seleccionar el ministerio responsable de la
-                    actividad. Esto facilitará la asignación de
-                    responsabilidades y el seguimiento.
-                  </p>
-                </div>
-                <div>
-                  <span className="font-medium">Google Maps:</span>
-                  <p className="text-muted-foreground">
-                    Puedes agregar un embed de Google Maps para mostrar la
-                    ubicación interactiva del evento. Ve a Google Maps, busca la
-                    ubicación, haz clic en &quot;Compartir&quot; →
-                    &quot;Insertar mapa&quot; y pega el código.
-                  </p>
-                </div>
-                <div>
-                  <span className="font-medium">Tipos de actividad:</span>
-                  <p className="text-muted-foreground">
-                    Las actividades <strong>Regulares</strong> son eventos
-                    recurrentes como cultos o estudios. Las actividades
-                    <strong>Especiales</strong> son eventos únicos o
-                    ocasionales.
-                  </p>
-                </div>
-                <div>
-                  <span className="font-medium">Estados:</span>
-                  <p className="text-muted-foreground">
-                    <strong>Programada:</strong> Actividad planificada pero no
-                    iniciada. <strong>En curso:</strong> Actividad en
-                    desarrollo.
-                    <strong>Finalizada:</strong> Actividad completada.
-                    <strong>Cancelada:</strong> Actividad cancelada.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                      {/* Ubicación con Google Maps Embed */}
+                      <FormField
+                        control={form.control}
+                        name="ubicacion"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Ubicación y Google Maps</FormLabel>
+                            <FormControl>
+                              <div className="space-y-4">
+                                <UseIglesiaLocationButton
+                                  onLocationSet={(data) => {
+                                    field.onChange(data.direccion);
+                                    form.setValue(
+                                      "googleMapsEmbed",
+                                      data.googleMapsEmbed
+                                    );
+                                  }}
+                                />
+                                <GoogleMapsEmbed
+                                  onLocationChange={(location: {
+                                    direccion: string;
+                                    googleMapsEmbed?: string;
+                                  }) => {
+                                    field.onChange(location.direccion);
+                                    form.setValue(
+                                      "googleMapsEmbed",
+                                      location.googleMapsEmbed
+                                    );
+                                  }}
+                                  direccion={field.value || ""}
+                                  googleMapsEmbed={form.getValues(
+                                    "googleMapsEmbed"
+                                  )}
+                                />
+                              </div>
+                            </FormControl>
+                            <FormDescription>
+                              Dirección física del evento con embed de Google
+                              Maps
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                    <CardFooter className="flex justify-end gap-3">
+                      <Button
+                        variant="outline"
+                        type="button"
+                        onClick={() => router.back()}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button type="submit" disabled={saving}>
+                        {saving ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Creando...
+                          </>
+                        ) : (
+                          "Crear Actividad"
+                        )}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </form>
+          </Form>
         </div>
       </SidebarInset>
     </SidebarProvider>

@@ -857,7 +857,10 @@ export default function ActividadesPage() {
         // Fecha formateada correctamente (centrada verticalmente)
         const centroFilaY = yPosition + alturaFila / 2 + 2;
         try {
-          const fechaFormateada = dayjs(actividad.fecha).format("DD/MM/YYYY");
+          // Agregar +1 día para compensar problemas de zona horaria UTC
+          const fechaCorregida = new Date(actividad.fecha);
+          fechaCorregida.setDate(fechaCorregida.getDate() + 1);
+          const fechaFormateada = dayjs(fechaCorregida).format("DD/MM/YYYY");
           pdf.text(fechaFormateada, 120, centroFilaY);
         } catch {
           pdf.text(actividad.fecha, 120, centroFilaY);

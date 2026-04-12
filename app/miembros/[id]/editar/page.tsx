@@ -134,11 +134,11 @@ export default function EditarMiembroPage({
   useEffect(() => {
     const fetchMiembro = async () => {
       if (!iglesiaActiva?.id) {
-        console.log("🔍 DEBUG - No hay iglesia seleccionada para edición");
-        setLoading(false);
+        // Iglesia aún no resuelta — esperar sin salir con error
         return;
       }
 
+      setLoading(true);
       try {
         console.log(
           `🔄 Cargando datos del miembro ${id} para edición - Iglesia: ${iglesiaActiva?.nombre} (ID: ${iglesiaActiva?.id})`

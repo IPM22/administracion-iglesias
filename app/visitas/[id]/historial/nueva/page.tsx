@@ -49,7 +49,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { ModeToggle } from "../../../../../components/mode-toggle";
 import PersonaSelector from "../../../../../components/PersonaSelector";
-import { formatDateForInput } from "@/lib/date-utils";
+import { formatDateForInput, toLocaleDateShort, toLocaleDateLong } from "@/lib/date-utils";
 
 interface TipoActividad {
   id: number;
@@ -576,9 +576,7 @@ export default function NuevaEntradaHistorialPage({
                                   <div className="flex flex-col">
                                     <span>{actividad.nombre}</span>
                                     <span className="text-xs text-muted-foreground">
-                                      {new Date(
-                                        actividad.fecha
-                                      ).toLocaleDateString()}
+                                      {toLocaleDateShort(actividad.fecha)}
                                       {actividad.horaInicio &&
                                         ` - ${actividad.horaInicio}`}
                                     </span>
@@ -609,13 +607,7 @@ export default function NuevaEntradaHistorialPage({
                           específica:
                         </p>
                         <p className="font-medium mt-1">
-                          {new Date(
-                            actividadSeleccionada.fecha
-                          ).toLocaleDateString("es-ES", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })}
+                          {toLocaleDateLong(actividadSeleccionada.fecha)}
                           {actividadSeleccionada.horaInicio && (
                             <span className="text-muted-foreground">
                               {" "}

@@ -826,7 +826,7 @@ export default function FamiliaDetallePage({
                                 const rutaEditar =
                                   persona.tipo === "miembro"
                                     ? `/miembros/${persona.id}/editar`
-                                    : `/visitas/${persona.id}/editar`;
+                                    : `/comunidad/${persona.id}/editar`;
                                 router.push(rutaEditar);
                               }}
                             >

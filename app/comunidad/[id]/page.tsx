@@ -193,11 +193,11 @@ export default function ComunidadDetallePage({
   useEffect(() => {
     const fetchPersona = async () => {
       if (!iglesiaActiva?.id) {
-        console.log("🔍 DEBUG - No hay iglesia seleccionada");
-        setLoading(false);
+        // Iglesia aún no resuelta — esperar sin salir con error
         return;
       }
 
+      setLoading(true);
       try {
         console.log(
           `🔄 Cargando detalles de la persona ${id} para iglesia: ${iglesiaActiva?.nombre} (ID: ${iglesiaActiva?.id})`
@@ -445,7 +445,7 @@ export default function ComunidadDetallePage({
                   const editPath =
                     persona.rol === "MIEMBRO"
                       ? `/miembros/${persona.id}/editar`
-                      : `/visitas/${persona.id}/editar`;
+                      : `/comunidad/${persona.id}/editar`;
                   router.push(editPath);
                 }}
               >

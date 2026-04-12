@@ -52,7 +52,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
 import { MensajeMasivoModal } from "@/components/MensajeMasivoModal";
-import { formatDate, formatActivityDate } from "@/lib/date-utils";
+import { formatActivityDate, toLocaleDateShort } from "@/lib/date-utils";
 
 // Función para formatear teléfonos para mostrar
 const formatPhoneForDisplay = (phone: string | null | undefined): string => {
@@ -1096,7 +1096,7 @@ export default function DetalleActividadPage({
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Creada:</span>
                   <span>
-                    {new Date(actividad.createdAt).toLocaleDateString("es-ES")}
+                    {toLocaleDateShort(actividad.createdAt)}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -1104,7 +1104,7 @@ export default function DetalleActividadPage({
                     Última actualización:
                   </span>
                   <span>
-                    {new Date(actividad.updatedAt).toLocaleDateString("es-ES")}
+                    {toLocaleDateShort(actividad.updatedAt)}
                   </span>
                 </div>
                 <div className="flex justify-between">

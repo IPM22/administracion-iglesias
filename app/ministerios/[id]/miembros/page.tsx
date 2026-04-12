@@ -76,6 +76,7 @@ import {
 } from "lucide-react";
 import { ModeToggle } from "../../../../components/mode-toggle";
 import MiembroSelector from "../../../../components/MiembroSelector";
+import { toLocaleDateMedium } from "@/lib/date-utils";
 
 const personaFormSchema = z.object({
   personaId: z.number().min(1, "Selecciona una persona"),
@@ -205,11 +206,7 @@ export default function GestionPersonasMinisterioPage({
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("es-ES", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    return toLocaleDateMedium(dateString);
   };
 
   const getEstadoBadge = (estado: string) => {

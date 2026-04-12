@@ -41,7 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Calendar, UserPlus, Plus, X } from "lucide-react";
+import { ArrowLeft, Calendar, UserPlus, Plus, X, Search, History, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm, type ControllerRenderProps } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -51,6 +51,17 @@ import { CloudinaryUploader } from "../../../components/CloudinaryUploader";
 import { PhoneInput } from "../../../components/PhoneInput";
 import { ModeToggle } from "../../../components/mode-toggle";
 import PersonaSelector from "../../../components/PersonaSelector";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { toLocaleDateShort, toLocaleDateMedium, toLocaleDateLong } from "@/lib/date-utils";
 
 // Interfaces para tipado
 interface TipoActividad {
@@ -124,6 +135,18 @@ interface NinoAPI {
   estado?: string;
 }
 
+interface VisitaBusqueda {
+  id: number;
+  nombres: string;
+  apellidos: string;
+  foto?: string;
+  correo?: string;
+  celular?: string;
+  estado: string;
+  fechaPrimeraVisita?: string;
+  _count: { historialVisitas: number };
+}
+
 const formSchema = z.object({
   nombres: z.string().min(2, "Los nombres deben tener al menos 2 caracteres"),
   apellidos: z
@@ -174,6 +197,14 @@ export default function NuevaVisitaPage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [horarioSeleccionado, setHorarioSeleccionado] = useState<string>("");
   const [agregarAsistencia, setAgregarAsistencia] = useState(false);
+
+  // Estados para detección de duplicados
+  const [visitasCoincidentes, setVisitasCoincidentes] = useState<VisitaBusqueda[]>([]);
+  const [visitaExistente, setVisitaExistente] = useState<VisitaBusqueda | null>(null);
+  const [buscandoDuplicados, setBuscandoDuplicados] = useState(false);
+  const [dialogDuplicado, setDialogDuplicado] = useState(false);
+  const [historialGuardando, setHistorialGuardando] = useState(false);
+  const [historialError, setHistorialError] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -369,12 +400,11 @@ export default function NuevaVisitaPage() {
   }, [tipoSeleccionado, tiposActividad, form, agregarAsistencia]);
 
   // Actualizar fecha cuando se selecciona actividad específica
+  const actividadIdWatched = form.watch("actividadId");
   useEffect(() => {
-    const actividadIdSeleccionada = form.watch("actividadId");
-
-    if (actividadIdSeleccionada && actividades.length > 0) {
+    if (actividadIdWatched && actividades.length > 0) {
       const actividadSeleccionada = actividades.find(
-        (act) => act.id.toString() === actividadIdSeleccionada
+        (act) => act.id.toString() === actividadIdWatched
       );
 
       if (actividadSeleccionada) {
@@ -393,7 +423,7 @@ export default function NuevaVisitaPage() {
       form.setValue("horarioId", "");
       setHorarioSeleccionado("");
     }
-  }, [form.watch("actividadId"), actividades, form]);
+  }, [actividadIdWatched, actividades, form]);
 
   // Función para determinar si se debe mostrar el campo de fecha
   const deberMostrarCampoFecha = () => {
@@ -402,6 +432,75 @@ export default function NuevaVisitaPage() {
     );
     return tipoActividad?.tipo === "Regular";
   };
+
+  // Búsqueda debounced de visitas duplicadas por nombre/apellido
+  const nombresWatched = form.watch("nombres");
+  const apellidosWatched = form.watch("apellidos");
+  useEffect(() => {
+    if (visitaExistente) return;
+
+    const query = `${nombresWatched ?? ""} ${apellidosWatched ?? ""}`.trim();
+    if (query.length < 3) {
+      setVisitasCoincidentes([]);
+      setBuscandoDuplicados(false);
+      return;
+    }
+
+    setBuscandoDuplicados(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/visitas/buscar?q=${encodeURIComponent(query)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setVisitasCoincidentes(data);
+        } else {
+          setVisitasCoincidentes([]);
+        }
+      } catch {
+        setVisitasCoincidentes([]);
+      } finally {
+        setBuscandoDuplicados(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [nombresWatched, apellidosWatched, visitaExistente]);
+
+  // Función para agregar asistencia a una visita existente y redirigir
+  async function guardarAsistenciaExistente() {
+    if (!visitaExistente) return;
+    setHistorialGuardando(true);
+    setHistorialError(null);
+    const values = form.getValues();
+    try {
+      const fechaParaRegistro = actividadSeleccionada
+        ? actividadSeleccionada.fecha
+        : values.fechaAsistencia || new Date().toISOString().split("T")[0];
+
+      const res = await fetch(`/api/visitas/${visitaExistente.id}/historial`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fecha: fechaParaRegistro,
+          tipoActividadId: values.tipoActividadId ? parseInt(values.tipoActividadId) : null,
+          actividadId: values.actividadId ? parseInt(values.actividadId) : null,
+          horarioId: values.horarioId ? parseInt(values.horarioId) : null,
+          invitadoPorId: values.invitadoPorId ? parseInt(values.invitadoPorId) : null,
+          observaciones: values.observacionesAsistencia || null,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setHistorialError(err.error || "Error al registrar la asistencia");
+        return;
+      }
+      router.push(`/visitas/${visitaExistente.id}`);
+    } catch {
+      setHistorialError("Error de red al registrar la asistencia");
+    } finally {
+      setHistorialGuardando(false);
+    }
+  }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setSaving(true);
@@ -598,6 +697,73 @@ export default function NuevaVisitaPage() {
                               )}
                             />
                           </div>
+
+                          {/* Banner de coincidencias detectadas */}
+                          {buscandoDuplicados && (
+                            <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+                              <Search className="h-4 w-4 animate-pulse" />
+                              Buscando visitas similares…
+                            </div>
+                          )}
+                          {!buscandoDuplicados && visitasCoincidentes.length === 0 &&
+                           (nombresWatched ?? "").length + (apellidosWatched ?? "").length >= 3 &&
+                           !visitaExistente && (
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              ✓ Sin coincidencias — puedes continuar con el registro nuevo.
+                            </p>
+                          )}
+                          {visitasCoincidentes.length > 0 && !visitaExistente && !buscandoDuplicados && (
+                            <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 p-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Search className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                                <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                                  {visitasCoincidentes.length === 1
+                                    ? "Encontramos 1 visita con un nombre similar"
+                                    : `Encontramos ${visitasCoincidentes.length} visitas con nombres similares`}
+                                </p>
+                              </div>
+              <p className="text-xs text-amber-700 dark:text-amber-400 mb-3">
+                                ¿Es alguna de estas personas? Si ya ha visitado antes, selecciónala para agregar una nueva asistencia sin duplicar el registro.
+                              </p>
+                              <div className="space-y-2">
+                                {visitasCoincidentes.map((v) => (
+                                  <div
+                                    key={v.id}
+                                    className="flex items-center gap-3 rounded-md bg-white dark:bg-zinc-900 border border-amber-200 dark:border-amber-800 p-2 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-950/50 transition-colors"
+                                    onClick={() => {
+                                      setVisitaExistente(v);
+                                      setAgregarAsistencia(true);
+                                      setDialogDuplicado(true);
+                                    }}
+                                  >
+                                    <Avatar className="h-9 w-9 shrink-0">
+                                      <AvatarImage src={v.foto} />
+                                      <AvatarFallback className="text-xs">
+                                        {v.nombres[0]}{v.apellidos[0]}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-medium text-sm truncate">
+                                        {v.nombres} {v.apellidos}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {v._count.historialVisitas} asistencia{v._count.historialVisitas !== 1 ? "s" : ""} registrada{v._count.historialVisitas !== 1 ? "s" : ""}
+                                        {v.fechaPrimeraVisita && (
+                                          <> · Primera visita: {toLocaleDateMedium(v.fechaPrimeraVisita)}</>
+                                        )}
+                                      </p>
+                                    </div>
+                                    <Badge variant="secondary" className="shrink-0 text-xs">
+                                      Seleccionar
+                                    </Badge>
+                                  </div>
+                                ))}
+                              </div>
+                              <p className="text-xs text-amber-600 dark:text-amber-500 mt-2">
+                                Si no es ninguna de estas, continúa llenando el formulario para crear una nueva visita.
+                              </p>
+                            </div>
+                          )}
                         </div>
 
                         {/* Columna derecha - Foto (ocupa las 3 filas desde el inicio) */}
@@ -1153,9 +1319,7 @@ export default function NuevaVisitaPage() {
                                     <div className="flex flex-col">
                                       <span>{actividad.nombre}</span>
                                       <span className="text-xs text-muted-foreground">
-                                        {new Date(
-                                          actividad.fecha
-                                        ).toLocaleDateString()}
+                                        {toLocaleDateShort(actividad.fecha)}
                                         {actividad.horaInicio &&
                                           ` - ${actividad.horaInicio}`}
                                       </span>
@@ -1232,13 +1396,7 @@ export default function NuevaVisitaPage() {
                                           <div className="flex flex-col">
                                             <div className="flex items-center gap-2">
                                               <span className="font-medium">
-                                                {new Date(
-                                                  horario.fecha
-                                                ).toLocaleDateString("es-ES", {
-                                                  weekday: "short",
-                                                  day: "numeric",
-                                                  month: "short",
-                                                })}
+                                                {toLocaleDateMedium(horario.fecha)}
                                               </span>
                                               <span className="text-primary">
                                                 {horario.horaInicio} -{" "}
@@ -1279,13 +1437,7 @@ export default function NuevaVisitaPage() {
                             específica:
                           </p>
                           <p className="font-medium mt-1">
-                            {new Date(
-                              actividadSeleccionada.fecha
-                            ).toLocaleDateString("es-ES", {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            })}
+                            {toLocaleDateLong(actividadSeleccionada.fecha)}
                             {actividadSeleccionada.horaInicio && (
                               <span className="text-muted-foreground">
                                 {" "}
@@ -1383,6 +1535,229 @@ export default function NuevaVisitaPage() {
               </div>
             </form>
           </Form>
+
+          {/* Dialog: agregar asistencia a visita existente */}
+          <Dialog open={dialogDuplicado} onOpenChange={(open) => {
+            setDialogDuplicado(open);
+            if (!open) {
+              setVisitaExistente(null);
+              setHistorialError(null);
+            }
+          }}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5 text-primary" />
+                  Agregar nueva asistencia
+                </DialogTitle>
+                <DialogDescription>
+                  Esta persona ya tiene un registro. Se añadirá una nueva asistencia sin duplicar sus datos.
+                </DialogDescription>
+              </DialogHeader>
+
+              {visitaExistente && (
+                <div className="space-y-5">
+                  {/* Info de la visita seleccionada */}
+                  <div className="flex items-center gap-3 rounded-lg border bg-muted/50 p-3">
+                    <Avatar className="h-12 w-12 shrink-0">
+                      <AvatarImage src={visitaExistente.foto} />
+                      <AvatarFallback>
+                        <User className="h-5 w-5" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-semibold">
+                        {visitaExistente.nombres} {visitaExistente.apellidos}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {visitaExistente._count.historialVisitas} asistencia{visitaExistente._count.historialVisitas !== 1 ? "s" : ""} previa{visitaExistente._count.historialVisitas !== 1 ? "s" : ""}
+                      </p>
+                      {visitaExistente.correo && (
+                        <p className="text-xs text-muted-foreground">{visitaExistente.correo}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {historialError && (
+                    <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                      {historialError}
+                    </div>
+                  )}
+
+                  {/* Tipo de actividad */}
+                  <div className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="tipoActividadId"
+                      render={({ field }: { field: ControllerRenderProps<FormValues> }) => (
+                        <FormItem>
+                          <FormLabel>Tipo de Actividad</FormLabel>
+                          <Select
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              setTipoSeleccionado(value);
+                              form.setValue("actividadId", "");
+                              setActividadSeleccionada(null);
+                              const tipo = tiposActividad.find((t) => t.id.toString() === value);
+                              if (tipo?.tipo === "Regular") {
+                                form.setValue("fechaAsistencia", new Date().toISOString().split("T")[0]);
+                              } else {
+                                form.setValue("fechaAsistencia", "");
+                              }
+                            }}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecciona el tipo" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {tiposActividad.map((tipo) => (
+                                <SelectItem key={tipo.id} value={tipo.id.toString()}>
+                                  {tipo.nombre} ({tipo.tipo})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Fecha para actividades regulares */}
+                    {deberMostrarCampoFecha() && (
+                      <FormField
+                        control={form.control}
+                        name="fechaAsistencia"
+                        render={({ field }: { field: ControllerRenderProps<FormValues> }) => (
+                          <FormItem>
+                            <FormLabel>Fecha de Asistencia</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
+                    {/* Actividad específica (solo tipo Especial) */}
+                    {tipoSeleccionado && tiposActividad.find((t) => t.id.toString() === tipoSeleccionado)?.tipo === "Especial" && (
+                      <FormField
+                        control={form.control}
+                        name="actividadId"
+                        render={({ field }: { field: ControllerRenderProps<FormValues> }) => (
+                          <FormItem>
+                            <FormLabel>Actividad Específica</FormLabel>
+                            <Select
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                const act = actividades.find((a) => a.id.toString() === value);
+                                if (act) {
+                                  setActividadSeleccionada(act);
+                                  form.setValue("fechaAsistencia", new Date(act.fecha).toISOString().split("T")[0]);
+                                } else {
+                                  setActividadSeleccionada(null);
+                                }
+                              }}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecciona la actividad" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {actividades.map((act) => (
+                                  <SelectItem key={act.id} value={act.id.toString()}>
+                                    <div className="flex flex-col">
+                                      <span>{act.nombre}</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {toLocaleDateShort(act.fecha)}
+                                        {act.horaInicio && ` - ${act.horaInicio}`}
+                                      </span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
+                    {/* Invitado por */}
+                    <FormField
+                      control={form.control}
+                      name="invitadoPorId"
+                      render={({ field }: { field: ControllerRenderProps<FormValues> }) => (
+                        <FormItem>
+                          <FormLabel>Invitado por (Opcional)</FormLabel>
+                          <FormControl>
+                            <PersonaSelector
+                              personas={personas}
+                              onSeleccionar={(persona: Persona | null) => {
+                                if (persona) {
+                                  field.onChange(persona.id.toString());
+                                  setPersonaSeleccionada(persona);
+                                } else {
+                                  field.onChange("");
+                                  setPersonaSeleccionada(null);
+                                }
+                              }}
+                              personaSeleccionada={personaSeleccionada}
+                              placeholder="Buscar persona que invitó..."
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Observaciones */}
+                    <FormField
+                      control={form.control}
+                      name="observacionesAsistencia"
+                      render={({ field }: { field: ControllerRenderProps<FormValues> }) => (
+                        <FormItem>
+                          <FormLabel>Observaciones (Opcional)</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Notas sobre esta asistencia..."
+                              className="min-h-[80px]"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <DialogFooter className="gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setDialogDuplicado(false);
+                    setVisitaExistente(null);
+                    setHistorialError(null);
+                  }}
+                >
+                  Cancelar — crear nueva visita
+                </Button>
+                <Button
+                  onClick={guardarAsistenciaExistente}
+                  disabled={historialGuardando || !form.watch("tipoActividadId")}
+                >
+                  {historialGuardando ? "Guardando..." : "Registrar asistencia"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </SidebarInset>
     </SidebarProvider>

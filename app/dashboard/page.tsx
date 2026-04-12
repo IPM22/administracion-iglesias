@@ -37,6 +37,7 @@ import {
   Clock,
   MapPin,
 } from "lucide-react";
+import { toLocaleDateMedium } from "@/lib/date-utils";
 
 interface DashboardStats {
   // Estadísticas principales por rol
@@ -294,14 +295,7 @@ export default function DashboardPage() {
   }
 
   const formatearFecha = (fecha: string) => {
-    // Agregar +1 día para compensar problemas de zona horaria
-    const fechaCorregida = new Date(fecha);
-    fechaCorregida.setDate(fechaCorregida.getDate() + 1);
-    
-    return fechaCorregida.toLocaleDateString("es-ES", {
-      month: "short",
-      day: "numeric",
-    });
+    return toLocaleDateMedium(fecha);
   };
 
   const obtenerColorTipo = (tipo: string) => {

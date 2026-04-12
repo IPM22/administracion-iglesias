@@ -19,6 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { CloudinaryUploader } from "@/components/CloudinaryUploader";
 import { GoogleMapsEmbed } from "@/components/GoogleMapsEmbed";
+import { toLocaleDateShort } from "@/lib/date-utils";
 import {
   User,
   Building2,
@@ -1001,9 +1002,7 @@ export default function ConfiguracionPage() {
                           )}
                           <p className="text-xs text-muted-foreground">
                             Miembro desde:{" "}
-                            {new Date(
-                              usuarioIglesia.fechaUnion
-                            ).toLocaleDateString()}
+                            {toLocaleDateShort(usuarioIglesia.fechaUnion)}
                           </p>
                         </div>
                       </div>
@@ -1109,7 +1108,7 @@ export default function ConfiguracionPage() {
                           )}
                           <p className="text-xs text-muted-foreground">
                             Solicitado:{" "}
-                            {new Date(solicitud.createdAt).toLocaleDateString()}
+                            {toLocaleDateShort(solicitud.createdAt)}
                           </p>
                         </div>
                       </div>

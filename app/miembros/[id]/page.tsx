@@ -179,11 +179,11 @@ function MiembroDetalleContent({
   useEffect(() => {
     const fetchMiembro = async () => {
       if (!iglesiaActiva?.id) {
-        console.log("🔍 DEBUG - No hay iglesia seleccionada");
-        setLoading(false);
+        // Iglesia aún no resuelta — esperar sin salir con error
         return;
       }
 
+      setLoading(true);
       try {
         console.log(
           `🔄 Cargando detalles del miembro ${id} para iglesia: ${iglesiaActiva?.nombre} (ID: ${iglesiaActiva?.id})`

@@ -11,9 +11,93 @@ dayjs.extend(localizedFormat);
 dayjs.locale("es");
 
 /**
+ * Extrae solo la parte YYYY-MM-DD de cualquier string de fecha,
+ * evitando que la conversión UTC → local reste un día.
+ * Ej: "2026-04-11T00:00:00.000Z" → "2026-04-11"
+ *     "2026-04-11"               → "2026-04-11"
+ */
+function extractDatePart(dateString: string): string {
+  // Si contiene T o Z, tomar solo los primeros 10 caracteres (YYYY-MM-DD)
+  if (dateString.includes("T") || dateString.includes("Z")) {
+    return dateString.substring(0, 10);
+  }
+  return dateString.trim();
+}
+
+/**
+ * Parsea cualquier fecha de forma segura como fecha LOCAL (sin desplazamiento UTC).
+ * Úsalo en lugar de dayjs(dateString) para fechas que solo representan un día (sin hora).
+ */
+function parseDateLocal(dateString: string | Date): dayjs.Dayjs {
+  if (dateString instanceof Date) {
+    // Construir desde componentes locales para evitar conversión UTC
+    return dayjs(
+      `${dateString.getFullYear()}-${String(dateString.getMonth() + 1).padStart(2, "0")}-${String(dateString.getDate()).padStart(2, "0")}`
+    );
+  }
+  return dayjs(extractDatePart(String(dateString)));
+}
+
+/**
  * Utilidades para manejo correcto de fechas usando Day.js
  * Evita problemas de zona horaria al convertir fechas para inputs y display
  */
+
+/**
+ * Convierte una fecha a string corto "DD/MM/YYYY" sin desfase de timezone.
+ * Reemplaza: new Date(x).toLocaleDateString("es-ES")
+ */
+export function toLocaleDateShort(dateString?: string | Date | null): string {
+  if (!dateString) return "—";
+  try {
+    const d = parseDateLocal(dateString);
+    return d.isValid() ? d.format("DD/MM/YYYY") : "—";
+  } catch {
+    return "—";
+  }
+}
+
+/**
+ * Convierte una fecha a string largo "D de MMMM de YYYY" sin desfase de timezone.
+ * Reemplaza: new Date(x).toLocaleDateString("es-ES", { day, month, year })
+ */
+export function toLocaleDateLong(
+  dateString?: string | Date | null,
+  opts: { day?: boolean; month?: "short" | "long"; year?: boolean; weekday?: "short" | "long" } = {
+    day: true,
+    month: "long",
+    year: true,
+  }
+): string {
+  if (!dateString) return "—";
+  try {
+    const d = parseDateLocal(dateString);
+    if (!d.isValid()) return "—";
+    let fmt = "";
+    if (opts.weekday === "long") fmt += "dddd, ";
+    else if (opts.weekday === "short") fmt += "ddd. ";
+    if (opts.day !== false) fmt += "D";
+    if (opts.month === "long") fmt += " [de] MMMM";
+    else if (opts.month === "short") fmt += " MMM";
+    if (opts.year !== false) fmt += " [de] YYYY";
+    return d.format(fmt.trim());
+  } catch {
+    return "—";
+  }
+}
+
+/**
+ * Convierte una fecha a formato "D MMM YYYY" (ej: "11 abr 2026") sin desfase.
+ */
+export function toLocaleDateMedium(dateString?: string | Date | null): string {
+  if (!dateString) return "—";
+  try {
+    const d = parseDateLocal(dateString);
+    return d.isValid() ? d.format("D MMM YYYY") : "—";
+  } catch {
+    return "—";
+  }
+}
 
 /**
  * Convierte una fecha a formato string para inputs type="date" (YYYY-MM-DD)
@@ -23,40 +107,18 @@ export function formatDateForInput(dateString?: string | null): string {
   if (!dateString) return "";
 
   try {
-    // Si es una cadena vacía o solo espacios, retornar vacío
     if (typeof dateString === "string" && dateString.trim() === "") {
       return "";
     }
 
-    // Usar dayjs para parsear la fecha como local (sin zona horaria)
-    const date = dayjs(dateString).startOf("day");
+    const date = parseDateLocal(dateString);
 
-    // Verificar que la fecha es válida
     if (!date.isValid()) {
-      console.warn(
-        "📅 formatDateForInput: Fecha inválida recibida:",
-        dateString
-      );
       return "";
     }
 
-    // Formatear como YYYY-MM-DD
-    const result = date.format("YYYY-MM-DD");
-
-    console.log("📅 formatDateForInput:", {
-      input: dateString,
-      output: result,
-      parsed: date.toISOString(),
-    });
-
-    return result;
-  } catch (error) {
-    console.warn(
-      "📅 formatDateForInput: Error al formatear fecha:",
-      error,
-      "Fecha original:",
-      dateString
-    );
+    return date.format("YYYY-MM-DD");
+  } catch {
     return "";
   }
 }
@@ -78,11 +140,7 @@ export function formatDate(
   if (!dateString) return "—";
 
   try {
-    // LOG TEMPORAL: Verificar que se esté usando la función corregida
-    console.log("🔧 FUNCIÓN CORREGIDA formatDate - Input:", dateString);
-
-    // Usar dayjs para parsear la fecha como local (sin zona horaria)
-    const date = dayjs(dateString).startOf("day");
+    const date = parseDateLocal(dateString as string | Date);
 
     if (!date.isValid()) return "—";
 
@@ -113,9 +171,6 @@ export function formatDate(
     // Formatear usando dayjs directamente
     const result = date.format(formatStr);
 
-    // LOG TEMPORAL: Verificar el resultado
-    console.log("🔧 FUNCIÓN CORREGIDA formatDate - Output:", result);
-
     return result;
   } catch {
     return "—";
@@ -131,14 +186,10 @@ export function calcularEdad(
   fechaNacimiento?: string | Date | null
 ): number | null {
   if (!fechaNacimiento) return null;
-
   try {
-    const nacimiento = dayjs(fechaNacimiento);
-
+    const nacimiento = parseDateLocal(fechaNacimiento as string | Date);
     if (!nacimiento.isValid()) return null;
-
-    const hoy = dayjs();
-    return hoy.diff(nacimiento, "year");
+    return dayjs().diff(nacimiento, "year");
   } catch {
     return null;
   }
@@ -146,21 +197,15 @@ export function calcularEdad(
 
 /**
  * Calcula años transcurridos desde una fecha (útil para calcular años en la iglesia)
- * @param fechaInicio Fecha de inicio
- * @returns Años transcurridos o null si no es válida
  */
 export function calcularAniosTranscurridos(
   fechaInicio?: string | Date | null
 ): number | null {
   if (!fechaInicio) return null;
-
   try {
-    const inicio = dayjs(fechaInicio);
-
+    const inicio = parseDateLocal(fechaInicio as string | Date);
     if (!inicio.isValid()) return null;
-
-    const hoy = dayjs();
-    return hoy.diff(inicio, "year");
+    return dayjs().diff(inicio, "year");
   } catch {
     return null;
   }
@@ -173,41 +218,15 @@ export function calcularAniosTranscurridos(
  */
 export function parseDateForAPI(dateString?: string): Date | undefined {
   if (!dateString || dateString.trim() === "") {
-    console.log("📅 parseDateForAPI: Fecha vacía o nula, retornando undefined");
     return undefined;
   }
-
   try {
-    console.log("📅 parseDateForAPI: Procesando fecha:", dateString);
-
-    // Limpiar la fecha de cualquier espacio extra
-    const cleanDate = dateString.trim();
-
-    // Usar dayjs para parsear la fecha como local (sin zona horaria)
-    const date = dayjs(cleanDate).startOf("day");
-
-    if (!date.isValid()) {
-      console.warn("📅 parseDateForAPI: Fecha inválida:", cleanDate);
-      return undefined;
-    }
-
-    // Convertir a Date nativo para la API
-    const result = date.toDate();
-
-    console.log("📅 parseDateForAPI: Fecha procesada exitosamente:", {
-      input: cleanDate,
-      output: result.toISOString(),
-      local: result.toLocaleDateString(),
-    });
-
-    return result;
-  } catch (error) {
-    console.error(
-      "📅 parseDateForAPI: Error al procesar fecha:",
-      error,
-      "Input:",
-      dateString
-    );
+    const cleanDate = extractDatePart(dateString.trim());
+    const date = dayjs(cleanDate);
+    if (!date.isValid()) return undefined;
+    // Construir Date en medianoche LOCAL para que Prisma/Postgres no desplace el día
+    return new Date(`${cleanDate}T00:00:00`);
+  } catch {
     return undefined;
   }
 }
@@ -219,12 +238,9 @@ export function parseDateForAPI(dateString?: string): Date | undefined {
  */
 export function formatDateShort(dateString?: string | Date | null): string {
   if (!dateString) return "—";
-
   try {
-    const date = dayjs(dateString).startOf("day");
-
+    const date = parseDateLocal(dateString as string | Date);
     if (!date.isValid()) return "—";
-
     return date.format("DD-MM-YYYY");
   } catch {
     return "—";
@@ -262,12 +278,9 @@ export function formatTime12Hour(timeString?: string): string {
  */
 export function formatDateComplete(dateString?: string | Date | null): string {
   if (!dateString) return "—";
-
   try {
-    const date = dayjs(dateString).startOf("day");
-
+    const date = parseDateLocal(dateString as string | Date);
     if (!date.isValid()) return "—";
-
     return date.format("dddd, D [de] MMMM [de] YYYY");
   } catch {
     return "—";
@@ -285,10 +298,8 @@ export function formatDateTimeShort(
   timeString?: string
 ): string {
   if (!dateString) return "—";
-
   try {
-    const date = dayjs(dateString).startOf("day");
-
+    const date = parseDateLocal(dateString as string | Date);
     if (!date.isValid()) return "—";
 
     let result = date.format("DD/MM/YYYY");
@@ -296,9 +307,7 @@ export function formatDateTimeShort(
     if (timeString) {
       try {
         const [hours, minutes] = timeString.split(":");
-        const timeDate = dayjs()
-          .hour(parseInt(hours))
-          .minute(parseInt(minutes));
+        const timeDate = dayjs().hour(parseInt(hours)).minute(parseInt(minutes));
         result += ` ${timeDate.format("HH:mm")}`;
       } catch {
         result += ` ${timeString}`;
@@ -312,11 +321,10 @@ export function formatDateTimeShort(
 }
 
 /**
- * Formatea una fecha de actividad corrigiendo problemas de zona horaria
- * Agrega +1 día para compensar la conversión UTC a hora local
+ * Formatea una fecha de actividad usando dayjs
  * @param dateString Fecha en formato string o Date
  * @param options Opciones de formateo
- * @returns Fecha formateada corregida
+ * @returns Fecha formateada
  */
 export function formatActivityDate(
   dateString?: string | Date | null,
@@ -327,56 +335,32 @@ export function formatActivityDate(
   }
 ): string {
   if (!dateString) return "—";
-
   try {
-    // Agregar +1 día para compensar problemas de zona horaria
-    const fechaCorregida = new Date(dateString);
-    fechaCorregida.setDate(fechaCorregida.getDate() + 1);
-    
-    // Usar dayjs para parsear la fecha corregida
-    const date = dayjs(fechaCorregida).startOf("day");
-
+    const date = parseDateLocal(dateString as string | Date);
     if (!date.isValid()) return "—";
 
-    // Construir el formato según las opciones usando dayjs directamente
     let formatStr = "";
-
     if (options.weekday) {
-      if (options.weekday === "long") formatStr += "dddd, ";
-      else if (options.weekday === "short") formatStr += "ddd, ";
+      formatStr += options.weekday === "long" ? "dddd, " : "ddd, ";
     }
-
     if (options.day) {
-      if (options.day === "2-digit") formatStr += "DD";
-      else formatStr += "D";
+      formatStr += options.day === "2-digit" ? "DD" : "D";
     }
-
     if (options.month) {
       if (options.month === "long") formatStr += " [de] MMMM";
       else if (options.month === "short") formatStr += " MMM";
       else if (options.month === "numeric") formatStr += "/M";
       else if (options.month === "2-digit") formatStr += "/MM";
     }
-
     if (options.year) {
-      if (options.month === "numeric" || options.month === "2-digit") formatStr += "/YYYY";
-      else formatStr += " [de] YYYY";
+      formatStr +=
+        options.month === "numeric" || options.month === "2-digit"
+          ? "/YYYY"
+          : " [de] YYYY";
     }
 
-    // Formatear usando dayjs directamente
-    const result = date.format(formatStr);
-    
-    // Log para debug
-    console.log("🔧 formatActivityDate:", {
-      input: dateString,
-      corrected: fechaCorregida.toISOString(),
-      formatStr,
-      result
-    });
-    
-    return result;
-  } catch (error) {
-    console.error("❌ Error en formatActivityDate:", error);
+    return date.format(formatStr);
+  } catch {
     return "—";
   }
 }

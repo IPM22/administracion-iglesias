@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Users, Calendar, Plus, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ModeToggle } from "../../../../components/mode-toggle";
+import { toLocaleDateLong } from "@/lib/date-utils";
 
 // Interfaces para tipado
 interface Ministerio {
@@ -77,11 +78,7 @@ export default function MiembroMinisteriosPage({
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "—";
-    return new Date(dateString).toLocaleDateString("es-ES", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    return toLocaleDateLong(dateString);
   };
 
   const getEstadoBadge = (ministerio: Ministerio) => {

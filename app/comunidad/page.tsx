@@ -105,6 +105,7 @@ import {
   type FiltrosPersona,
 } from "@/src/lib/validations/persona";
 import { MensajeMasivoModal } from "@/components/MensajeMasivoModal";
+import { toLocaleDateShort } from "@/lib/date-utils";
 
 interface Persona {
   id: number;
@@ -1289,9 +1290,7 @@ function ComunidadContent() {
                                   <div className="flex items-center gap-1">
                                     <Heart className="h-3 w-3 text-red-500" />
                                     <span className="text-sm">
-                                      {new Date(
-                                        persona.fechaBautismo
-                                      ).toLocaleDateString()}
+                                      {toLocaleDateShort(persona.fechaBautismo)}
                                     </span>
                                   </div>
                                 ) : (
@@ -1305,9 +1304,7 @@ function ComunidadContent() {
                               <TableCell>
                                 {persona.fechaPrimeraVisita ? (
                                   <span className="text-sm">
-                                    {new Date(
-                                      persona.fechaPrimeraVisita
-                                    ).toLocaleDateString()}
+                                    {toLocaleDateShort(persona.fechaPrimeraVisita)}
                                   </span>
                                 ) : (
                                   <span className="text-sm text-muted-foreground">

@@ -1,16 +1,22 @@
 // Configuración simplificada de Supabase - separada para cliente y servidor
+// Soporta tanto ANON_KEY (legacy) como PUBLISHABLE_KEY (nuevo formato Supabase)
 
 // Configuración solo para el cliente (navegador)
 export function getSupabaseClientConfig() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // Soportar tanto la nueva publishable key como la legacy anon key
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   const isConfigured = Boolean(url && anonKey);
 
   if (!isConfigured) {
     console.error("❌ Supabase Client Config Missing:", {
       NEXT_PUBLIC_SUPABASE_URL: url ? "OK" : "MISSING",
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: anonKey ? "OK" : "MISSING",
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY_OR_ANON_KEY: anonKey
+        ? "OK"
+        : "MISSING",
     });
   }
 
@@ -24,7 +30,10 @@ export function getSupabaseClientConfig() {
 // Configuración completa para el servidor (incluye serviceKey)
 export function getSupabaseServerConfig() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // Soportar tanto la nueva publishable key como la legacy anon key
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Sin NEXT_PUBLIC_
 
   const isConfigured = Boolean(url && anonKey && serviceKey);
@@ -32,7 +41,9 @@ export function getSupabaseServerConfig() {
   if (!isConfigured) {
     console.error("❌ Supabase Server Config Missing:", {
       NEXT_PUBLIC_SUPABASE_URL: url ? "OK" : "MISSING",
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: anonKey ? "OK" : "MISSING",
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY_OR_ANON_KEY: anonKey
+        ? "OK"
+        : "MISSING",
       SUPABASE_SERVICE_ROLE_KEY: serviceKey ? "OK" : "MISSING",
     });
   }

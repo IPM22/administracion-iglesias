@@ -319,9 +319,9 @@ export function UseIglesiaLocationButton({
 
   if (!direccion) {
     return (
-      <Card className="border-amber-200 bg-amber-50/50">
+      <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/30">
         <CardContent className="p-4">
-          <p className="text-sm text-amber-700">
+          <p className="text-sm text-amber-700 dark:text-amber-400">
             No hay ubicación configurada en la iglesia.
             <Button
               variant="link"
@@ -346,18 +346,18 @@ export function UseIglesiaLocationButton({
   };
 
   return (
-    <Card className="border-green-200 bg-green-50/50">
+    <Card className="border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/30">
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-green-800">
+            <p className="text-sm font-medium text-green-800 dark:text-green-300">
               📍 Usar ubicación de la iglesia
             </p>
-            <p className="text-xs text-green-600 mt-1">{direccion}</p>
+            <p className="text-xs text-green-600 dark:text-green-400 mt-1">{direccion}</p>
             {googleMapsEmbed && (
               <Badge
                 variant="outline"
-                className="text-xs text-green-600 border-green-200 mt-1"
+                className="text-xs text-green-600 dark:text-green-400 border-green-200 dark:border-green-700 mt-1"
               >
                 Con Google Maps
               </Badge>
@@ -368,7 +368,7 @@ export function UseIglesiaLocationButton({
             variant="outline"
             size="sm"
             onClick={handleUseIglesiaLocation}
-            className="text-green-700 border-green-300 hover:bg-green-100"
+            className="text-green-700 dark:text-green-400 border-green-300 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-900/50"
           >
             <MapPin className="h-3 w-3 mr-1" />
             Usar esta ubicación

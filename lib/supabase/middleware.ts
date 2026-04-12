@@ -32,13 +32,13 @@ export async function updateSession(request: NextRequest) {
       },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value }) =>
-          request.cookies.set(name, value)
+          request.cookies.set(name, value),
         );
         supabaseResponse = NextResponse.next({
           request,
         });
         cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options)
+          supabaseResponse.cookies.set(name, value, options),
         );
       },
     },
@@ -49,6 +49,21 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
+
+  // Si el usuario está autenticado, inyectar su ID en los headers de las rutas API
+  if (user && pathname.startsWith("/api/")) {
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-user-id", user.id);
+    // Crear nuevo response con el header inyectado, preservando las cookies ya seteadas
+    const newResponse = NextResponse.next({
+      request: { headers: requestHeaders },
+    });
+    // Copiar todas las cookies del supabaseResponse al nuevo response
+    supabaseResponse.cookies.getAll().forEach(({ name, value }) => {
+      newResponse.cookies.set(name, value);
+    });
+    supabaseResponse = newResponse;
+  }
 
   // Rutas públicas que no requieren autenticación
   const isPublicRoute =
@@ -108,7 +123,7 @@ export async function updateSession(request: NextRequest) {
                 },
                 // Timeout más corto para middleware
                 signal: AbortSignal.timeout(3000),
-              }
+              },
             );
 
             if (userResponse.ok) {
@@ -116,11 +131,11 @@ export async function updateSession(request: NextRequest) {
 
               // Verificar si el usuario tiene iglesias activas
               const tieneIglesiasActivas = userData.iglesias?.some(
-                (iglesia: { estado: string }) => iglesia.estado === "ACTIVO"
+                (iglesia: { estado: string }) => iglesia.estado === "ACTIVO",
               );
 
               const tieneSolicitudesPendientes = userData.iglesias?.some(
-                (iglesia: { estado: string }) => iglesia.estado === "PENDIENTE"
+                (iglesia: { estado: string }) => iglesia.estado === "PENDIENTE",
               );
 
               // Guardar en caché
@@ -148,7 +163,7 @@ export async function updateSession(request: NextRequest) {
               console.log("Usuario no encontrado en DB, permitiendo continuar");
             } else {
               console.warn(
-                `Error al obtener datos del usuario: ${userResponse.status}`
+                `Error al obtener datos del usuario: ${userResponse.status}`,
               );
             }
           }
@@ -180,7 +195,7 @@ function setCachedUserData(userId: string, _data: MiddlewareCacheData): void {
     // En el middleware no tenemos acceso a sessionStorage
     // Esta implementación puede mejorarse usando cookies si es necesario
     console.log(
-      `💾 Datos de usuario ${userId} guardados en caché del middleware`
+      `💾 Datos de usuario ${userId} guardados en caché del middleware`,
     );
   } catch (error) {
     console.error("Error guardando caché del middleware:", error);

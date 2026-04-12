@@ -193,6 +193,8 @@ export async function PUT(
       foto,
       fechaIngreso,
       fechaBautismo,
+      fechaPrimeraVisita,
+      estado,
       notasAdicionales,
     } = body;
 
@@ -235,6 +237,9 @@ export async function PUT(
         parseDate(fechaNacimiento) || miembroExistente.fechaNacimiento,
       fechaIngreso: parseDate(fechaIngreso) || miembroExistente.fechaIngreso,
       fechaBautismo: parseDate(fechaBautismo) || miembroExistente.fechaBautismo,
+      fechaPrimeraVisita:
+        parseDate(fechaPrimeraVisita) ?? miembroExistente.fechaPrimeraVisita,
+      estado: (parseString(estado) as import("@prisma/client").EstadoPersona) || miembroExistente.estado,
       updatedAt: new Date(),
     };
 

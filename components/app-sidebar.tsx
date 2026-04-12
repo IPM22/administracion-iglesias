@@ -138,6 +138,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {
           name: "Cargando...",
           logo: Building2,
+          logoUrl: undefined as string | undefined,
           plan: "Iniciando...",
         },
       ]
@@ -146,6 +147,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {
           name: iglesiaActiva.nombre,
           logo: Building2,
+          logoUrl: iglesiaActiva.logoUrl ?? undefined,
           plan:
             iglesiaActiva.rol === "ADMIN"
               ? "Administrador"
@@ -162,6 +164,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {
           name: "Sin iglesia",
           logo: Building2,
+          logoUrl: undefined as string | undefined,
           plan: "Sin acceso",
         },
       ];

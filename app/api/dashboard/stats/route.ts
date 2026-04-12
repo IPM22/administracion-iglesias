@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/db";
 import { createClient } from "@/lib/supabase/server";
+import { toLocaleDateMedium } from "@/lib/date-utils";
 
 export async function GET(request: Request) {
   try {
@@ -387,17 +388,10 @@ export async function GET(request: Request) {
 
     // Formatear las actividades para el dashboard
     const proximasActividades = proximasActividadesDB.map((actividad) => {
-      const fechaActividad = new Date(actividad.fecha);
-
       // Formatear la fecha para mostrar
-      const fechaFormateada = fechaActividad.toLocaleDateString("es-ES", {
-        weekday: "long",
-        month: "short",
-        day: "numeric",
-      });
+      let fechaCompleta = toLocaleDateMedium(actividad.fecha);
 
       // Agregar hora si está disponible
-      let fechaCompleta = fechaFormateada;
       if (actividad.horaInicio) {
         fechaCompleta += ` ${actividad.horaInicio}`;
       }

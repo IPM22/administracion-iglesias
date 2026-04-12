@@ -237,7 +237,7 @@ export default function DetalleVisitaPage({
                 <Calendar className="mr-2 h-4 w-4" />
                 Historial
               </Button>
-              <Button onClick={() => router.push(`/visitas/${id}/editar`)}>
+              <Button onClick={() => router.push(`/comunidad/${id}/editar`)}>
                 <Edit className="mr-2 h-4 w-4" />
                 Editar
               </Button>

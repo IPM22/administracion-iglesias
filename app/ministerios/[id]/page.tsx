@@ -34,6 +34,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { ModeToggle } from "../../../components/mode-toggle";
+import { toLocaleDateLong, toLocaleDateMedium } from "@/lib/date-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -128,21 +129,11 @@ export default function MinisterioDetallePage({
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("es-ES", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    return toLocaleDateLong(dateString);
   };
 
   const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("es-ES", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return toLocaleDateMedium(dateString);
   };
 
   const getEstadoBadge = (estado: string) => {

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import PromocionActividadClient from "./client";
+import { toLocaleDateLong } from "@/lib/date-utils";
 
 interface ActividadData {
   id: number;
@@ -98,16 +99,7 @@ export async function generateMetadata({
   console.log("📝 METADATA: Generando metadata para:", actividad.nombre);
 
   const formatearFecha = (fecha: string) => {
-    // Agregar +1 día para compensar problemas de zona horaria
-    const fechaCorregida = new Date(fecha);
-    fechaCorregida.setDate(fechaCorregida.getDate() + 1);
-    
-    return fechaCorregida.toLocaleDateString("es-ES", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
+    return toLocaleDateLong(fecha);
   };
 
   const formatearHora = (hora?: string) => {

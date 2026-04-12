@@ -11,21 +11,33 @@ export async function getUserContext(
   request: NextRequest
 ): Promise<UserContext | null> {
   try {
-    // Obtener el ID del usuario desde las headers (implementar según tu sistema de auth)
-    const userId =
-      request.headers.get("x-user-id") ||
-      "e18db95b-71ae-441f-b18b-c1eefd48e95a"; // ID temporal para testing
+    // Obtener el ID del usuario desde los headers (inyectado por el middleware de Supabase)
+    const userId = request.headers.get("x-user-id");
 
     if (!userId) {
       return null;
     }
 
+    // Verificar si el cliente envía un iglesiaId específico (query param)
+    const url = new URL(request.url);
+    const iglesiaIdParam = url.searchParams.get("iglesiaId");
+    const iglesiaIdSolicitado = iglesiaIdParam
+      ? parseInt(iglesiaIdParam)
+      : null;
+
+    // Construir el filtro: si viene iglesiaId en el query param, validar que
+    // el usuario pertenece a esa iglesia específica
+    const whereClause = iglesiaIdSolicitado
+      ? {
+          usuarioId: userId,
+          iglesiaId: iglesiaIdSolicitado,
+          estado: "ACTIVO" as const,
+        }
+      : { usuarioId: userId, estado: "ACTIVO" as const };
+
     // Obtener la relación usuario-iglesia
     const usuarioIglesia = await prisma.usuarioIglesia.findFirst({
-      where: {
-        usuarioId: userId,
-        estado: "ACTIVO",
-      },
+      where: whereClause,
       include: {
         iglesia: {
           select: {
