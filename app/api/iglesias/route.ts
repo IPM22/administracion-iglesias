@@ -155,9 +155,14 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error obteniendo iglesias:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Error obteniendo iglesias:", errorMessage);
     return NextResponse.json(
-      { error: "Error interno del servidor" },
+      {
+        error: "Error al buscar iglesias",
+        detail:
+          process.env.NODE_ENV !== "production" ? errorMessage : undefined,
+      },
       { status: 500 }
     );
   }

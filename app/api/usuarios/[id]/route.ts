@@ -55,9 +55,14 @@ export async function GET(
 
     return NextResponse.json(usuario);
   } catch (error) {
-    console.error("Error obteniendo usuario:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Error obteniendo usuario:", errorMessage);
     return NextResponse.json(
-      { error: "Error interno del servidor" },
+      {
+        error: "Error interno del servidor",
+        detail:
+          process.env.NODE_ENV !== "production" ? errorMessage : undefined,
+      },
       { status: 500 }
     );
   }
