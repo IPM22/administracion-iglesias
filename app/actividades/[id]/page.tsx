@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +39,8 @@ import {
   ArrowLeft,
   Edit,
   Loader2,
+  UserPlus,
+  X,
 } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
@@ -52,6 +54,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
 import { MensajeMasivoModal } from "@/components/MensajeMasivoModal";
+import { AgregarAsistentesModal } from "@/components/AgregarAsistentesModal";
 import { formatActivityDate, toLocaleDateShort } from "@/lib/date-utils";
 
 // Función para formatear teléfonos para mostrar
@@ -156,6 +159,15 @@ export default function DetalleActividadPage({
   const [horarioSeleccionado, setHorarioSeleccionado] =
     useState<Horario | null>(null);
 
+  // Estados para el registro rápido de asistentes
+  const [modalAsistentesOpen, setModalAsistentesOpen] = useState(false);
+  const [horarioParaAgregar, setHorarioParaAgregar] = useState<number | null>(
+    null,
+  );
+  const [eliminandoAsistenteId, setEliminandoAsistenteId] = useState<
+    number | null
+  >(null);
+
   // Estados para el modal de mensajes masivos (nuevo modal)
   const [modalMensajesOpen, setModalMensajesOpen] = useState(false);
   const [personasParaMensajes, setPersonasParaMensajes] = useState<
@@ -168,27 +180,25 @@ export default function DetalleActividadPage({
     }[]
   >([]);
 
-  useEffect(() => {
-    const fetchActividad = async () => {
-      try {
-        const response = await fetch(`/api/actividades/${id}`);
-        if (!response.ok) {
-          throw new Error("Error al obtener los datos de la actividad");
-        }
-        const data = await response.json();
-        console.log("📊 Datos de actividad recibidos:", data);
-        console.log("📊 Historial de visitas:", data.historialVisitas);
-        setActividad(data);
-      } catch (error) {
-        console.error("Error:", error);
-        setError("Error al cargar la actividad");
-      } finally {
-        setLoading(false);
+  const fetchActividad = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/actividades/${id}`);
+      if (!response.ok) {
+        throw new Error("Error al obtener los datos de la actividad");
       }
-    };
-
-    fetchActividad();
+      const data = await response.json();
+      setActividad(data);
+    } catch (error) {
+      console.error("Error:", error);
+      setError("Error al cargar la actividad");
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
+
+  useEffect(() => {
+    fetchActividad();
+  }, [fetchActividad]);
 
   const formatearFecha = (fecha: string) => {
     return formatActivityDate(fecha, {
@@ -288,6 +298,48 @@ export default function DetalleActividadPage({
     } finally {
       setIsDeleting(false);
       setDialogOpen(false);
+    }
+  };
+
+  // Abrir el modal de registro rápido, opcionalmente con un horario preseleccionado
+  const abrirAgregarAsistentes = (horario: Horario | null) => {
+    setHorarioParaAgregar(horario?.id ?? null);
+    setModalAsistentesOpen(true);
+  };
+
+  // Quitar un asistente de la actividad
+  const quitarAsistente = async (historialId: number, nombre: string) => {
+    if (!actividad) return;
+
+    setEliminandoAsistenteId(historialId);
+    try {
+      const response = await fetch(
+        `/api/actividades/${actividad.id}/asistentes?historialId=${historialId}`,
+        { method: "DELETE" },
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Error al quitar el asistente");
+      }
+
+      setActividad((prev) =>
+        prev
+          ? {
+              ...prev,
+              historialVisitas: prev.historialVisitas.filter(
+                (h) => h.id !== historialId,
+              ),
+            }
+          : prev,
+      );
+      toast.success(`${nombre} fue removido de la actividad`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Error al quitar el asistente",
+      );
+    } finally {
+      setEliminandoAsistenteId(null);
     }
   };
 
@@ -858,16 +910,32 @@ export default function DetalleActividadPage({
           {/* Asistentes por Horario */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Asistentes ({actividad.historialVisitas.length})
-              </CardTitle>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Asistentes ({actividad.historialVisitas.length})
+                </CardTitle>
+                <Button onClick={() => abrirAgregarAsistentes(null)}>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Agregar asistentes
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {actividad.historialVisitas.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
-                  No hay asistentes registrados para esta actividad
-                </p>
+                <div className="text-center py-8">
+                  <Users className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-muted-foreground">
+                    No hay asistentes registrados para esta actividad
+                  </p>
+                  <Button
+                    className="mt-4"
+                    onClick={() => abrirAgregarAsistentes(null)}
+                  >
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Agregar asistentes
+                  </Button>
+                </div>
               ) : (
                 <Tabs defaultValue="0" className="w-full">
                   {/* Diseño para pantallas grandes */}
@@ -962,6 +1030,14 @@ export default function DetalleActividadPage({
                       {/* Botones de reporte para cada horario */}
                       <div className="flex gap-2 mb-4 flex-wrap">
                         <Button
+                          size="sm"
+                          onClick={() => abrirAgregarAsistentes(grupo.horario)}
+                          className="flex items-center gap-2"
+                        >
+                          <UserPlus className="h-4 w-4" />
+                          Agregar
+                        </Button>
+                        <Button
                           variant="outline"
                           size="sm"
                           onClick={() =>
@@ -1010,9 +1086,19 @@ export default function DetalleActividadPage({
 
                       {/* Lista de asistentes */}
                       {grupo.asistentes.length === 0 ? (
-                        <p className="text-muted-foreground text-center py-8">
-                          No hay asistentes registrados para este horario
-                        </p>
+                        <div className="text-center py-8">
+                          <p className="text-muted-foreground">
+                            No hay asistentes registrados para este horario
+                          </p>
+                          <Button
+                            variant="outline"
+                            className="mt-4"
+                            onClick={() => abrirAgregarAsistentes(grupo.horario)}
+                          >
+                            <UserPlus className="mr-2 h-4 w-4" />
+                            Agregar asistentes
+                          </Button>
+                        </div>
                       ) : (
                         <div className="space-y-3">
                           {grupo.asistentes.map((historial) => (
@@ -1088,6 +1174,27 @@ export default function DetalleActividadPage({
                                   )}
                                 </div>
                               </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Quitar de la actividad"
+                                disabled={
+                                  eliminandoAsistenteId === historial.id
+                                }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  quitarAsistente(
+                                    historial.id,
+                                    `${historial.persona.nombres} ${historial.persona.apellidos}`,
+                                  );
+                                }}
+                              >
+                                {eliminandoAsistenteId === historial.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <X className="h-4 w-4" />
+                                )}
+                              </Button>
                             </div>
                           ))}
                         </div>
@@ -1272,6 +1379,18 @@ export default function DetalleActividadPage({
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Modal de registro rápido de asistentes */}
+        <AgregarAsistentesModal
+          open={modalAsistentesOpen}
+          onOpenChange={setModalAsistentesOpen}
+          actividadId={actividad.id}
+          actividadNombre={actividad.nombre}
+          horarios={actividad.horarios}
+          asistentesActuales={actividad.historialVisitas}
+          horarioInicialId={horarioParaAgregar}
+          onAsistentesAgregados={fetchActividad}
+        />
 
         {/* Nuevo Modal de Mensajes Masivos Mejorado */}
         <MensajeMasivoModal
